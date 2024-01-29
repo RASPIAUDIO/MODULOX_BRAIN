@@ -1,0 +1,19 @@
+/smpnum
+Sample1
+Sample2
+Sample3
+Sample4
+Sample5
+Sample6
+Sample7
+Sample8
+/Filter Type
+None
+Low Pass
+High Pass
+Band Pass
+/wifi
+Search wifi
+Load samples
+Wifi Off
+/End

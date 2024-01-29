@@ -1,0 +1,36 @@
+Sample load
+smpnum
+Start
+smpnum
+End
+smpnum
+Pitch
+smpnum
+Chan Trigger
+smpnum
+Note Trigger
+smpnum
+Disto Gain
+onoff
+Filter Freq
+Filter Type
+Filter Res
+Filter Type
+Delay Time
+onoff
+Delay Feedback
+onoff
+Compressor threshold
+no
+Compressor attack
+no
+Compressor release
+no
+Compressor ratio
+no
+Compressor type
+no
+Compressor view
+no
+WIFI loader
+wifi
