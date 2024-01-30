@@ -1,33 +1,26 @@
--Synth
-//Osc
-***@Waveform
-***@Volume1
-***@Volume2
-***@Volume3
-***@Volume4
-***@Volume5
-***@Volume6
-//Env
-***Env Vol
-++++@Attack
-++++@Decay
-++++@Sustain
-++++@Release
-***Env Filt
-++++@Attack
-++++@Decay
-++++@Sustain
-++++@Release
-//Organ
-***Tremolo
-++++@Speed
-++++@Amount
--MIDI
-//@Global
+-Sample edit
+//@Sample load
+//@Start
+//@End
+//@Pitch
+//@Chan Trigger
+//@Note Trigger
+-Global effects
+//Disto
+***@Disto Gain
+//Filter
+***@Filter Freq
+***@Filter Res
+//Delay
+***@Delay Time
+***@Delay Feedback
+//Compressor
+***@Compressor threshold
+***@Compressor attack
+***@Compressor release
+***@Compressor ratio
+***@Compressor view
+//Phaser
 -Setup
-//@Sync
-//@MIDI
-//@Audio
-//@Save
-//@Load
+//@WIFI loader
 #end
