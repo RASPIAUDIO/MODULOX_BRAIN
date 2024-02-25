@@ -5,7 +5,18 @@ void Core0Task(void *parameter)
 Serial.println("core 0");
 
   core0_init();
-  
+
+  disp.clear();
+  disp.draw_warning("LOAD");
+  disp.display_window();
+  disp.clear();
+
+  savenum=1;
+  load_preset_sampler();
+  param_focus[0]=0;
+
+  display_menu();
+  display_param();
 
   while (1)
   {
@@ -20,11 +31,13 @@ Serial.println("core 0");
       
     }
 
-    //disp.display_compressor(comp.maxmax, (comp.env_value-comp.ratio_conv*comp.env_value));
+    if(param_displayed == 15) 
+    {
+      disp.display_compressor(comp.cmax, comp.duty);
+      disp.display_window();
+    }
     
-    //disp.display_window();
-    //if(param_displayed == 16) disp.display_compressor(comp.maxmax, comp.env_value);
-    //yield();
+    
     delay(1);
   }
 }

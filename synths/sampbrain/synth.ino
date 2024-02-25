@@ -1,9 +1,14 @@
 void Synth_Init()
 {
   smp.init();
-  smp.load_file("/kick01.wav",0);
-  smp.load_file("/snare01.wav",1);
-  smp.load_file("/hihat04.wav",2);
+  /*smp.load_file("/kick01.wav",0,0);
+  smp.load_file("/snare01.wav",1,1);
+  smp.load_file("/hihat04.wav",2,2);*/
+  for(int i=0; i<8; i++)
+  {
+    smp.tune(64,i);
+    chan_voice[i]=i+1;
+  }
   filter.Init((float)SAMPLE_RATE);
   filter.SetMode(TeeBeeFilter::LP_24);
   filter.SetResonance( 5,true);
@@ -18,6 +23,7 @@ void Synth_Init()
   lfo_phase.start();
   delay_init();
   comp.init();
+  //phaser.init();
 
 }
 
@@ -42,9 +48,10 @@ inline void Synth_Process(int16_t *left, int16_t *right)
     else out_l=fast_tanh(out_l);
     if(filter_on) out_l = filter.Process(out_l); 
     if(delay_on) out_l+=delay_output(out_l)*param_midi[9]/127;
-    out_l=comp.out(out_l);
-    out_l=phaser.ProcessSample(out_l);
-    *left = 32768.0*out_l;
+    if(comp_on) out_l=comp.out(out_l);
+    //if(phaser_on) out_l=phaser.ProcessSample(out_l);
+    out_l=fast_tanh(out_l);
+    *left = 32767.0*out_l;
     //Serial.println(*left);
     *right = *left;
 

@@ -23,9 +23,12 @@ public:
   
   boolean started;
   boolean activated;
+  
+  int dest;
 
   void init()
   {
+	dest=0;
     envA = 0.0001;
     envD = 0.0001;
     envS = 1.0;

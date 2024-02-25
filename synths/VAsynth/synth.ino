@@ -6,8 +6,11 @@ void Synth_Init()
     oscA[i].init();
     oscA[i].glideon = true;
     disto[i].init();
+    disto_on[i]=false;
     Filter[i].Init((float)SAMPLE_RATE);
     Filter[i].SetMode(TeeBeeFilter::LP_24);
+    Filter[i].SetResonance( 5,true);
+    filter_on[i]=false;
     lfo[0][i].init();
     //lfo[0][i].setfreq(param_lfo_freq[0]);
     lfo[1][i].init();
@@ -15,7 +18,8 @@ void Synth_Init()
     lfo[2][i].init();
     //lfo[2][i].setfreq(param_lfo_freq[2]);
     delay_init();
-    env[i].init();
+    env[0][i].init();
+    env[1][i].init();
     highpass1.setMode(OnePoleFilter::HIGHPASS);
     highpass1.setCutoff(24.167f);
   }
@@ -23,8 +27,29 @@ void Synth_Init()
 
 
 float volg=1.0;
-float envamount_prev[2]={0,0};
-float lfo1amount_prev[2]={0,0};
+float envamount_prev[2][2]={{0,0},{0,0}};
+float lfo1amount_prev[3][2]={{0,0},{0,0},{0,0}};
+
+
+void test_matrix(int desti, float amoun)
+{
+  if(desti==1) oscA[current_synth].set_pitch_lfo(amoun);
+  if(desti==2) volg=amoun;
+  if(desti==3) oscA[current_synth].setPWM(0, (int)(1+126.0*amoun));
+  if(desti==4) oscA[current_synth].setPWM(1, (int)(1+126.0*amoun));
+  if(desti==5) oscA[current_synth].setPWM(2, (int)(1+126.0*amoun));
+  if(desti==6) oscA[current_synth].setVolOsc(0, (int)(127.0*amoun));
+  if(desti==7) oscA[current_synth].setVolOsc(1, (int)(127.0*amoun));
+  if(desti==8) oscA[current_synth].setVolOsc(2, (int)(127.0*amoun));
+  if(desti==9) oscA[current_synth].set_pitch_lfo(0, amoun);
+  if(desti==10) oscA[current_synth].set_pitch_lfo(1, amoun);
+  if(desti==11) oscA[current_synth].set_pitch_lfo(2, amoun);
+  if(desti==12) Filter[current_synth].SetCutoff( (int)(127.0*amoun),true); 
+  if(desti==13) Filter[current_synth].SetResonance( (int)(127.0*amoun),true);
+  if(desti==14) set_time((int)(127.0*amoun));
+  if(desti==15) oscA[current_synth].compute_detune((int)(127.0*amoun));
+  if(desti==16) oscA[current_synth].compute_unisson_vol((int)(127.0*amoun));
+}
 
 
 inline void Synth_Process(int16_t *left, int16_t *right)
@@ -39,6 +64,7 @@ inline void Synth_Process(int16_t *left, int16_t *right)
     float out_l, out_r;
     out_l = 0;
     out_r = 0;
+    float glbvol=1.0;
 
     
 
@@ -49,17 +75,17 @@ inline void Synth_Process(int16_t *left, int16_t *right)
       outvoice[1]=0;
       for(int cur=0; cur<2; cur++)
       {
-        if(env_dest>0)
+        for(int i=0; i<2; i++)
         {
-          float envamount=env[cur].amount();
-          if(envamount!=envamount_prev[cur])
+          if(env[i][cur].dest>0)
           {
-            if(env_dest==1) oscA[cur].setPWM(0, (int)(1+126.0*envamount));
-            if(env_dest==2) oscA[cur].setPWM(1, (int)(1+126.0*envamount));
-            if(env_dest==3) oscA[cur].setPWM(2, (int)(1+126.0*envamount));
-            if(env_dest==4) oscA[cur].set_pitch_lfo(envamount);
-            display_wave=true;
-            envamount_prev[cur]=envamount;
+            float envamount=env[i][cur].amount();
+            if(envamount<envamount_prev[i][cur]-0.01 || envamount>envamount_prev[i][cur]+0.01 )
+            {
+              test_matrix(env[i][cur].dest, envamount);
+              display_wave=true;
+              envamount_prev[i][cur]=envamount;
+            }
           }
         }
     
@@ -70,16 +96,11 @@ inline void Synth_Process(int16_t *left, int16_t *right)
             float lfo1amount=lfo[i][cur].output();
             if(lfo1amount<0) lfo1amount=0;
             if(lfo1amount>=1.0) lfo1amount=1.0;
-            if(lfo1amount>lfo1amount_prev[cur]+0.01 || lfo1amount<lfo1amount_prev[cur]-0.01)
+            if(lfo1amount>lfo1amount_prev[i][cur]+0.01 || lfo1amount<lfo1amount_prev[i][cur]-0.01)
             {
-              if(lfo[i][cur].dest==1) oscA[cur].setPWM(0, 1+126.0*lfo1amount);
-              if(lfo[i][cur].dest==2) oscA[cur].setPWM(1, 1+126.0*lfo1amount);
-              if(lfo[i][cur].dest==3) oscA[cur].setPWM(2, 1+126.0*lfo1amount);
-              if(lfo[i][cur].dest==4) Filter[cur].SetCutoff( 127.0*lfo1amount,true); 
-              if(lfo[i][cur].dest==5) Filter[cur].SetResonance( 127.0*lfo1amount,true);  
-              if(lfo[i][cur].dest==6) oscA[cur].set_pitch_lfo(lfo1amount);
+              test_matrix(lfo[i][current_synth].dest, lfo1amount);
               display_wave=true;
-              lfo1amount_prev[cur]=lfo1amount;
+              lfo1amount_prev[i][cur]=lfo1amount;
               //rec1=micros()-save_rec1;
             }
           }
@@ -92,10 +113,10 @@ inline void Synth_Process(int16_t *left, int16_t *right)
       
         out_l = oscA[cur].output();
     
-        if(disto_on) out_l = disto[cur].out(out_l);
+        if(disto_on[cur]) out_l = disto[cur].out(out_l);
         else out_l=fast_tanh(out_l);
     
-        if(param_focus[40]) out_l = Filter[cur].Process(out_l); 
+        if(filter_on[cur]) out_l = Filter[cur].Process(out_l); 
         
         if(delay_on) out_l+=delay_output(out_l)*param_midi[44]/127;
 
@@ -105,17 +126,17 @@ inline void Synth_Process(int16_t *left, int16_t *right)
     }
     else
     {
-      if(env_dest>0)
+      for(int i=0; i<2; i++)
       {
-        float envamount=env[current_synth].amount();
-        if(envamount!=envamount_prev[current_synth])
+        if(env[i][current_synth].dest>0)
         {
-          if(env_dest==1) oscA[current_synth].setPWM(0, (int)(1+126.0*envamount));
-          if(env_dest==2) oscA[current_synth].setPWM(1, (int)(1+126.0*envamount));
-          if(env_dest==3) oscA[current_synth].setPWM(2, (int)(1+126.0*envamount));
-          if(env_dest==4) oscA[current_synth].set_pitch_lfo(envamount);
-          display_wave=true;
-          envamount_prev[current_synth]=envamount;
+          float envamount=env[i][current_synth].amount();
+          if(envamount<envamount_prev[i][current_synth]-0.01 || envamount>envamount_prev[i][current_synth]+0.01 )
+          {
+            test_matrix(env[i][current_synth].dest, envamount);            
+            display_wave=true;
+            envamount_prev[i][current_synth]=envamount;
+          }
         }
       }
   
@@ -126,16 +147,11 @@ inline void Synth_Process(int16_t *left, int16_t *right)
           float lfo1amount=lfo[i][current_synth].output();
           if(lfo1amount<0) lfo1amount=0;
           if(lfo1amount>=1.0) lfo1amount=1.0;
-          if(lfo1amount>lfo1amount_prev[current_synth]+0.01 || lfo1amount<lfo1amount_prev[current_synth]-0.01)
+          if(lfo1amount>lfo1amount_prev[i][current_synth]+0.01 || lfo1amount<lfo1amount_prev[i][current_synth]-0.01)
           {
-            if(lfo[i][current_synth].dest==1) oscA[current_synth].setPWM(0, 1+126.0*lfo1amount);
-            if(lfo[i][current_synth].dest==2) oscA[current_synth].setPWM(1, 1+126.0*lfo1amount);
-            if(lfo[i][current_synth].dest==3) oscA[current_synth].setPWM(2, 1+126.0*lfo1amount);
-            if(lfo[i][current_synth].dest==4) Filter[current_synth].SetCutoff( 127.0*lfo1amount,true); 
-            if(lfo[i][current_synth].dest==5) Filter[current_synth].SetResonance( 127.0*lfo1amount,true);  
-            if(lfo[i][current_synth].dest==6) oscA[current_synth].set_pitch_lfo(lfo1amount);
+            test_matrix(lfo[i][current_synth].dest, lfo1amount);
             display_wave=true;
-            lfo1amount_prev[current_synth]=lfo1amount;
+            lfo1amount_prev[i][current_synth]=lfo1amount;
             //rec1=micros()-save_rec1;
           }
         }
@@ -153,21 +169,23 @@ inline void Synth_Process(int16_t *left, int16_t *right)
 
       
   
-      if(disto_on) out_l = disto[current_synth].out(out_l);
+      if(disto_on[current_synth]) out_l = disto[current_synth].out(out_l);
   
-      if(param_focus[40]) out_l = Filter[current_synth].Process(out_l); 
+      if(filter_on[current_synth]) out_l = Filter[current_synth].Process(out_l); 
 
-      if(delay_on) out_l+=delay_output(out_l)*param_midi[44]/127;
+      if(delay_on) out_l+=delay_output(out_l)*delay_mix;
+
+      out_l*=volg;
 
       //out_l = highpass1.getSample(out_l);
     }
   
     
-
+    out_l=fast_tanh(out_l);
     out_r=out_l;
  
-    *left = 32768.0*out_l;
-    *right = 32768.0*out_r;
+    *left = 32767.0*out_l;
+    *right = 32767.0*out_r;
 
     
 }

@@ -1,14 +1,14 @@
 Sample load
 smpnum
-Start
+Sample Start
 smpnum
-End
+Sample End
 smpnum
-Pitch
+Sample Pitch
 smpnum
-Chan Trigger
+Sample Chan
 smpnum
-Note Trigger
+Sample Note
 smpnum
 Disto Gain
 onoff
@@ -21,16 +21,20 @@ onoff
 Delay Feedback
 onoff
 Compressor threshold
-no
+onoff
 Compressor attack
-no
+onoff
 Compressor release
-no
+onoff
 Compressor ratio
-no
-Compressor type
-no
+onoff
 Compressor view
-no
-WIFI loader
+onoff
+Setup WIFI loader
 wifi
+Setup Audio
+no
+Setup Load
+ok
+Setup Save
+ok

@@ -1,0 +1,143 @@
+Preset
+no
+Osc 1 Waveform
+no
+Osc 1 PWM
+no
+Osc 1 Pitch
+no
+Osc 1 Fine
+no
+Osc 1 Volume
+no
+Osc 2 Waveform
+no
+Osc 2 PWM
+no
+Osc 2 Pitch
+no
+Osc 2 Tune
+no
+Osc 2 Volume
+no
+Osc 3 Waveform
+no
+Osc 3 PWM
+no
+Osc 3 Pitch
+no
+Osc 3 Tune
+no
+Osc 3 Volume
+no
+Env Vol Attack
+no
+Env Vol Decay
+no
+Env Vol Sustain
+no
+Env Vol Release
+no
+Env 1 Destination
+no
+Env 1 Attack
+no
+Env 1 Decay
+no
+Env 1 Sustain
+no
+Env 1 Release
+no
+Env 2 Destination
+no
+Env 2 Attack
+no
+Env 2 Decay
+no
+Env 2 Sustain
+no
+Env 2 Release
+no
+LFO 1 Destination
+no
+LFO 1 Waveform
+no
+LFO 1 Speed
+no
+LFO 1 Amount
+no
+LFO 1 Cutoff
+no
+LFO 2 Destination
+no
+LFO 2 Waveform
+no
+LFO 2 Speed
+no
+LFO 2 Amount
+no
+LFO 2 Cutoff
+no
+LFO 3 Destination
+no
+LFO 3 Waveform
+no
+LFO 3 Speed
+no
+LFO 3 Amount
+no
+LFO 3 Cutoff
+no
+Filter Freq
+Filter type
+Filter Res
+Filter type
+Delay Time
+onoff
+Delay Feedback
+onoff
+Delay Dry Wet
+onoff
+Sound Polyphony
+no
+Sound Glide
+Glide
+Arpeggio BPM
+Arp
+Arpeggio Mode
+Arp
+Arpeggio rate
+Arp
+Arpeggio Gate
+Arp
+Arpeggio Step
+Arp
+Unisson Number
+no
+Unisson Detune
+no
+Unisson Volume
+no
+Disto Gain
+onoff
+Setup Sync
+no
+MIDI Global
+no
+Setup Audio
+no
+Setup Load
+validation
+Setup Save
+validation
+Multi Switch
+no
+Multi Sound1
+no
+Multi Sound2
+no
+MIDI Multi1
+no
+MIDI Multi1
+no
+#end

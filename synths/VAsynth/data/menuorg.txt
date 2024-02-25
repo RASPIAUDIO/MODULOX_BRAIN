@@ -1,0 +1,95 @@
+-Synth
+//Osc
+***Osc 1
+++++@Waveform
+++++@PWM
+++++@Pitch
+++++@Fine
+++++@Volume
+***Osc 2
+++++@Waveform
+++++@PWM
+++++@Pitch
+++++@Fine
+++++@Volume
+***Osc 3
+++++@Waveform
+++++@PWM
+++++@Pitch
+++++@Fine
+++++@Volume
+//Env
+***Env Vol
+++++@Attack
+++++@Decay
+++++@Sustain
+++++@Release
+***Env 1
+++++@Destination
+++++@Attack
+++++@Decay
+++++@Sustain
+++++@Release
+***Env 2
+++++@Destination
+++++@Attack
+++++@Decay
+++++@Sustain
+++++@Release
+//LFO
+***LFO 1
+++++@Destination
+++++@Waveform
+++++@Speed
+++++@Amount
+++++@Cutoff
+***LFO 2
+++++@Destination
+++++@Waveform
+++++@Speed
+++++@Amount
+++++@Cutoff
+***LFO 3
+++++@Destination
+++++@Waveform
+++++@Speed
+++++@Amount
+++++@Cutoff
+//Filter
+***@Freq
+***@Res
+//Delay
+***@Time
+***@Feedback
+***@Dry Wet
+//Disto
+***@Type
+***@Gain
+//Arpeggio
+***@BPM
+***@Mode
+***@Rate
+***@Gate
+***@Step
+-MIDI
+//@Global
+//@Multi1
+//@Multi2
+-Sound
+//@Polyphony
+//@Glide
+//Unisson
+***@Number
+***@Detune
+***@Volume
+//Multi
+***@Switch
+***@Sound1
+***@Sound2
+-Setup
+//@Sync
+//@MIDI
+//@Audio
+//@Save
+//@Load
+#end

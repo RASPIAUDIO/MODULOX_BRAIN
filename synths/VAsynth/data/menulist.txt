@@ -1,0 +1,21 @@
+/Mode
+Off
+Low pass
+Band pass
+BP res
+High pass
+/Filter Type
+None
+Low Pass
+High Pass
+Band Pass
+/Glide
+Off
+On
+/Arp
+Off
+On
+/Disto
+Off
+On
+/End

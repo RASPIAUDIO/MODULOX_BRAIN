@@ -126,6 +126,7 @@ class TeeBeeFilter
     /** Sets the mode of the filter, @see: modes */
     void SetMode(int newMode)
 	{
+	  Serial.println("SetMode");
 	  if( newMode >= 0 && newMode < NUM_MODES )
 	  {
 		mode = newMode;
@@ -150,6 +151,10 @@ class TeeBeeFilter
 		}
 	  }
 	  calculateCoefficientsApprox4();
+	  Serial.println(b0);
+	  Serial.println(a1);
+	  Serial.println(k);
+	  if(mode==TB_303) {Serial.println("TB303"); calculateCoefficientsExact();}
 	}
 
     /** Sets the cutoff frequency for the highpass filter in the feedback path. */

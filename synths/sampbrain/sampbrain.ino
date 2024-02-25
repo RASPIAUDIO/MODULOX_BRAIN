@@ -13,13 +13,15 @@
 #include <delay.h>
 
 #include "braindisplay.h"
-#include "phaser.h"
+//#include "phaser.h"
 
 ImprovWiFi improvSerial(&Serial);
 
 bool delay_on=false;
 bool disto_on=false;
 bool filter_on=false;
+bool comp_on=false;
+//bool phaser_on=false;
 bool save_bool=false;
 bool load_bool=false;
 uint8_t audio_out = 0;      // 0: HP
@@ -34,7 +36,7 @@ Lfo lfo_phase;
 TeeBeeFilter filter;
 Compressor comp;
 Disto2 disto;
-Phaser phaser;
+//Phaser phaser;
 
 bool display_wave=false;
 bool display_par=true;
@@ -43,7 +45,7 @@ bool wifi_found=false;
 uint8_t chan_voice[MAX_SAMPLE_NUM];
 uint8_t note_voice[MAX_SAMPLE_NUM];
 
-bool wifiload=true;
+bool wifiload=false;
 bool wifijustload=false;
 bool wifijustunload=false;
 
@@ -85,47 +87,15 @@ bool connectWifi(const char *ssid, const char *password)
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
+  delay(2000);
   modubrainInit();
-  param_focus[17]=2;
-  //if(wifiload) setup_wifi();
-  /*WiFi.mode(WIFI_STA);
-  WiFi.disconnect();
-
-  improvSerial.setDeviceInfo(ImprovTypes::ChipFamily::CF_ESP32, "ImprovWiFiLib", "1.0.0", "BasicWebServer", "http://{LOCAL_IPV4}?name=Guest");
-  improvSerial.onImprovError(onImprovWiFiErrorCb);
-  improvSerial.onImprovConnected(onImprovWiFiConnectedCb);
-  improvSerial.setCustomConnectWiFi(connectWifi);  // Optional*/
+  disto.set_gain(10);
+  param_focus[16]=2;
 }
 
 void loop() {
   Midi_Process();  
-  /*if(wifijustload) {
-      wifijustload=false;
-      i2s_stop(i2s_num);
-      WiFi.begin("Gaetan","");
-      while (WiFi.status() != WL_CONNECTED) {
-        delay(10);
-      }
-
-      if (!filemgr.AddFS(FFat, "Flash/FFat", false)) {
-        Serial.println(F("Adding FFAT failed."));
-      }
-      setupFilemanager();
-      //delay(1000);
-      //setup_wifi();
-    }
-    if(wifijustunload) 
-    {
-      wifijustunload=false;
-      //WiFi.disconnect(true);
-      //delay(1000);
-      i2s_start(i2s_num);
-    }*/
-  if(param_focus[17]==0) improvSerial.handleSerial();
-  if(param_focus[17]==1) wifi_listener();
-  if(param_focus[17]==2) modubrainProcess();
-  //if(wifiload) wifi_listener();
-  //else modubrainProcess();
-
+  if(param_focus[16]==0) improvSerial.handleSerial();
+  if(param_focus[16]==1) wifi_listener();
+  if(param_focus[16]==2) modubrainProcess();
 }

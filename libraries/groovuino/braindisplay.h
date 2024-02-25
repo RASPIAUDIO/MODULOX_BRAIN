@@ -9,7 +9,14 @@
 
 #include <TFT_eSPI.h>
 #include "FS.h"
-#include "SPIFFS.h"
+#include "FFat.h"
+//#include <oschammond.h>
+
+#ifdef HAMMOND
+#include <oschammond.h>
+#else
+#include <oscfloat.h>
+#endif
 
 int peak_filt[] ={0,1,1,1,1,2,2,2,2,3,3,3,4,4,5,5,6,7,8,10,12,14,17,20,24,27,29,31,32,32,33,33,34,34,34,35,35,35,35,34,34,34,33,33,33,32,32,31,31,30,30,29,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0};
 
@@ -22,7 +29,7 @@ public:
 	
 	uint8_t menuminmax[16][2];
 	uint8_t paramdrawnum[128];
-	String list_text[10];
+	String list_text[20];
 	String list_previous;
 	uint8_t list_size=0;
 	uint8_t line_selected[4];
@@ -32,6 +39,8 @@ public:
 	TFT_eSPI tft = TFT_eSPI();
 	TFT_eSprite spr = TFT_eSprite(&tft);
 	TFT_eSprite sprt = TFT_eSprite(&tft);
+	
+	bool valida;
 	
 	int cur[20];
 	
@@ -49,6 +58,7 @@ public:
 	
 	void init()
 	{
+		valida=true;
 		tft.init();
 		tft.setRotation(3);
 		for(int i=0; i<10; i++)
@@ -80,18 +90,45 @@ public:
 		sprt.fillSprite(TFT_BLACK);
 	}
 	
+	int find_title_num()
+	{
+		fs::File file = FFat.open("/menutitle.txt", "r");
+		int i=0;
+		while(file.available()) 
+		{
+			String titleSt = file.readStringUntil('\r\n');
+			i++;
+		}
+		file.close();
+		return i/2;
+	}
+	
+	void display_compressor(float volaudio, float volcomp)
+	{
+		//Serial.println(volaudio);
+		
+		spr.fillRect(200, 20, 40, 105,  TFT_BLACK);
+		spr.fillRect(200, 120-volaudio*100.0, 20, volaudio*100+5,  TFT_RED);
+		spr.fillRect(220, 20, 20, (1.0-volcomp)*100.0+5,  TFT_BLUE);
+	}
+	
 	void menu_top(int titlenum, int bcol=0x5ACB)
 	{
+		Serial.println("menu_top");
 		sprt.setTextColor(TFT_WHITE);
 		sprt.fillRect(0, 0, SCREEN_WIDTH, 40,  bcol);
 		sprt.drawRect(0, 0, SCREEN_WIDTH, 40, 0x3186);
-		fs::File file = SPIFFS.open("/menutitle.txt", "r");
-		for(int i=0; i<2*titlenum; i++) 
+		fs::File file = FFat.open("/menutitle.txt", "r");
+		String titleSt="";
+		int i=0;
+		while( i<=titlenum && file.available()) 
 		{
 			//file.findUntil("","\r\n");
-			String titleSt = file.readStringUntil('\r\n');
+			titleSt = file.readStringUntil('\r\n');
+			String men = file.readStringUntil('\r\n');
+			i++;
 		}
-		String titleSt = file.readStringUntil('\r\n');
+		//String titleSt = file.readStringUntil('\r\n');
 		Serial.println(titleSt);
 		file.close();
 		draw_title(titleSt);
@@ -108,7 +145,7 @@ public:
 		sprt.drawString("<", SCREEN_WIDTH/6, 10, 2);
 		sprt.drawString(">", SCREEN_WIDTH*5/6, 10, 2);
 		
-		fs::File file = SPIFFS.open("/menutitle.txt", "r");
+		fs::File file = FFat.open("/menutitle.txt", "r");
 		Serial.println("file opened");
 		for(int i=0; i<2*selnum; i++) 
 		{
@@ -126,30 +163,48 @@ public:
 		{
 			Serial.println("no select");
 		}
+		
 		else
 		{
-			file = SPIFFS.open("/menulist.txt", "r");
-			Serial.println("file opened");
-			char Buf2[20];
-			bool test=true;
-			while(test)
+			if(Buf[0]=='v' && Buf[1]=='a' && Buf[2]=='l')
 			{
+				Serial.println("validate");
+				draw_bottom_menu("validate");
+			}
+			else if(Buf[0]=='o' && Buf[1]=='n' && Buf[2]=='o')
+			{
+				if(menuselect==0) draw_bottom_menu("Off");
+				else draw_bottom_menu("On");
+			}
+			else if(Buf[0]=='o' && Buf[1]=='k')
+			{
+				draw_bottom_menu("OK"); 
+			}
+			else
+			{
+				file = FFat.open("/menulist.txt", "r");
+				Serial.println("file opened");
+				char Buf2[20];
+				bool test=true;
+				while(test)
+				{
+					titleSt = file.readStringUntil('\r\n');
+					Serial.println(titleSt);
+					titleSt.toCharArray(Buf2, 20);
+					if(Buf2[0]=='/')
+					{
+						if(Buf[0]==Buf2[1] && Buf[1]==Buf2[2]) test=false;
+					}
+				}
+				Serial.println(menuselect);
+				for(int i=0; i<menuselect; i++) 
+				{
+					titleSt = file.readStringUntil('\r\n');
+				}
 				titleSt = file.readStringUntil('\r\n');
 				Serial.println(titleSt);
-				titleSt.toCharArray(Buf2, 20);
-				if(Buf2[0]=='/')
-				{
-					if(Buf[0]==Buf2[1] && Buf[1]==Buf2[2]) test=false;
-				}
+				draw_bottom_menu(titleSt);
 			}
-			Serial.println(menuselect);
-			for(int i=0; i<menuselect; i++) 
-			{
-				titleSt = file.readStringUntil('\r\n');
-			}
-			titleSt = file.readStringUntil('\r\n');
-			Serial.println(titleSt);
-			draw_bottom_menu(titleSt);
 		}
 		file.close();
 	}
@@ -160,7 +215,7 @@ public:
 		Serial.println("list_bottom");
 		String titleSt;
 		
-		fs::File file = SPIFFS.open("/menutitle.txt", "r");
+		fs::File file = FFat.open("/menutitle.txt", "r");
 		Serial.println("file opened");
 		for(int i=0; i<2*selnum; i++) 
 		{
@@ -176,41 +231,132 @@ public:
 		{
 			Serial.println("no select");
 		}
+		
 		else
 		{
-			file = SPIFFS.open("/menulist.txt", "r");
-			Serial.println("file opened");
-			char Buf2[20];
-			bool test=true;
-			while(test)
+			if(Buf[0]=='v' && Buf[1]=='a' && Buf[2]=='l')
 			{
-				titleSt = file.readStringUntil('\r\n');
-				Serial.println(titleSt);
-				titleSt.toCharArray(Buf2, 20);
-				if(Buf2[0]=='/')
+				Serial.println("validate");
+			    draw_validate();
+				ret=-1;
+			}
+			else if(Buf[0]=='o' && Buf[1]=='k')
+			{
+				Serial.println("OK");
+				ret=-3;
+			}
+			else if(Buf[0]=='o' && Buf[1]=='n' && Buf[2]=='o')
+			{
+				ret=-2;
+			}
+			else
+			{
+				file = FFat.open("/menulist.txt", "r");
+				Serial.println("file opened");
+				char Buf2[20];
+				bool test=true;
+				while(test)
 				{
-					if(Buf[0]==Buf2[1] && Buf[1]==Buf2[2]) test=false;
+					titleSt = file.readStringUntil('\r\n');
+					Serial.println(titleSt);
+					titleSt.toCharArray(Buf2, 20);
+					if(Buf2[0]=='/')
+					{
+						if(Buf[0]==Buf2[1] && Buf[1]==Buf2[2]) test=false;
+					}
 				}
+				int i=0;
+				while(Buf[0]!='/')
+				{
+					Serial.println(i);
+					list_text[i]=file.readStringUntil('\r\n');
+					Serial.println(list_text[i]);
+					list_text[i].toCharArray(Buf, 20);
+					i++;
+				}
+				list_size=i-1;
+				ret=list_size-1;
+				
+				display_list(listselnum,90,60,100);
 			}
-			int i=0;
-			while(Buf[0]!='/')
-			{
-				Serial.println(i);
-				list_text[i]=file.readStringUntil('\r\n');
-				Serial.println(list_text[i]);
-				list_text[i].toCharArray(Buf, 20);
-				i++;
-			}
-			list_size=i-1;
-			ret=list_size-1;
-			display_list(listselnum,90,100,100);
 		}
 		file.close();
 		return ret;
 	}
 	
+	void display_array(String array[],int numwifi, int index)
+	{
+		Serial.println("display_array");
+		spr.fillRect(0, 10+20*index, 160, 20, TFT_RED);
+
+		Serial.println(numwifi);
+		for(int i=0; i<numwifi; i++) 
+		{
+			spr.drawString(array[i], 30, 10+i*20, 2);
+		}
+	}
+	
+	String display_fatfiles(int index)
+	{
+		Serial.println("display_fatfiles");
+		
+		String filelist[50];
+		File root = FFat.open("/");
+		File file = root.openNextFile();
+		int filenumber=0;
+		int page = index/7;
+		int place = index%7;
+		spr.fillRect(0, 10+20*place, 20, 20, TFT_RED);
+		while(file){
+			if(!file.isDirectory()){
+				String filetemp=file.name();
+				if (filetemp.endsWith(".wav"))
+				{
+					filelist[filenumber]=filetemp;
+					Serial.println(filelist[filenumber]);
+					filenumber++;
+				}
+			}
+			file = root.openNextFile();
+			
+		}
+		Serial.println(filenumber);
+		int endfile;
+		if(filenumber<(page+1)*7) endfile = filenumber;
+		else endfile = (page+1)*7;
+		for(int i=page*7; i<endfile; i++) 
+		{
+			spr.drawString(filelist[i], 30, 10+(i-page*7)*20, 2);
+		}
+		file.close();
+		root.close();
+		return filelist[index];
+	}
+	
+	void draw_validate()
+	{
+		Serial.println("draw_validate");
+		//if(i==ls) line_color = 0x0A80;
+		tft.fillRect(80, 80, 120, 20, 0xF800);
+		tft.drawRect(80, 80, 120, 20, TFT_WHITE);
+		tft.setTextColor(TFT_WHITE);
+		tft.drawString("Are you sure ?", 110, 82, 2);
+		
+		if(valida) tft.fillRect(80, 100, 60, 20, 0x0A80);
+		else tft.fillRect(80, 100, 60, 20, 0xF800);
+		tft.drawRect(80, 100, 60, 20, TFT_WHITE);
+		tft.setTextColor(TFT_WHITE);
+		tft.drawString("Yes", 100, 102, 2);
+		if(valida) tft.fillRect(140, 100, 60, 20, 0xF800);
+		else tft.fillRect(140, 100, 60, 20, 0x0A80);
+		tft.drawRect(140, 100, 60, 20, TFT_WHITE);
+		tft.setTextColor(TFT_WHITE);
+		tft.drawString("No", 160, 102, 2);
+	}
+	
 	void change_menu_select(int _sens)
 	{
+		Serial.println("change_menu_select");
 		line_selected[menu_level]+=_sens;
 		line_selected[menu_level+1]=0;
 		if(line_selected[menu_level]>line_selected_max[menu_level]) line_selected[menu_level]=line_selected_max[menu_level];
@@ -226,7 +372,7 @@ public:
 		int ret=200;
 		Serial.println("search_menutitle");
 		Serial.println(stringsearch);
-		fs::File file = SPIFFS.open("/menutitle.txt", "r");
+		fs::File file = FFat.open("/menutitle.txt", "r");
 		char Buf2[20];
 		for(int j=0; j<20; j++) Buf2[j]=' ';
 		stringsearch.toCharArray(Buf2, 20);	
@@ -265,6 +411,7 @@ public:
 	
 	int menu_right()
 	{
+		Serial.println("menu_right");
 		int ret=200;
 		char Buf[20];
 		list_text[line_selected[menu_level]].toCharArray(Buf, 20);
@@ -287,7 +434,7 @@ public:
 	
 	void menu_hierarchy()
 	{
-		fs::File file = SPIFFS.open("/menuorg.txt", "r");
+		fs::File file = FFat.open("/menuorg.txt", "r");
 		
 		Serial.println("hierarchy");
 		Serial.println(menu_level);
@@ -315,7 +462,7 @@ public:
 			
 		}
 		file.close();
-		file = SPIFFS.open("/menuorg.txt", "r");
+		file = FFat.open("/menuorg.txt", "r");
 		if(menu_level>=1)
 		{
 			i=0;
@@ -344,7 +491,7 @@ public:
 			display_list(line_selected[1],80,10,65);		
 		}
 		file.close();
-		file = SPIFFS.open("/menuorg.txt", "r");
+		file = FFat.open("/menuorg.txt", "r");
 		if(menu_level>=2)
 		{
 			i=0;
@@ -381,7 +528,7 @@ public:
 			display_list(line_selected[2],145,10,65);	
 		}
 		file.close();
-		file = SPIFFS.open("/menuorg.txt", "r");
+		file = FFat.open("/menuorg.txt", "r");
 		if(menu_level>=3)
 		{
 			i=0;
@@ -456,9 +603,15 @@ public:
 		tft.fillRect(250, 10, 20, 20, TFT_BLUE);
 	}
 	
+	void draw_warning(String txt)
+	{
+		//spr.fillRect(60, 20, 160, 120, TFT_BLUE);
+	    spr.drawString(txt, SCREEN_WIDTH/2-20, 70, 4);
+	}
+	
 	void draw_centered(int height, String txt, int size)
 	{
-		if(size==BIGCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*8, height, size);
+		if(size==BIGCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*7-3, height, size);
 		if(size==SMALLCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*4, height, size);
 	}
 	
@@ -500,8 +653,18 @@ public:
 	
 	void midi_learn()
 	{
+		Serial.println("midi_learn");
 	  spr.fillRect(60, 20, 160, 120, TFT_BLUE);
-	  spr.drawString("MIDI LEARN", SCREEN_WIDTH/2-105, 110, 4);
+	  spr.drawString("MIDI LEARN", SCREEN_WIDTH/2-75, 70, 4);
+	}
+	
+	void midi_learned(int num)
+	{
+		Serial.println("midi_learned");
+	  spr.fillRect(60, 20, 160, 120, TFT_BLUE);
+	  String aff = String(num);
+		aff = "CC " + aff;
+	  spr.drawString(aff, SCREEN_WIDTH/2-75, 70, 4);
 	}
 
 	
@@ -572,8 +735,8 @@ public:
       {
         //int point1=32 - sine[i<<4]*28;
         //int point2=32 - sine[(i+1)<<4]*28;
-        int point1=120 - *(wavefo+(i*5))*200;
-        int point2=120 - *(wavefo+((i+1)*5))*200;
+        int point1=120 - *(wavefo+(i*5))*80;
+        int point2=120 - *(wavefo+((i+1)*5))*80;
         if(i==0) point1=120;
         if(i==borne-2) point2=120;
         int dist = point2-point1;
@@ -603,6 +766,47 @@ public:
       spr.drawFastVLine(borne+40, 40 , 80, TFT_DARKGREY);
 	}
 	
+	void draw_wave(int16_t *wavefile, int startind, int samplength, int sampstart, int sampend)
+	{
+		Serial.println("draw_wave");
+		int indinc = samplength/200;
+		int borne=200;
+		spr.fillRect(40+sampstart*200/127, 20, borne-(sampend+sampstart)*200/127, 120,  TFT_DARKGREY);
+      for(int i=0; i<200; i++)
+      {
+        //int point1=32 - sine[i<<4]*28;
+        //int point2=32 - sine[(i+1)<<4]*28;
+        int point1=120 - *(wavefile+startind+(i*indinc))/512;
+        int point2=120 - *(wavefile+startind+((i+1)*indinc))/512;
+        if(i==0) point1=120;
+        if(i==borne-2) point2=120;
+        int dist = point2-point1;
+        /*if(dist>0) tft.drawFastVLine(point1, 32+i,dist, TFT_WHITE);
+        if(dist<0) tft.drawFastVLine(point2, 32+i,-dist, TFT_WHITE);
+        if(dist==0) tft.drawFastVLine(point1, 32+i,1, TFT_WHITE);*/
+        if(point1<120)
+        {
+          spr.drawFastVLine(40+i,point1-40 ,120-point1, TFT_DARKGREEN);
+        }
+        else
+        {
+          spr.drawFastVLine(40+i,80 ,point1-120, TFT_DARKGREEN);
+        }
+        if(dist>0) {
+          spr.drawFastVLine(40+i,point1-40 ,dist, TFT_GREEN);   
+        }
+        if(dist<0) {
+          spr.drawFastVLine(40+i,point2-40 ,-dist, TFT_GREEN);
+          //tft.drawFastVLine(40+i,point1 ,110-point1, 0x00B0);
+        }
+        if(dist==0) spr.drawFastVLine(40+i,point1-40 ,1, TFT_GREEN);
+      }
+      //tft.drawFastHLine(40, 120,200, TFT_GREEN);
+      spr.drawFastVLine(40+sampstart*200/127, 20 , 120, TFT_RED);
+      spr.drawFastVLine(borne+40-sampend*200/127, 20 , 120, TFT_RED);
+	}
+
+#ifndef HAMMOND	
 	void draw_waveform_osc(OscMonoPoly os, int num)
     {
       int borne=SAMPLES_PER_CYCLE/5;
@@ -626,8 +830,8 @@ public:
 			 }
 			//int point1=32 - sine[i<<4]*28;
 			//int point2=32 - sine[(i+1)<<4]*28;
-			int point1=120 - os.wave[num][i1]*200;
-			int point2=120 - os.wave[num][i2]*200;
+			int point1=120 - os.wave[num][i1]*80;
+			int point2=120 - os.wave[num][i2]*80;
 			if(i==0) point1=120;
 			if(i==borne-2) point2=120;
 			int dist = point2-point1;
@@ -678,6 +882,7 @@ public:
 		}
 		else draw_waveform(os.wave[num]);
 	}
+#endif
 	
 	void compute_filter_curve(float res)
 	{
@@ -688,7 +893,7 @@ public:
 	  for(int i=0; i<20; i++) cur[i] = 99+40*((i*2+curve)*(i*2+curve)-curve*curve)/((40+curve)*(40+curve)-curve*curve);
 	}
 	
-	void draw_filter(float freq, float res)
+	void draw_filter(float freq, float res, float mode)
 	{
 		for(int i=1; i<10; i++)
 		{
@@ -701,8 +906,8 @@ public:
 		spr.drawString("1000", 100, 140, SMALLCHAR);
 		spr.drawString("10000", 180, 140, SMALLCHAR);
 		float freqcal = log10(freq)*80-160; 
-	  //if(param_filter_mode[0]==1)
-	  //{
+	  if(mode==1)
+	  {
 		spr.drawFastHLine(40, 60,freqcal, TFT_GREEN);
 		spr.drawFastHLine(40, 59,freqcal, TFT_GREEN);
 		spr.drawFastHLine(40, 61,freqcal, TFT_GREEN);
@@ -712,50 +917,69 @@ public:
 		for(int i=0; i<40; i++) {spr.drawFastVLine(freqcal+40+i,59-(float)peak_filt[i*2]/q2 ,3, TFT_GREEN);}
 		for(int i=0; i<20; i++) {spr.drawFastVLine(freqcal+i+80,cur[i]-40,3, TFT_GREEN);}
 		spr.drawFastVLine(freqcal+20,90 ,13, TFT_BLACK);
-	  //}
-	  /*if(param_filter_mode[0]==2)
+	  }
+	  /*if(mode==2)
 	  {
 		for(int i=0; i<40; i++) spr.drawFastVLine(40+f3.freq_save+i,(i-20)*(i-20)/10+60 ,3, TFT_GREEN);
 	  }
-	  if(param_filter_mode[0]==3)
+	  if(mode==3)
 	  {
 		for(int i=0; i<40; i++) spr.drawFastVLine(40+f3.freq_save+i,(i-20)*(i-20)/10+60 ,3, TFT_GREEN);
-	  }
-	  if(param_filter_mode[0]==4)
+	  }*/
+	  if(mode==2)
 	  {    
-		float q2 = 1+exp((127.0-(float)param_filter_res[0])/12.0)/400.0;
+		float q2 = 1+exp((127.0-res)/12.0)/400.0;
 		float curve = 100/(q2*q2);
 		//for(int i=0; i<20; i++) tft.drawFastVLine(40+i+param_filter_freq[0],99+40*(((20-i)*2+curve)*((20-i)*2+curve)-curve*curve)/((40+curve)*(40+curve)-curve*curve),3, TFT_GREEN);
-		for(int i=0; i<20; i++) spr.drawFastVLine(40+i+f3.freq_save,cur[i]-40,3, TFT_GREEN);
-		for(int i=0; i<40; i++) spr.drawFastVLine(60+i+f3.freq_save,59-(float)peak_filt[80-i*2]/q2 ,3, TFT_GREEN);
+		for(int i=0; i<20; i++) spr.drawFastVLine(40+i+freqcal,cur[20-i]-40,3, TFT_GREEN);
+		for(int i=0; i<40; i++) spr.drawFastVLine(60+i+freqcal,59-(float)peak_filt[80-i*2]/q2 ,3, TFT_GREEN);
 		
-		spr.drawFastHLine(100+f3.freq_save, 60,140-f3.freq_save, TFT_GREEN);
-		spr.drawFastHLine(100+f3.freq_save, 59,140-f3.freq_save, TFT_GREEN);
-		spr.drawFastHLine(100+f3.freq_save, 61,140-f3.freq_save, TFT_GREEN); 
+		spr.drawFastHLine(100+freqcal, 60,140-freqcal, TFT_GREEN);
+		spr.drawFastHLine(100+freqcal, 59,140-freqcal, TFT_GREEN);
+		spr.drawFastHLine(100+freqcal, 61,140-freqcal, TFT_GREEN); 
 	  }
 	  spr.drawFastVLine(40, 40 , 60, TFT_DARKGREY);
-	  spr.drawFastHLine(40, 100 , 200, TFT_DARKGREY);*/
+	  spr.drawFastHLine(40, 100 , 200, TFT_DARKGREY);
 	}
 	
 	void display_list(int ls, int x, int y, int larg)
 	{
 		Serial.println("display_list");
+		Serial.println(ls);
+		Serial.println(x);
 	  int max_line = 8;
+	  int start_line=0;
+	  if(ls>(max_line-1)) start_line=ls-max_line+1;
+	  Serial.println(start_line);
+	  
 	  //uint8_t a = detect_button();
+	  
+	  if(list_size > max_line)
+	  {
+		tft.fillRect(x+larg/2-10, y+20*max_line+2, 20, 20, 0x5ACB);
+		tft.fillRect(x+larg/2-10, y-12, 20, 20, TFT_BLACK);
+	  }
+	  
 	  for(int i=0; i<list_size && i<max_line; i++)
 	  {
 		uint16_t line_color = 0xF800;
-		if(i==ls) line_color = 0x0A80;
+		if(i==(ls-start_line)) line_color = 0x0A80;
 		tft.fillRect(x, y+i*20, larg, 20, line_color);
 		tft.drawRect(x, y+i*20, larg, 20, TFT_WHITE);
 		tft.setTextColor(TFT_WHITE);
-		tft.drawString(list_text[i], x+5, y+2+i*20, 2);
+		tft.drawString(list_text[i+start_line], x+5, y+2+i*20, 2);
 		//tft.drawNumber(a, 50, 32+i*20,2);
 	  }
-	  if(list_size>max_line)
+	  
+	  if((list_size-start_line) > max_line)
 	  {
 		tft.fillTriangle(x+larg/2-10,y+20*max_line+2, x+larg/2+10,y+20*max_line+2, x+larg/2,y+20*max_line+12,TFT_RED);
 		tft.drawTriangle(x+larg/2-10,y+20*max_line+2, x+larg/2+10,y+20*max_line+2, x+larg/2,y+20*max_line+12,TFT_WHITE);
+	  }
+	  if(start_line>0)
+	  {
+		tft.fillTriangle(x+larg/2-10,y-2, x+larg/2+10,y-2, x+larg/2,y-12,TFT_RED);
+		tft.drawTriangle(x+larg/2-10,y-2, x+larg/2+10,y-2, x+larg/2,y-12,TFT_WHITE);
 	  }
 	}
 	
@@ -766,7 +990,7 @@ public:
 	  fs::File bmpFS;
 
 	  // Open requested file on SD card
-	  bmpFS = SPIFFS.open(filename, "r");
+	  bmpFS = FFat.open(filename, "r");
 
 	  if (!bmpFS)
 	  {

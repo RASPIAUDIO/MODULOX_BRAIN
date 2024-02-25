@@ -3,9 +3,20 @@
 #define oscfloat_h
 
 #include <arduino.h>
+#include <envfloat.h>
+#include "FFat.h"
 
+int16_t *waveformTab;
+
+#define WAVEFORM_NUMBER 128
+#define WAVEFORM_SIZE 1024
+
+#ifndef NUM_OSC
 #define NUM_OSC 3  // Change this to change the number of oscillators per voice
+#endif
+#ifndef UNI_MAX
 #define UNI_MAX 8  // Change this to change the max number of oscillators added on unisson mode
+#endif
 
 // Can adjust the Sample rate
 #define SAMPLE_RATE 44100.0 
@@ -16,6 +27,71 @@
 #define TICKS_PER_CYCLE (float)((float)SAMPLES_PER_CYCLE/(float)SAMPLE_RATE)
 
 int count2=0;
+
+void wavef_init()
+{
+  for(int fn=0; fn<44; fn++)
+  {
+    String nu = "/wavef" + String(fn+1) + ".wav";
+    fs::File file = FFat.open(nu, "r");
+    Serial.println(nu);
+
+    if(!file || file.isDirectory()){
+        Serial.println("- failed to open file for reading");
+        return;
+    }
+    
+    int i=0;
+    int wav_size=0;
+    int chan_num=0;
+    int smp_rate=0;
+    int bps=0;
+    int find_data=0;
+    int ind_data=10000;
+    int n=0;
+    
+    while(file.available()){
+      char val=file.read();
+      if(i==0) Serial.write(val);
+      if(i==1) Serial.write(val);
+      if(i==2) Serial.write(val);
+      if(i==3) Serial.write(val);
+      if(i==4) wav_size+=val;
+      if(i==5) wav_size+=val*256;
+      if(i==22) chan_num+=val;
+      if(i==23) chan_num+=val*256;
+      if(i==24) smp_rate+=val;
+      if(i==25) smp_rate+=val*256;
+      if(i==26) smp_rate+=val*65536;
+      if(i==27) smp_rate+=val*16777216;
+      if(i==34) bps+=val;
+      if(i==35) bps+=val*256;
+      if(i<200)
+      {
+        if(val==0x64 && find_data==0) find_data=1;
+        if(val==0x61 && find_data==1) find_data=2;
+        if(val==0x74 && find_data==2) find_data=3;
+        if(val==0x61 && find_data==3) {ind_data=i+5;find_data=0;}
+      }
+      if(i>=(ind_data))
+      {
+        if(chan_num==1 && i%2==0) waveformTab[n+fn*1024]=val&0xFF;
+        if(chan_num==1 && i%2==1) {waveformTab[n+fn*1024]|=((int)val<<8)&0xFF00; waveformTab[n+fn*1024]=waveformTab[n+fn*1024]; n++;}
+        if(fn<=1 && i%2==1) {Serial.print((n-1)+fn*1024); Serial.print(" : "); Serial.println((int)waveformTab[(n-1)+fn*1024]);}
+      }
+      i++;
+    }
+    Serial.println("waveformat");
+    Serial.println(n);
+    Serial.println(wav_size);
+    Serial.println(chan_num);
+    Serial.println(smp_rate);
+    Serial.println(bps);
+    Serial.println(ind_data);
+    
+    file.close();
+  }
+}
 
 // This class represents a voice of synth. It can have several oscillators
 class OscMonoPoly
@@ -94,7 +170,8 @@ public:
 // initialize the synth. Here you can put your default values.   
 	void init()
 	{
-		
+		waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
+		wavef_init();
 		polyphony=false;
 		unisson=1;
 		pol=1;
@@ -135,7 +212,7 @@ public:
 			for(int j=0; j<(int)SAMPLES_PER_CYCLE; j++)
 			{
 				//wave[i][j]=waveformTab[j];
-				wave[i][j]=(float)waveformTab[j]/65536.0;
+				wave[i][j]=(float)waveformTab[j]/32768.0;
 			}
 			setPWM(i, 0);
 			fact1[i]=1;
@@ -205,8 +282,8 @@ public:
 // If we are in glide mode and the synth is not playing, we have to compute the glide increment (= glide speed)	
 // We do not have to change the frequency value, it's the glide increment which will change it
 		bool ret=true;
-		//Serial.println("SetNote");
-		//Serial.println(note);
+		Serial.println("SetNote");
+		Serial.println(note);
 		int note2=128;
 		bool playmono=false;
 	    current_step=0;
@@ -526,7 +603,7 @@ public:
 	 for(int i=0; i<SAMPLES_PER_CYCLE; i++)
 	 {
 		 //Serial.println(waveformTab[i+val*1024]);
-		 wave[num][i]=(float)waveformTab[i+val*1024]/65536.0;
+		 wave[num][i]=(float)waveformTab[i+val*1024]/32768.0;
 	 }
    }
    
@@ -746,6 +823,7 @@ public:
 				 }
 			 }
 		 }
+		 //Serial.println(phase_accu[0][0][0]);
    }
    
    void set_pitch_lfo(float val)
@@ -773,6 +851,16 @@ public:
 			 }
 		 }
 	  }
+   }
+   
+   void set_pitch_lfo(uint8_t num, float val)
+   {
+	   float va=0.75+val*0.5;
+	 for(int j=0; j<pol; j++)
+	 {
+		phase_inc[num][j][0] = phase_inc_save[num][j][0]*va ; 
+	 }
+
    }
    
    void compute_detune(int val)
@@ -850,7 +938,9 @@ public:
 		for(int j=0; j<pol; j++)
 		{
 			//voldesc=0.0;
+			
 			float volenv=env[j].amount()*volglb[j];
+			//Serial.println(volenv);
 			if(!env[j].started && play[j]) {play[j]=false; notepressed[j].isplaying=false; Serial.print("end env : "); Serial.println(j);}
 
 
@@ -921,6 +1011,7 @@ public:
 		 //voldesc=4;
 		/*if(voldesc<1.0) voldesc=1.0;
 			return (ret/voldesc);*/
+			//Serial.println(ret*voldesc);
 			return (ret*voldesc);
 		//return wave[0][(int)phase_accu[0][0][0]];
 	}
