@@ -1,0 +1,25 @@
+Preset
+no
+Select algo
+no
+Velocity
+operator
+attack
+operator
+Decay1
+operator
+Decay2
+operator
+Decay level
+operator
+Release
+operator
+Enveloppe max
+operator
+Feedback
+operator
+Multiplicator
+operator
+Detune
+operator
+#end
