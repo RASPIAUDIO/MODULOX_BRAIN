@@ -11,13 +11,13 @@
  * a uart compatible signal
  */
 
-inline void Midi_NoteOn(uint8_t note, uint8_t vol)
+inline void Midi_NoteOn(uint8_t chan, uint8_t note, uint8_t vol)
 {
   Serial.println("Midi_NoteOn"); 
   FmSynth_NoteOn(0, note, vol/127.0);
 }
 
-inline void Midi_NoteOff(uint8_t note)
+inline void Midi_NoteOff(uint8_t chan, uint8_t note)
 {
   Serial.println("Midi_NoteOff");
   FmSynth_NoteOff(0, note);
@@ -53,16 +53,16 @@ inline void HandleShortMsg(uint8_t *data)
         
         if (data[2] > 0)
         {
-          Midi_NoteOn(data[1],data[2]);
+          Midi_NoteOn(ch, data[1],data[2]);
         }
         else
         {
-          Midi_NoteOff(data[1]);
+          Midi_NoteOff(ch, data[1]);
         }
         break;
     /* note off */
     case 0x80:
-        Midi_NoteOff(data[1]);
+        Midi_NoteOff(ch, data[1]);
         break;
     case 0xb0:
         Midi_ControlChange(ch, data[1], data[2]);
