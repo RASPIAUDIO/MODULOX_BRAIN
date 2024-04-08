@@ -216,17 +216,24 @@ void load_preset()
   Serial.println(aff);
   fs::File file = FFat.open(aff, "r");
   Serial.println(file.name());
-  for(int i=1; i<128; i++)
-  {
-	
-    param_midi[i] = file.read();
-	Serial.println(param_midi[i]);
+  if(!file){
+        Serial.println("- failed to open file");
+        return;
   }
-  for(int i=1; i<128; i++)
+  else
   {
-	
-    param_focus[i] = file.read();
-	Serial.println(param_focus[i]);
+	  for(int i=1; i<128; i++)
+	  {
+		
+	    param_midi[i] = file.read();
+		Serial.println(param_midi[i]);
+	  }
+	  for(int i=1; i<128; i++)
+	  {
+		
+	    param_focus[i] = file.read();
+		Serial.println(param_focus[i]);
+	  }
   }
   file.close();
   Serial.println("file closed");
