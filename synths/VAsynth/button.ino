@@ -1,5 +1,11 @@
+void enco_pressed()
+{
+  if(param_displayed != 0 && param_displayed!=64 && param_displayed!=65) learn_midi();
+}
+
 void but_mid_pressed()
 {
+  Serial.println("but mid");
   if(param_displayed==64 && enco_focus==3) 
   {
     audio_start=false; 

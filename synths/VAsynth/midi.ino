@@ -27,6 +27,8 @@ inline void Midi_NoteOff(uint8_t chan, uint8_t note)
   Serial.println(current_synth);
   Serial.println(note);
     oscA[current_synth].setNote(note, 0);
+    if(env[0][current_synth].dest>0) env[0][current_synth].stop(); 
+    if(env[1][current_synth].dest>0) env[1][current_synth].stop();
 }
 
 

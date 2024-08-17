@@ -27,6 +27,8 @@ void display_menu();
 void display_param();
 void change_enco(int sens);
 void but_mid_pressed();
+void enco_pressed();
+void learn_midi();
 
 static uint16_t WM8960_REG_VAL[56] =
 {
@@ -271,6 +273,24 @@ bool i2s_write_sample_32ch2(uint32_t sample)
     {
         return false;
     }
+}
+
+String midi_note(int notein)
+{
+	String noteStr;
+	if(notein%12==0) noteStr = "C";
+	if(notein%12==1) noteStr = "C#";
+	if(notein%12==2) noteStr = "D";
+	if(notein%12==3) noteStr = "D#";
+	if(notein%12==4) noteStr = "E";
+	if(notein%12==5) noteStr = "F";
+	if(notein%12==6) noteStr = "F#";
+	if(notein%12==7) noteStr = "G";
+	if(notein%12==8) noteStr = "G#";
+	if(notein%12==9) noteStr = "A";
+	if(notein%12==10) noteStr = "Bb";
+	if(notein%12==11) noteStr = "B";
+	return (noteStr + String((notein/12)-2));
 }
 
 
@@ -652,7 +672,7 @@ bool i2s_write_stereo_samples_buff(int16_t *fl_sample, int16_t *fr_sample)
       int16_t ch[2];
   } sampleDataU[SAMPLE_BUFFER_SIZE];
   
-  if(fl_sample[0]>0) Serial.println(fl_sample[0]);
+  //if(fl_sample[0]>0) Serial.println(fl_sample[0]);
 
   for (int n = 0; n < SAMPLE_BUFFER_SIZE; n++)
     {
@@ -937,7 +957,7 @@ void enco_turned()
    uint8_t result = r.process();
    if(result) 
    {
-      Serial.println("enco");
+      //Serial.println("enco");
       int passed=millis()-passed2;
       //Serial.println(passed);
       if(enco_focus!=-1)
@@ -999,8 +1019,9 @@ void button_pressed()
 		  Serial.println(param_displayed);
 		  if(param_displayed>=num_title) param_displayed=num_title-1;
 		  Serial.println(param_displayed);
+		  display_param();
           display_menu();
-          display_param();
+          
        }
       if(enco_focus==-1)
       {
@@ -1010,8 +1031,9 @@ void button_pressed()
             enco_focus=0;
             param_displayed=disppar;
             disp.clear();
+			display_param();
             display_menu();
-            display_param();
+            
           }
           else
           {
@@ -1041,8 +1063,9 @@ void button_pressed()
       { 
           param_displayed -= 1;
           if(param_displayed<0) param_displayed=0;
+		  display_param();
           display_menu();
-          display_param();
+          
       }
     }
   
@@ -1053,8 +1076,9 @@ void button_pressed()
       {
 		but_mid_pressed();
         enco_focus=0;
+		display_param();
         display_menu();
-        display_param();
+        
       }
       else
       {
@@ -1081,8 +1105,9 @@ void button_pressed()
         //menu_level=0;
         enco_focus=-1;
         disp.clear();
+		display_param();
         display_menu();
-        display_param();
+        
         disp.menu_hierarchy();      
       }
       else
@@ -1094,26 +1119,33 @@ void button_pressed()
     }
     if(testbut==4) 
     {
-		Serial.println("but4");
-      if(!midi_learn)
-      {
-        disp.midi_learn();
-		disp.display_window();
-        midi_learn=true;
-		i2s_stop(i2s_num);
-		delay(200);
-		i2s_start(i2s_num);
-      }
-      else
-      {
-        display_menu();
-        display_param();
-        midi_learn=false;
-		i2s_stop(i2s_num);
-		delay(200);
-		i2s_start(i2s_num);
-      }
+	  Serial.println("but4");
+	  enco_pressed();
+      
     }
+}
+
+void learn_midi()
+{
+	Serial.println("learn midi");
+	if(!midi_learn)
+	{
+		disp.midi_learn();
+		disp.display_window();
+		midi_learn=true;
+		i2s_stop(i2s_num);
+		delay(200);
+		i2s_start(i2s_num);
+	}
+	else
+	{
+		display_menu();
+		display_param();
+		midi_learn=false;
+		i2s_stop(i2s_num);
+		delay(200);
+		i2s_start(i2s_num);
+	}
 }
 
 #endif

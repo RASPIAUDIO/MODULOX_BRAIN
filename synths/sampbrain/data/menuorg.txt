@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 -Sample
 //@load
 //@Start
@@ -6,7 +5,7 @@
 //@Pitch
 //@Chan
 //@Note
--Global effects
+-Effects
 //Disto
 ***@Gain
 //Filter
@@ -14,9 +13,9 @@
 ***@Res
 //Delay
 ***@Time
-***@Feedback
-//Compressor
-***@threshold
+***@Fdbck
+//Comp
+***@thresh
 ***@attack
 ***@release
 ***@ratio
@@ -27,31 +26,3 @@
 //@Load
 //@Save
 #end
-=======
--Sample edit
-//@Sample load
-//@Start
-//@End
-//@Pitch
-//@Chan Trigger
-//@Note Trigger
--Global effects
-//Disto
-***@Disto Gain
-//Filter
-***@Filter Freq
-***@Filter Res
-//Delay
-***@Delay Time
-***@Delay Feedback
-//Compressor
-***@Compressor threshold
-***@Compressor attack
-***@Compressor release
-***@Compressor ratio
-***@Compressor view
-//Phaser
--Setup
-//@WIFI loader
-#end
->>>>>>> 3f108c17e47d93957904758919e19cda62807ba8

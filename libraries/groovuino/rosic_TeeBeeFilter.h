@@ -91,7 +91,9 @@ class TeeBeeFilter
     inline void SetCutoff(float newCutoff, bool updateCoefficients)
 	{
 	  //newCutoff=(newCutoff*80.0f)+200.0f;
-	  newCutoff=pow(10.0, ((newCutoff+5.0)/25.0f))+200.0f;
+	  //newCutoff=pow(10.0, ((newCutoff+5.0)/25.0f))+200.0f;
+	  //newCutoff=midi_pitches[(int)newCutoff]/2+40.0f;
+	  newCutoff= 100.0f  * pow(2, (newCutoff / 12.0));
 	  if ( newCutoff != cutoff )
 	  {
 		if ( newCutoff < 200.0f ) // an absolute floor for the cutoff frequency - tweakable

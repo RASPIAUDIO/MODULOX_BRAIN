@@ -513,7 +513,12 @@ public:
 
    void compute_notes()
 	 {
+		 Serial.println("compute notes");
 		 int ind=0;
+		 Serial.print("arpmode : ");
+		 Serial.println(arpmode);
+		 Serial.print("arpstep : ");
+		 Serial.println(arpstep);
 		 // UP
 		 if(arpmode==0)
 		 {
@@ -521,7 +526,7 @@ public:
 			 {
 				 int i=0;
 				 while(notepressed[i].on)
-			   {
+			     {
 					 note_to_play[ind]=notepressed[i].pitch+12*j;
 					 i++;
 					 ind++;
@@ -542,9 +547,11 @@ public:
 				 }
 
 			 }
+			 int totind=ind;
 			 for(int j=arpstep-1; j>=0; j--)
 			 {
-				 int i=0;
+				 int i=totind/arpstep-1;
+				 if(j==arpstep-1 && i>0) i--;
 			 	 while(i>0)
 				 {
 					 note_to_play[ind]=notepressed[i].pitch+12*j;
@@ -571,6 +578,7 @@ public:
 			}
 		}
 		nb_note_to_play=ind;
+		Serial.println(nb_note_to_play);
 	}
 
 // Set the volume of one oscillator
@@ -776,6 +784,7 @@ public:
 			 int tim = millis()-previous_step;
 			 if(tim>(step_time*arprate)) 
 			 {
+				 Serial.println(tim);
 				 if(arpgate<127)
 				 {
 					 for(int i=0; i<NUM_OSC; i++)

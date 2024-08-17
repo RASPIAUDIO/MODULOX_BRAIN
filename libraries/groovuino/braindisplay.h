@@ -10,6 +10,12 @@
 #include <TFT_eSPI.h>
 #include "FS.h"
 #include "FFat.h"
+#include "NotoSansBold15.h"
+#include "NotoSansBold36.h"
+#include "NotoSansMonoSCB20.h"
+#define AA_FONT_SMALL NotoSansBold15
+#define AA_FONT_LARGE NotoSansMonoSCB20
+#define AA_FONT_HUGE NotoSansBold36
 //#include <oschammond.h>
 
 #ifdef HAMMOND
@@ -61,12 +67,13 @@ public:
 		valida=true;
 		tft.init();
 		tft.setRotation(3);
+		tft.loadFont(AA_FONT_SMALL);	
+		tft.setTextColor(TFT_WHITE, 0x5ACB);
 		for(int i=0; i<10; i++)
 		  {
 			list_text[i]="";
 		  }
 		menu_level=0;
-		compute_filter_curve(10);
 	}
 	
 	void display_top()
@@ -108,8 +115,8 @@ public:
 		//Serial.println(volaudio);
 		
 		spr.fillRect(200, 20, 40, 105,  TFT_BLACK);
-		spr.fillRect(200, 120-volaudio*100.0, 20, volaudio*100+5,  TFT_RED);
-		spr.fillRect(220, 20, 20, (1.0-volcomp)*100.0+5,  TFT_BLUE);
+		spr.fillRect(90, 120-volaudio*100.0, 40, volaudio*100+5,  TFT_BLUE);
+		spr.fillRect(140, 20, 40, (1.0-volcomp)*100.0+5,  TFT_RED);
 	}
 	
 	void menu_top(int titlenum, int bcol=0x5ACB)
@@ -277,7 +284,7 @@ public:
 				list_size=i-1;
 				ret=list_size-1;
 				
-				display_list(listselnum,90,60,100);
+				display_list(listselnum,0,10,100);
 			}
 		}
 		file.close();
@@ -292,7 +299,8 @@ public:
 		Serial.println(numwifi);
 		for(int i=0; i<numwifi; i++) 
 		{
-			spr.drawString(array[i], 30, 10+i*20, 2);
+			//spr.drawString(array[i], 30, 10+i*20, 2);
+			draw_free(30, 10+i*20, array[i], SMALLCHAR);
 		}
 	}
 	
@@ -304,9 +312,7 @@ public:
 		File root = FFat.open("/");
 		File file = root.openNextFile();
 		int filenumber=0;
-		int page = index/7;
-		int place = index%7;
-		spr.fillRect(0, 10+20*place, 20, 20, TFT_RED);
+		
 		while(file){
 			if(!file.isDirectory()){
 				String filetemp=file.name();
@@ -320,38 +326,49 @@ public:
 			file = root.openNextFile();
 			
 		}
+		if(index>filenumber-1) index=filenumber-1;
+		int page = index/7;
+		int place = index%7;
+		spr.fillRect(0, 10+20*place, 20, 20, TFT_RED);
 		Serial.println(filenumber);
 		int endfile;
 		if(filenumber<(page+1)*7) endfile = filenumber;
 		else endfile = (page+1)*7;
 		for(int i=page*7; i<endfile; i++) 
 		{
-			spr.drawString(filelist[i], 30, 10+(i-page*7)*20, 2);
+			draw_free(30, 10+(i-page*7)*20, filelist[i], SMALLCHAR);
+			//spr.drawString(filelist[i], 30, 10+(i-page*7)*20, 2);
 		}
 		file.close();
 		root.close();
+			
+		spr.fillRect(200, 50, 70, 60,  0x5ACB);
+		draw_free(210, 60, "press", SMALLCHAR);
+		draw_free(210, 80, "to load", SMALLCHAR);
 		return filelist[index];
 	}
 	
 	void draw_validate()
 	{
 		Serial.println("draw_validate");
-		//if(i==ls) line_color = 0x0A80;
 		tft.fillRect(80, 80, 120, 20, 0xF800);
 		tft.drawRect(80, 80, 120, 20, TFT_WHITE);
 		tft.setTextColor(TFT_WHITE);
-		tft.drawString("Are you sure ?", 110, 82, 2);
+		draw_free(110, 82, "Are you sure ?", SMALLCHAR);
+		//tft.drawString("Are you sure ?", 110, 82, 2);
 		
 		if(valida) tft.fillRect(80, 100, 60, 20, 0x0A80);
 		else tft.fillRect(80, 100, 60, 20, 0xF800);
 		tft.drawRect(80, 100, 60, 20, TFT_WHITE);
 		tft.setTextColor(TFT_WHITE);
-		tft.drawString("Yes", 100, 102, 2);
+		draw_free(100, 102, "Yes", SMALLCHAR);
+		//tft.drawString("Yes", 100, 102, 2);
 		if(valida) tft.fillRect(140, 100, 60, 20, 0xF800);
 		else tft.fillRect(140, 100, 60, 20, 0x0A80);
 		tft.drawRect(140, 100, 60, 20, TFT_WHITE);
 		tft.setTextColor(TFT_WHITE);
-		tft.drawString("No", 160, 102, 2);
+		draw_free(160, 102, "No", SMALLCHAR);
+		//tft.drawString("No", 160, 102, 2);
 	}
 	
 	void change_menu_select(int _sens)
@@ -589,8 +606,11 @@ public:
 	void cpu_usage(int cpu)
 	{
 		String aff = String(cpu/6) + " %";
-        tft.fillRect(SCREEN_WIDTH/2+100, 0, 40, 40,  0x5ACF);
-        tft.drawString(aff, SCREEN_WIDTH/2+100, 10, 2);
+        tft.fillRect(SCREEN_WIDTH/2+100, 0, 40, 39,  0x5ACB);
+        //tft.drawString(aff, SCREEN_WIDTH/2+100, 10, 2);
+		
+		tft.setCursor(SCREEN_WIDTH/2+100, 10);	
+		tft.println(aff);
 	}
 	
 	void tempo_on()
@@ -605,43 +625,84 @@ public:
 	
 	void draw_warning(String txt)
 	{
-		//spr.fillRect(60, 20, 160, 120, TFT_BLUE);
-	    spr.drawString(txt, SCREEN_WIDTH/2-20, 70, 4);
+		spr.fillRect(60, 20, 160, 120, TFT_RED);
+		draw_centered(70, txt, SMALLCHAR);
+	    //spr.drawString(txt, SCREEN_WIDTH/2-20, 70, 4);
 	}
 	
 	void draw_centered(int height, String txt, int size)
 	{
-		if(size==BIGCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*7-3, height, size);
-		if(size==SMALLCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*4, height, size);
+		//if(size==BIGCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*7-3, height, size);
+		//if(size==SMALLCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*4, height, size);
+		spr.setTextColor(TFT_WHITE, TFT_BLACK);
+		if(size==BIGCHAR)
+		{
+			spr.loadFont(AA_FONT_HUGE);
+			int textWidth = spr.textWidth(txt);
+			spr.setCursor(SCREEN_WIDTH/2-textWidth/2, height);	
+		}
+		if(size==SMALLCHAR)
+		{
+			spr.loadFont(AA_FONT_SMALL);
+			int textWidth = spr.textWidth(txt);
+			spr.setCursor(SCREEN_WIDTH/2-textWidth/2, height);
+		}
+		spr.println(txt);
+	}
+	
+	void draw_free(int absc, int height, String txt, int size)
+	{
+		//if(size==BIGCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*7-3, height, size);
+		//if(size==SMALLCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*4, height, size);
+		spr.setTextColor(TFT_WHITE, TFT_BLACK);
+		if(size==BIGCHAR)
+		{
+			spr.loadFont(AA_FONT_HUGE);
+			spr.setCursor(absc, height);	
+		}
+		if(size==SMALLCHAR)
+		{
+			spr.loadFont(AA_FONT_SMALL);
+			spr.setCursor(absc, height);
+		}
+		spr.println(txt);
 	}
 	
 	void draw_title(String txt)
 	{
-		sprt.drawString(txt, SCREEN_WIDTH/2-txt.length()*7, 10, BIGCHAR);
+		sprt.loadFont(AA_FONT_LARGE);
+		sprt.setCursor(SCREEN_WIDTH/2-txt.length()*6, 10);	
+		sprt.setTextColor(TFT_WHITE, 0x5ACB);
+		sprt.println(txt);
+		//sprt.drawString(txt, SCREEN_WIDTH/2-txt.length()*7, 10, BIGCHAR);
 	}
 	
 	void draw_bottom_menu(String txt)
 	{
-		sprt.drawString(txt, SCREEN_WIDTH/2-txt.length()*4, 10, SMALLCHAR);
+		sprt.loadFont(AA_FONT_SMALL);
+		sprt.setCursor(SCREEN_WIDTH/2-txt.length()*4, 10);	
+		sprt.setTextColor(TFT_WHITE, 0x5ACB);
+		sprt.println(txt);
+		//sprt.drawString(txt, SCREEN_WIDTH/2-txt.length()*4, 10, SMALLCHAR);
 	}
 	
 	void draw_string_center(String txt)
 	{
-		draw_centered(90, txt, BIGCHAR);
+		draw_centered(60, txt, BIGCHAR);
 	}
 	
 	void draw_string_number_center(String txt, int num)
 	{
 		String aff = String(num);
 		aff = txt + aff;
-		draw_centered(90, aff, BIGCHAR);
+		draw_centered(60, aff, BIGCHAR);
 	}
 	
 	void draw_number_string_center(int num, String txt)
 	{
 		String aff = String(num);
 		aff = aff+txt;
-		draw_centered(90, aff, BIGCHAR);
+		draw_centered(60, aff, BIGCHAR);
 	}
 	
 	void draw_number_string_low(int num, String txt)
@@ -884,14 +945,6 @@ public:
 	}
 #endif
 	
-	void compute_filter_curve(float res)
-	{
-	  float q2 = 1+exp((127.0-res)/12.0)/400.0;
-	  float curve = 100/(q2*q2);
-	  //if(param_filter_mode[0]==1) for(int i=0; i<20; i++) cur[i] = 99+40*((i*2+curve)*(i*2+curve)-curve*curve)/((40+curve)*(40+curve)-curve*curve);
-	  //if(param_filter_mode[0]==4) for(int i=0; i<20; i++) cur[i] = 99+40*(((20-i)*2+curve)*((20-i)*2+curve)-curve*curve)/((40+curve)*(40+curve)-curve*curve);
-	  for(int i=0; i<20; i++) cur[i] = 99+40*((i*2+curve)*(i*2+curve)-curve*curve)/((40+curve)*(40+curve)-curve*curve);
-	}
 	
 	void draw_filter(float freq, float res, float mode)
 	{
@@ -902,44 +955,58 @@ public:
 		}
 		spr.drawFastVLine(log10(10000)*80-120,40,100,TFT_DARKGREY);
 		spr.drawFastVLine(log10(20000)*80-120,40,100,TFT_DARKGREY);
-		spr.drawString("100 Hz", 30, 140, SMALLCHAR);
-		spr.drawString("1000", 100, 140, SMALLCHAR);
-		spr.drawString("10000", 180, 140, SMALLCHAR);
-		float freqcal = log10(freq)*80-160; 
-	  if(mode==1)
-	  {
-		spr.drawFastHLine(40, 60,freqcal, TFT_GREEN);
-		spr.drawFastHLine(40, 59,freqcal, TFT_GREEN);
-		spr.drawFastHLine(40, 61,freqcal, TFT_GREEN);
-		float q2 = 1+exp((127.0-res)/12.0)/400.0;
-		float curve = 100/(q2*q2);
-		//spr.drawFastVLine(freqcal+40,54-(float)peak_filt[0]/q2 ,13, TFT_BLACK);
-		for(int i=0; i<40; i++) {spr.drawFastVLine(freqcal+40+i,59-(float)peak_filt[i*2]/q2 ,3, TFT_GREEN);}
-		for(int i=0; i<20; i++) {spr.drawFastVLine(freqcal+i+80,cur[i]-40,3, TFT_GREEN);}
-		spr.drawFastVLine(freqcal+20,90 ,13, TFT_BLACK);
-	  }
-	  /*if(mode==2)
-	  {
-		for(int i=0; i<40; i++) spr.drawFastVLine(40+f3.freq_save+i,(i-20)*(i-20)/10+60 ,3, TFT_GREEN);
-	  }
-	  if(mode==3)
-	  {
-		for(int i=0; i<40; i++) spr.drawFastVLine(40+f3.freq_save+i,(i-20)*(i-20)/10+60 ,3, TFT_GREEN);
-	  }*/
-	  if(mode==2)
-	  {    
-		float q2 = 1+exp((127.0-res)/12.0)/400.0;
-		float curve = 100/(q2*q2);
-		//for(int i=0; i<20; i++) tft.drawFastVLine(40+i+param_filter_freq[0],99+40*(((20-i)*2+curve)*((20-i)*2+curve)-curve*curve)/((40+curve)*(40+curve)-curve*curve),3, TFT_GREEN);
-		for(int i=0; i<20; i++) spr.drawFastVLine(40+i+freqcal,cur[20-i]-40,3, TFT_GREEN);
-		for(int i=0; i<40; i++) spr.drawFastVLine(60+i+freqcal,59-(float)peak_filt[80-i*2]/q2 ,3, TFT_GREEN);
+		draw_free(30, 140, "100 Hz", SMALLCHAR);
+		//spr.drawString("100 Hz", 30, 140, SMALLCHAR);
+		draw_free(100, 140, "1000", SMALLCHAR);
+		//spr.drawString("1000", 100, 140, SMALLCHAR);
+		draw_free(180, 140, "10000", SMALLCHAR);
+		int startx=10;
+		int starty=40;
+		int r1=50;
+		int r2=8;
+		float res2=res/2;
+
+		int pente=20;
+
+		int longu=100;
+		float freqcal = log10(freq)*80-160-r1*sin(res2*0.0174); 
+		if(mode==1) freqcal = log10(freq)*80-160-r1*sin(res2*0.0174); 
+		if(mode==2) freqcal = 200-(log10(freq)*80-160)-r1*sin(res2*0.0174); 
 		
-		spr.drawFastHLine(100+freqcal, 60,140-freqcal, TFT_GREEN);
-		spr.drawFastHLine(100+freqcal, 59,140-freqcal, TFT_GREEN);
-		spr.drawFastHLine(100+freqcal, 61,140-freqcal, TFT_GREEN); 
-	  }
-	  spr.drawFastVLine(40, 40 , 60, TFT_DARKGREY);
-	  spr.drawFastHLine(40, 100 , 200, TFT_DARKGREY);
+		float C1x=startx+freqcal;
+        float C1y= starty-r1;
+		
+		float C2x=C1x+(r1+r2)*sin(res2*0.0174);
+		float C2y=C1y+cos(res2*0.0174)*(r1+r2);
+		
+        float Px=C2x+cos(-pente*0.0174)*r2;
+		float Py=C2y+sin(-pente*0.0174)*r2;
+ 
+		float P2x=Px+sin(pente*0.0174)*longu;
+		float P2y=Py+cos(pente*0.0174)*longu+(1-cos(res2*0.0174))*r1;
+ 
+		if(mode==1)
+		{
+			spr.drawFastHLine(startx,starty,freqcal,TFT_GREEN);
+			if(res2>0.5) spr.drawSmoothArc(C1x, C1y, r1, r1, 360-res2, 360, TFT_GREEN, TFT_BLACK, false);
+			spr.drawSmoothArc(C2x, C2y, r2, r2, 180-res2, 270-pente, TFT_GREEN, TFT_BLACK, false);
+			spr.drawLine(Px, Py, P2x,P2y,TFT_GREEN);
+		}
+		if(mode==2)
+		{
+			spr.drawFastHLine(280-startx-freqcal,starty,280-startx,TFT_GREEN);
+			if(res2>0.5) spr.drawSmoothArc(280-C1x, C1y, r1, r1, 0, res2, TFT_GREEN, TFT_BLACK, false);
+			spr.drawSmoothArc(280-C2x, C2y, r2, r2, 90+pente, 180+res2, TFT_GREEN, TFT_BLACK, false);
+			spr.drawLine(280-Px, Py, 280-P2x,P2y,TFT_GREEN);
+		}	
+		if(mode==3)
+		{
+			spr.drawSmoothArc(C2x, C2y, r2, r2, 90+pente, 270-pente, TFT_GREEN, TFT_BLACK, false);
+			spr.drawLine(Px, Py, P2x,P2y,TFT_GREEN);
+			spr.drawLine(Px-2*r2, Py, 2*Px-P2x-2*r2,P2y,TFT_GREEN);
+		}
+		spr.drawFastVLine(40, 40 , 60, TFT_DARKGREY);
+	    spr.drawFastHLine(40, 100 , 200, TFT_DARKGREY);
 	}
 	
 	void display_list(int ls, int x, int y, int larg)
@@ -947,6 +1014,8 @@ public:
 		Serial.println("display_list");
 		Serial.println(ls);
 		Serial.println(x);
+		Serial.println(list_size);
+		Serial.println(list_text[0]);
 	  int max_line = 8;
 	  int start_line=0;
 	  if(ls>(max_line-1)) start_line=ls-max_line+1;
@@ -956,31 +1025,33 @@ public:
 	  
 	  if(list_size > max_line)
 	  {
-		tft.fillRect(x+larg/2-10, y+20*max_line+2, 20, 20, 0x5ACB);
-		tft.fillRect(x+larg/2-10, y-12, 20, 20, TFT_BLACK);
+		spr.fillRect(x+larg/2-10, y+20*max_line+2, 20, 20, 0x5ACB);
+		spr.fillRect(x+larg/2-10, y-12, 20, 20, TFT_BLACK);
 	  }
 	  
 	  for(int i=0; i<list_size && i<max_line; i++)
 	  {
 		uint16_t line_color = 0xF800;
 		if(i==(ls-start_line)) line_color = 0x0A80;
-		tft.fillRect(x, y+i*20, larg, 20, line_color);
-		tft.drawRect(x, y+i*20, larg, 20, TFT_WHITE);
-		tft.setTextColor(TFT_WHITE);
-		tft.drawString(list_text[i+start_line], x+5, y+2+i*20, 2);
+		spr.fillRect(x, y+i*20, larg, 20, line_color);
+		spr.drawRect(x, y+i*20, larg, 20, TFT_WHITE);
+		//spr.setTextColor(TFT_WHITE);
+		//tft.drawString(list_text[i+start_line], x+5, y+2+i*20, 2);
 		//tft.drawNumber(a, 50, 32+i*20,2);
+		draw_free(x+5, y+2+i*20, list_text[i+start_line], SMALLCHAR);
 	  }
 	  
 	  if((list_size-start_line) > max_line)
 	  {
-		tft.fillTriangle(x+larg/2-10,y+20*max_line+2, x+larg/2+10,y+20*max_line+2, x+larg/2,y+20*max_line+12,TFT_RED);
-		tft.drawTriangle(x+larg/2-10,y+20*max_line+2, x+larg/2+10,y+20*max_line+2, x+larg/2,y+20*max_line+12,TFT_WHITE);
+		spr.fillTriangle(x+larg/2-10,y+20*max_line+2, x+larg/2+10,y+20*max_line+2, x+larg/2,y+20*max_line+12,TFT_RED);
+		spr.drawTriangle(x+larg/2-10,y+20*max_line+2, x+larg/2+10,y+20*max_line+2, x+larg/2,y+20*max_line+12,TFT_WHITE);
 	  }
 	  if(start_line>0)
 	  {
-		tft.fillTriangle(x+larg/2-10,y-2, x+larg/2+10,y-2, x+larg/2,y-12,TFT_RED);
-		tft.drawTriangle(x+larg/2-10,y-2, x+larg/2+10,y-2, x+larg/2,y-12,TFT_WHITE);
+		spr.fillTriangle(x+larg/2-10,y-2, x+larg/2+10,y-2, x+larg/2,y-12,TFT_RED);
+		spr.drawTriangle(x+larg/2-10,y-2, x+larg/2+10,y-2, x+larg/2,y-12,TFT_WHITE);
 	  }
+	  display_window();
 	}
 	
 	void drawBmp(const char *filename, int16_t x, int16_t y) {
@@ -1050,6 +1121,81 @@ public:
 			tft.pushImage(x, y--, w, 1, (uint16_t*)lineBuffer);
 		  }
 		  tft.setSwapBytes(oldSwapBytes);
+		  Serial.print("Loaded in "); Serial.print(millis() - startTime);
+		  Serial.println(" ms");
+		//}
+		//else Serial.println("BMP format not recognized.");
+	  }
+	  bmpFS.close();
+	}
+	
+	void drawBmpParam(const char *filename, int16_t x, int16_t y) {
+
+	  if ((x >= spr.width()) || (y >= spr.height())) return;
+
+	  fs::File bmpFS;
+
+	  // Open requested file on SD card
+	  bmpFS = FFat.open(filename, "r");
+
+	  if (!bmpFS)
+	  {
+		Serial.print("File not found");
+		return;
+	  }
+
+	  uint32_t seekOffset;
+	  uint16_t w, h, row, col;
+	  uint8_t  r, g, b;
+
+	  uint32_t startTime = millis();
+
+	  uint16_t fir = read16(bmpFS);
+	  Serial.println(fir&0x000F);
+	  Serial.println((fir&0x00F0)>>4);
+	  Serial.println((fir&0x0F00)>>8);
+	  Serial.println((fir&0xF000)>>12);
+
+	  //if (fir == 0x4D42)
+	  //{
+		Serial.println("OK");
+		read32(bmpFS);
+		read32(bmpFS);
+		seekOffset = read32(bmpFS);
+		read32(bmpFS);
+		w = read32(bmpFS);
+		h = read32(bmpFS);
+
+		if ((read16(bmpFS) == 1) && (read16(bmpFS) == 24) && (read32(bmpFS) == 0))
+		{
+		  y += h - 1;
+
+		  bool oldSwapBytes = spr.getSwapBytes();
+		  spr.setSwapBytes(true);
+		  bmpFS.seek(seekOffset);
+
+		  uint16_t padding = (4 - ((w * 3) & 3)) & 3;
+		  uint8_t lineBuffer[w * 3 + padding];
+
+		  for (row = 0; row < h; row++) {
+			
+			bmpFS.read(lineBuffer, sizeof(lineBuffer));
+			uint8_t*  bptr = lineBuffer;
+			uint16_t* tptr = (uint16_t*)lineBuffer;
+			// Convert 24 to 16 bit colours
+			for (uint16_t col = 0; col < w; col++)
+			{
+			  b = *bptr++;
+			  g = *bptr++;
+			  r = *bptr++;
+			  *tptr++ = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+			}
+
+			// Push the pixel row to screen, pushImage will crop the line if needed
+			// y is decremented as the BMP image is drawn bottom up
+			spr.pushImage(x, y--, w, 1, (uint16_t*)lineBuffer);
+		  }
+		  spr.setSwapBytes(oldSwapBytes);
 		  Serial.print("Loaded in "); Serial.print(millis() - startTime);
 		  Serial.println(" ms");
 		//}

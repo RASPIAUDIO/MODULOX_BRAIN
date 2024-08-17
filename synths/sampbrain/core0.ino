@@ -11,7 +11,7 @@ Serial.println("core 0");
   disp.display_window();
   disp.clear();
 
-  savenum=1;
+  //savenum=1;
   load_preset_sampler();
   param_focus[0]=0;
 
@@ -31,7 +31,7 @@ Serial.println("core 0");
       
     }
 
-    if(param_displayed == 15) 
+    if(param_displayed == 16) 
     {
       disp.display_compressor(comp.cmax, comp.duty);
       disp.display_window();

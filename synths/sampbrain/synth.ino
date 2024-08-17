@@ -1,5 +1,6 @@
 void Synth_Init()
 {
+  Serial.println("Synth_Init");
   smp.init();
   /*smp.load_file("/kick01.wav",0,0);
   smp.load_file("/snare01.wav",1,1);
@@ -47,7 +48,7 @@ inline void Synth_Process(int16_t *left, int16_t *right)
     if(disto_on) out_l = disto.out(out_l);
     else out_l=fast_tanh(out_l);
     if(filter_on) out_l = filter.Process(out_l); 
-    if(delay_on) out_l+=delay_output(out_l)*param_midi[9]/127;
+    if(delay_on) out_l+=delay_output(out_l)*param_midi[10]/127;
     if(comp_on) out_l=comp.out(out_l);
     //if(phaser_on) out_l=phaser.ProcessSample(out_l);
     out_l=fast_tanh(out_l);

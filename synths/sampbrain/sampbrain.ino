@@ -1,3 +1,5 @@
+bool stopaudio = false;
+
 #include <modubrain.h>
 #include <samplerfloat.h>
 #include <lfofloat.h>
@@ -44,6 +46,7 @@ bool wifi_found=false;
 
 uint8_t chan_voice[MAX_SAMPLE_NUM];
 uint8_t note_voice[MAX_SAMPLE_NUM];
+uint8_t vol_voice[MAX_SAMPLE_NUM];
 
 bool wifiload=false;
 bool wifijustload=false;
@@ -52,6 +55,7 @@ bool wifijustunload=false;
 bool wifi_connected=false;
 
 int previous_wifi_mode=0;
+
 
 
 
@@ -90,12 +94,16 @@ void setup() {
   delay(2000);
   modubrainInit();
   disto.set_gain(10);
-  param_focus[16]=2;
+  param_focus[17]=2;
 }
 
 void loop() {
-  Midi_Process();  
-  if(param_focus[16]==0) improvSerial.handleSerial();
-  if(param_focus[16]==1) wifi_listener();
-  if(param_focus[16]==2) modubrainProcess();
+  if(stopaudio) delay(10);
+  else
+  {
+    Midi_Process();  
+    if(param_focus[17]==0) improvSerial.handleSerial();
+    if(param_focus[17]==1) wifi_listener();
+    if(param_focus[17]==2) modubrainProcess();
+  }
 }

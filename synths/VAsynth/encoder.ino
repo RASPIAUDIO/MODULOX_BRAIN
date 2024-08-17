@@ -117,9 +117,9 @@ void param_action_focus(int num)
   Serial.println(filter_on[current_synth]);
   
   if(num==51) oscA[0].glideon=param_focus[num]%2;
-  if(num>=52 && num<=54) {
-    for(int i=48; i<=51; i++) param_focus[i]=param_focus[num];
-    oscA[0].arpon=param_focus[num]%2;
+  if(num>=52 && num<=56) {
+    for(int i=52; i<=56; i++) param_focus[i]=param_focus[num];
+    oscA[current_synth].arpon=param_focus[num]%2;
   }  
 }
 
@@ -149,7 +149,7 @@ void change_enco(int sens)
     //display_menu();
     disp.menu_bottom(param_displayed,param_focus[param_displayed]);
     disp.display_bottom();
-    disp.display_list(param_focus[param_displayed],90,60,100);
+    disp.display_list(param_focus[param_displayed],0,10,100);
   }
   if(enco_focus==3)
   {

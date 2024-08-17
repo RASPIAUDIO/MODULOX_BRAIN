@@ -4,7 +4,7 @@
 
 #include <arduino.h>
 #include <envfloat.h>
-#include "SPIFFS.h"
+#include "FFat.h"
 
 int16_t *waveformTab;
 
@@ -29,7 +29,7 @@ void wavef_init()
   for(int fn=0; fn<44; fn++)
   {
     String nu = "/wavef" + String(fn+1) + ".wav";
-    fs::File file = SPIFFS.open(nu, "r");
+    fs::File file = FFat.open(nu, "r");
     Serial.println(nu);
 
     if(!file || file.isDirectory()){

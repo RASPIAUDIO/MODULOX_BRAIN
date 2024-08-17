@@ -10,6 +10,8 @@ Sample Chan
 smpnum
 Sample Note
 smpnum
+Sample Volume
+smpnum
 Disto Gain
 onoff
 Filter Freq
@@ -18,17 +20,17 @@ Filter Res
 Filter Type
 Delay Time
 onoff
-Delay Feedback
+Delay Fdbck
 onoff
-Compressor threshold
+Comp thresh
 onoff
-Compressor attack
+Comp attack
 onoff
-Compressor release
+Comp release
 onoff
-Compressor ratio
+Comp ratio
 onoff
-Compressor view
+Comp view
 onoff
 Setup WIFI loader
 wifi

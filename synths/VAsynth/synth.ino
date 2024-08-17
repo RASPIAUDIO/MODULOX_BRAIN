@@ -33,13 +33,46 @@ float lfo1amount_prev[3][2]={{0,0},{0,0},{0,0}};
 
 void test_matrix(int desti, float amoun)
 {
-  if(desti==1) oscA[current_synth].set_pitch_lfo(amoun);
-  if(desti==2) volg=amoun;
-  if(desti==3) oscA[current_synth].setPWM(0, (int)(1+126.0*amoun));
-  if(desti==4) oscA[current_synth].setPWM(1, (int)(1+126.0*amoun));
-  if(desti==5) oscA[current_synth].setPWM(2, (int)(1+126.0*amoun));
-  if(desti==6) oscA[current_synth].setVolOsc(0, (int)(127.0*amoun));
-  if(desti==7) oscA[current_synth].setVolOsc(1, (int)(127.0*amoun));
+  if(desti==1) {
+    oscA[current_synth].set_pitch_lfo(amoun);
+    volg=1.0;
+  }
+  if(desti==2) 
+  {
+    volg=amoun;
+    oscA[current_synth].set_pitch_lfo(0.5);
+    oscA[current_synth].setPWM(0, param_midi[2]);
+  }
+  if(desti==3) 
+  {
+    oscA[current_synth].setPWM(0, (int)(1+126.0*amoun));
+    oscA[current_synth].setPWM(1, param_midi[7]);
+    volg=1.0;
+  }
+  if(desti==4) 
+  {
+    oscA[current_synth].setPWM(1, (int)(1+126.0*amoun));
+    oscA[current_synth].setPWM(0, param_midi[2]);
+    oscA[current_synth].setPWM(2, param_midi[12]);
+  }
+  if(desti==5) 
+  {
+    oscA[current_synth].setPWM(2, (int)(1+126.0*amoun));
+    oscA[current_synth].setVolOsc(0, param_midi[5]);
+    oscA[current_synth].setPWM(1, param_midi[7]);
+  }
+  if(desti==6) 
+  {
+    oscA[current_synth].setVolOsc(0, (int)(127.0*amoun));
+    oscA[current_synth].setPWM(2, param_midi[12]);
+    oscA[current_synth].setVolOsc(1, param_midi[10]);
+  }
+  if(desti==7) 
+  {
+    oscA[current_synth].setVolOsc(1, (int)(127.0*amoun));
+    oscA[current_synth].setVolOsc(0, param_midi[5]);
+    oscA[current_synth].setVolOsc(2, param_midi[15]);
+  }
   if(desti==8) oscA[current_synth].setVolOsc(2, (int)(127.0*amoun));
   if(desti==9) oscA[current_synth].set_pitch_lfo(0, amoun);
   if(desti==10) oscA[current_synth].set_pitch_lfo(1, amoun);
@@ -182,10 +215,11 @@ inline void Synth_Process(int16_t *left, int16_t *right)
   
     
     out_l=fast_tanh(out_l);
+    if(out_l>=0.95) Serial.println(out_l);
     out_r=out_l;
  
-    *left = 32767.0*out_l;
-    *right = 32767.0*out_r;
+    *left = 16383.0*out_l;
+    *right = 16383.0*out_r;
 
     
 }

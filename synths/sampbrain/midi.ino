@@ -17,10 +17,14 @@ inline void Midi_NoteOn(uint8_t chan, uint8_t note, uint8_t vol)
   Serial.println(chan);
   Serial.println(chan_voice[0]);
   Serial.println(note);
+  Serial.println(note_voice[0]);
   for(int i=0; i<MAX_SAMPLE_NUM; i++)
   {
-    if(chan==chan_voice[i] && note_voice[i]==0)  smp.sample_launch(i, vol,note);
-    if(chan==chan_voice[i] && note_voice[i]==note)  smp.sample_launch(i, vol);
+    int v = vol*vol_voice[i]/127;
+    //int v=64;
+    
+    if(chan==chan_voice[i] && note_voice[i]==0)  {smp.sample_launch(i,v ,note); Serial.println(v);}
+    if(chan==chan_voice[i] && note_voice[i]==note)  {smp.sample_launch(i, v, param_midi[3+7*i]); Serial.println(v);}
   }   
 }
 

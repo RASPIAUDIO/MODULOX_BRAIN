@@ -66,22 +66,24 @@ public:
   
   void setA(float val)
   {
-    envA = 0.2/(val*35+1);
+    envA = 0.1/(val*35+1);
   }
   
   void setD(float val)
   {
-    envD = 0.2*(1.0-envS)/(val*35+1);
+    envD = 0.1*(1.0-envS)/(val*35+1);
   }
   
   void setS(float val)
   {
     envS = val/127.0;
+	envD = 0.1*(1.0-envS)/(val*35+1);
+	envR = envS*0.1/(val*35+1);
   }
   
   void setR(float val)
   {
-    envR = envS*0.2/(val*35+1);
+    envR = envS*0.1/(val*35+1);
   }  
   
   float amount()
