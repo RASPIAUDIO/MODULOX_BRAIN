@@ -1,0 +1,39 @@
+Preset
+no
+Waveform
+no
+Osc 1 Vol
+no
+Osc 2 Vol
+no
+Osc 3 Vol
+no
+Osc 4 Vol
+no
+Osc 5 Vol
+no
+Osc 6 Vol
+no
+Osc 7 Vol
+no
+Osc 8 Vol
+no
+Osc 9 Vol
+no
+Vibrato strength
+no
+Vibrato speed
+no
+Env Attack
+no
+Env Decay
+no
+Env Sustain
+no
+Env Release
+no
+Base waveform
+no
+Setup WIFI loader
+wifi
+#end

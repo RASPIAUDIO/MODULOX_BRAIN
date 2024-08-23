@@ -1,0 +1,33 @@
+-Synth
+//Osc
+***@Waveform
+***@Volume1
+***@Volume2
+***@Volume3
+***@Volume4
+***@Volume5
+***@Volume6
+//Env
+***Env Vol
+++++@Attack
+++++@Decay
+++++@Sustain
+++++@Release
+***Env Filt
+++++@Attack
+++++@Decay
+++++@Sustain
+++++@Release
+//Organ
+***Tremolo
+++++@Speed
+++++@Amount
+-MIDI
+//@Global
+-Setup
+//@Sync
+//@MIDI
+//@Audio
+//@Save
+//@Load
+#end
