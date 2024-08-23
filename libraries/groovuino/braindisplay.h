@@ -89,6 +89,7 @@ public:
 	void display_window()
 	{
 		spr.pushSprite(0, 40);
+		Serial.println("display_window");
 	}
 	
 	void clear()
@@ -650,6 +651,17 @@ public:
 		spr.println(txt);
 	}
 	
+	void draw_string_number_center_red(String txt, int num)
+	{
+		String aff = String(num);
+		aff = txt + aff;
+		spr.setTextColor(TFT_RED, TFT_BLACK);
+		spr.loadFont(AA_FONT_HUGE);
+		int textWidth = spr.textWidth(aff);
+		spr.setCursor(SCREEN_WIDTH/2-textWidth/2, 60);
+		spr.println(aff);
+	}
+	
 	void draw_free(int absc, int height, String txt, int size)
 	{
 		//if(size==BIGCHAR) spr.drawString(txt, SCREEN_WIDTH/2-txt.length()*7-3, height, size);
@@ -715,17 +727,24 @@ public:
 	void midi_learn()
 	{
 		Serial.println("midi_learn");
-	  spr.fillRect(60, 20, 160, 120, TFT_BLUE);
-	  spr.drawString("MIDI LEARN", SCREEN_WIDTH/2-75, 70, 4);
+	  spr.fillRect(30, 20, 220, 110, TFT_BLUE);
+	  draw_centered(60, "MIDI LEARN", BIGCHAR);
+	  spr.fillRect(0, 130, 280, 30, TFT_BLACK);
+	  draw_centered(140, "Turn controler or Click encoder", SMALLCHAR);
+	  //spr.drawString("MIDI LEARN", 30, 70, 4);
 	}
 	
 	void midi_learned(int num)
 	{
 		Serial.println("midi_learned");
-	  spr.fillRect(60, 20, 160, 120, TFT_BLUE);
+	  spr.fillRect(30, 20, 220, 110, TFT_BLUE);
 	  String aff = String(num);
 		aff = "CC " + aff;
-	  spr.drawString(aff, SCREEN_WIDTH/2-75, 70, 4);
+	  //spr.drawString(aff, SCREEN_WIDTH/2-75, 70, 4);
+	  draw_centered(60, aff, BIGCHAR);
+	  spr.fillRect(0, 130, 280, 30, TFT_BLACK);
+	  draw_centered(140, "Click encoder to quit learn mode", SMALLCHAR);
+	  Serial.println("end midi_learned");
 	}
 
 	
