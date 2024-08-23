@@ -109,6 +109,7 @@ Adafruit_USBD_MIDI usb_midi;
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
 bool init_running = true;
+bool midi_changed=false;
 int savenum=1;
 
 Bdisplay disp;
@@ -134,10 +135,13 @@ bool pressed_4=false;
 bool pressed_5=false;
 
 int param_displayed = 0;
+int param_CC=0;
 int enco_focus=0;
 int time_enco=0;
 int target=0;
 int passed2=0;
+
+bool filefound=true;
 
 int param_focus_max;
 
@@ -186,11 +190,12 @@ int detect_button()
 
 void change_CC(int sens)
 {
-
-  param_midi[param_displayed]=sens;  
-  if(param_midi[param_displayed]>127) param_midi[param_displayed]=127;
-  if(param_midi[param_displayed]<0) param_midi[param_displayed]=0;
-  param_action(param_displayed);
+  Serial.println("change_CC");
+  Serial.println(param_CC);
+  param_midi[param_CC]=sens;  
+  if(param_midi[param_CC]>127) param_midi[param_CC]=127;
+  if(param_midi[param_CC]<0) param_midi[param_CC]=0;
+  
 }
 
 void init_synth_param()
@@ -218,24 +223,31 @@ void load_preset()
   Serial.println(aff);
   fs::File file = FFat.open(aff, "r");
   Serial.println(file.name());
-  for(int i=1; i<128; i++)
-  {
-	
-    param_midi[i] = file.read();
-	Serial.println(param_midi[i]);
+  if (!file) {
+	  filefound=false;
   }
-  for(int i=1; i<128; i++)
+  else
   {
-	
-    param_focus[i] = file.read();
-	Serial.println(param_focus[i]);
+	  filefound=true;
+	  for(int i=1; i<128; i++)
+	  {
+		
+		param_midi[i] = file.read();
+		Serial.println(param_midi[i]);
+	  }
+	  for(int i=1; i<128; i++)
+	  {
+		
+		param_focus[i] = file.read();
+		Serial.println(param_focus[i]);
+	  }
+	  file.close();
+	  Serial.println("file closed");
+	  init_synth_param();
+	  i2s_stop(i2s_num);
+	  delay(200);
+	  i2s_start(i2s_num);
   }
-  file.close();
-  Serial.println("file closed");
-  init_synth_param();
-  i2s_stop(i2s_num);
-  delay(200);
-  i2s_start(i2s_num);
 }
 
 void save_preset()
@@ -738,11 +750,13 @@ void USB_Midi_Process()
                 break;
 			case midi::ControlChange:
 				Midi_ControlChange(MIDI.getChannel(), MIDI.getData1(), MIDI.getData2());
+				
 				break;
             // See the online reference for other message types
             default:
                 break;
         }
+		
     }
 }
 
@@ -768,9 +782,8 @@ void Midi_Process()
 			uint8_t incomingByte = Serial2.read();
 			//Serial.println("read");
 
-	#ifdef DUMP_SERIAL2_TO_SERIAL
 			//Serial.printf("%02x", incomingByte);
-	#endif
+			//Serial.println("");
 			// ignore live messages 
 			if ((incomingByte & 0xF0) == 0xF0)
 			{
@@ -901,7 +914,7 @@ void modubrainInit()
   
   Serial.println("1 search");
   
-  //Midi_Setup();
+  Midi_Setup();
   Serial.println("midi setup");
   //MIDI.begin(MIDI_CHANNEL_OMNI);
 
