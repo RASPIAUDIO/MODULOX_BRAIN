@@ -3,12 +3,14 @@ int count5=0;
 void Core0Task(void *parameter)
 {
 Serial.println("core 0");
+Serial.println(digitalRead(0));
 
   core0_init();
-  
+  disp.init_buffer(22, 142);
 
   while (1)
   {
+    
     Sync_Process();
     enco_turned(); 
     button_pressed();
