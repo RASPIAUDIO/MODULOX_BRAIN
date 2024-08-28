@@ -32,8 +32,10 @@ Env Sustain
 no
 Env Release
 no
-Base waveform
+Attack Speed
 no
-Setup WIFI loader
-wifi
+Attack volume
+no
+Disto gain
+no
 #end
