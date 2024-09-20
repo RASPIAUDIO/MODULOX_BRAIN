@@ -146,6 +146,7 @@ bool filefound=true;
 int param_focus_max;
 
 int num_title;
+bool exclude_load=true;
 
 int detect_button()
 {
@@ -205,7 +206,9 @@ void init_synth_param()
   {
     Serial.println(i);
     Serial.println(param_midi[i]);
+	exclude_load=false;
     if(i!=64 && i!=65 && i!=63 && i!=67 && i!=68 && i!=0) param_action(i);
+	exclude_load=true;
   }
   for(int i=0; i<128; i++)
   {
@@ -231,7 +234,6 @@ void load_preset()
 	  filefound=true;
 	  for(int i=1; i<128; i++)
 	  {
-		
 		param_midi[i] = file.read();
 		Serial.println(param_midi[i]);
 	  }
@@ -355,8 +357,11 @@ void setup_i2s()
 
 void Midi_Setup()
 {
-    Serial2.begin(31250, SERIAL_8N1, RXD2, TXD2);
+	Serial.println("MIDI setup");
+    //Serial2.begin(31250, SERIAL_8N1, RXD2, TXD2);
+	Serial.println("Serial2 OK");
     pinMode(SYNCRX,INPUT_PULLDOWN);
+	Serial.println("Sync OK");
 }
 
 //-------------------CODEC SETUP
@@ -777,7 +782,7 @@ void Midi_Process()
 	
 		
 
-		if (Serial2.available())
+		/*if (Serial2.available())
 		{
 			uint8_t incomingByte = Serial2.read();
 			//Serial.println("read");
@@ -809,7 +814,7 @@ void Midi_Process()
 
 		  
 			inMsgWd = 0;
-		}
+		}*/
 		if(MIDI.read()) 
 		{
 		  switch(MIDI.getType())      // Get the type of the message we caught

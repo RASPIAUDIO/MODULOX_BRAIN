@@ -172,10 +172,9 @@ public:
 		volosc[6] = 0;
 		volosc[7] = 0;
 		volosc[8] = 0;
+		setWaveform(0);
 		for(int j=0; j<(int)SAMPLES_PER_CYCLE; j++)
 		{
-			wave[j]=(float)waveformTab[j]/65536.0;
-			waves_mix1[j]=wave[j]*volosc[0]+wave[(j*2)%1024]*volosc[1]+wave[(j*3)%1024]*volosc[2]+wave[(j*4)%1024]*volosc[3]+wave[(j*6)%1024]*volosc[4]+wave[(j*8)%1024]*volosc[5]+wave[(j*10)%1024]*volosc[6]+wave[(j*12)%1024]*volosc[7]+wave[(j*16)%1024]*volosc[8];
 			wave_accent[j]=wave[(j*6)%1024];
 		}
 		
@@ -304,6 +303,7 @@ public:
 		 }
    }
    
+   
 
 // Set the volume of one oscillator
    void setVolOsc(uint8_t num, int32_t vol)
@@ -344,10 +344,26 @@ public:
 // Set the waveform of one oscillator
    void setWaveform(uint8_t val)
    {
-	 for(int i=0; i<SAMPLES_PER_CYCLE; i++)
+	 if(wave_used) 
 	 {
-		 //Serial.println(waveformTab[i+val*1024]);
-		 wave[i]=(float)waveformTab[i+val*1024]/65536.0;
+		 for(int j=0; j<SAMPLES_PER_CYCLE; j++)
+		 {
+			 //Serial.println(waveformTab[i+val*1024]);
+			 wave[j]=(float)waveformTab[j+val*1024]/65536.0;
+			 waves_mix1[j]=wave[j]*volosc[0]+wave[(j*2)%1024]*volosc[1]+wave[(j*3)%1024]*volosc[2]+wave[(j*4)%1024]*volosc[3]+wave[(j*6)%1024]*volosc[4]+wave[(j*8)%1024]*volosc[5]+wave[(j*10)%1024]*volosc[6]+wave[(j*12)%1024]*volosc[7]+wave[(j*16)%1024]*volosc[8];
+
+		 }
+		 wave_used=false;
+	 }
+	 else
+	 {
+		 for(int j=0; j<SAMPLES_PER_CYCLE; j++)
+		 {
+			 //Serial.println(waveformTab[i+val*1024]);
+			wave[j]=(float)waveformTab[j+val*1024]/65536.0;
+			waves_mix2[j]=wave[j]*volosc[0]+wave[(j*2)%1024]*volosc[1]+wave[(j*3)%1024]*volosc[2]+wave[(j*4)%1024]*volosc[3]+wave[(j*6)%1024]*volosc[4]+wave[(j*8)%1024]*volosc[5]+wave[(j*10)%1024]*volosc[6]+wave[(j*12)%1024]*volosc[7]+wave[(j*16)%1024]*volosc[8];
+		 }
+		 wave_used=true;
 	 }
    }
 	 
@@ -447,7 +463,7 @@ public:
 			float volenv=env[j].amount()*volglb;
 			float volacc=env_accent[j].amount()*volglb*volaccent;
 			//if(j==0) Serial.println(volenv);
-			if(!env[j].started && play[j]) {play[j]=false; notepressed[j].isplaying=false; Serial.print("end env : "); Serial.println(j);}
+			if(!env[j].started && play[j]) {play[j]=false; notepressed[j].isplaying=false; }
 
     		if(wave_used) ret+=waves_mix2[(int)phase_accu[0][j]]*volenv;
 			else ret+=waves_mix1[(int)phase_accu[0][j]]*volenv;

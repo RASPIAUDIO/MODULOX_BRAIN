@@ -1,4 +1,4 @@
-#define DELAY_SAMPLES 80000
+#define DELAY_SAMPLES 60000
 
 float* samp_rec;
 int pos;
@@ -32,6 +32,6 @@ float delay_output(float input)
   float ret = samp_rec[pos];
   samp_rec[pos]=input+samp_rec[pos]*feedback;
   pos++;
-  if(pos>=DELAY_SAMPLES*deltime*deltime) pos=0;
+  if(pos>=DELAY_SAMPLES*deltime*deltime) {pos=0;}
   return ret;
 }

@@ -20,7 +20,7 @@ public:
 	void init()
 	{
 		//gain=2.0;
-		set_gain(0);
+		set_gain(1);
 		type=0;
 	}
 
