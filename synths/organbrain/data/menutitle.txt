@@ -1,0 +1,55 @@
+Preset
+no
+Wavef
+no
+Vol Osc1
+no
+Vol Osc2
+no
+Vol Osc3
+no
+Vol Osc4
+no
+Vol Osc5
+no
+Vol Osc6
+no
+Vol Osc7
+no
+Vol Osc8
+no
+Vol Osc9
+no
+Vibrato strength
+no
+Vibrato speed
+no
+Env Attack
+no
+Env Decay
+no
+Env Sustain
+no
+Env Release
+no
+Attack Speed
+no
+Attack Volume
+no
+Disto Gain
+onoff
+Delay Time
+onoff
+Delay Fdbck
+onoff
+Delay D/W
+onoff
+MIDI Global
+no
+Setup Audio
+no
+Setup Load
+validation
+Setup Save
+validation
+#end
