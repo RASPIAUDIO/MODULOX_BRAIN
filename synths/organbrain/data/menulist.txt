@@ -1,5 +1,0 @@
-/wifi
-Search wifi
-Load samples
-Wifi Off
-/End
