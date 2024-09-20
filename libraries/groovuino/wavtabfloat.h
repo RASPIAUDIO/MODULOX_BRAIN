@@ -1,18 +1,18 @@
 
-#ifndef oscfloat_h
-#define oscfloat_h
+#ifndef wavtabloat_h
+#define wavtabloat_h
 
 #include <arduino.h>
 #include <envfloat.h>
 #include "FFat.h"
 
-int16_t *waveformTab;
+int16_t *wavetabTab;
 
-#define WAVEFORM_NUMBER 128
+#define WAVEFORM_NUMBER 256
 #define WAVEFORM_SIZE 1024
 
 #ifndef NUM_OSC
-#define NUM_OSC 3  // Change this to change the number of oscillators per voice
+#define NUM_OSC 2  // Change this to change the number of oscillators per voice
 #endif
 #ifndef UNI_MAX
 #define UNI_MAX 8  // Change this to change the max number of oscillators added on unisson mode
@@ -30,9 +30,9 @@ int count2=0;
 
 void wavef_init()
 {
-  for(int fn=0; fn<44; fn++)
+  for(int fn=0; fn<1; fn++)
   {
-    String nu = "/wavef" + String(fn+1) + ".wav";
+    String nu = "/wavetab" + String(fn+1) + ".wav";
     fs::File file = FFat.open(nu, "r");
     Serial.println(nu);
 
@@ -75,9 +75,9 @@ void wavef_init()
       }
       if(i>=(ind_data))
       {
-        if(chan_num==1 && i%2==0) waveformTab[n+fn*1024]=val&0xFF;
-        if(chan_num==1 && i%2==1) {waveformTab[n+fn*1024]|=((int)val<<8)&0xFF00; waveformTab[n+fn*1024]=waveformTab[n+fn*1024]; n++;}
-        if(fn<=1 && i%2==1) {Serial.print((n-1)+fn*1024); Serial.print(" : "); Serial.println((int)waveformTab[(n-1)+fn*1024]);}
+        if(chan_num==1 && i%2==0) waveformTab[n+fn*WAVEFORM_NUMBER*WAVEFORM_SIZE]=val&0xFF;
+        if(chan_num==1 && i%2==1) {waveformTab[n+fn*WAVEFORM_NUMBER*WAVEFORM_SIZE]|=((int)val<<8)&0xFF00; waveformTab[n+fn*WAVEFORM_NUMBER*WAVEFORM_SIZE]=waveformTab[n+fn*WAVEFORM_NUMBER*WAVEFORM_SIZE]; n++;}
+        if(fn<=1 && i%2==1) {Serial.print((n-1)+fn*WAVEFORM_NUMBER*WAVEFORM_SIZE); Serial.print(" : "); Serial.println((int)waveformTab[(n-1)+fn*WAVEFORM_NUMBER*WAVEFORM_SIZE]);}
       }
       i++;
     }
@@ -258,6 +258,19 @@ public:
 	float compute_freq(int notefreq, int numosc)
 	{
 		return ((pow(2.0,((notefreq+12*octave[numosc])+(fine[numosc]/256)-69.0)/12.0)) * 440.0)*TICKS_PER_CYCLE;
+	}
+
+	float convertirOctetsEnFloat(byte octets[4]) {
+	  union {
+	    float valeurFloat;
+	    byte octetsFloat[4];
+	  } conversion;
+	
+	  for (int i = 0; i < 4; i++) {
+	    conversion.octetsFloat[i] = octets[i];
+	  }
+	
+	  return conversion.valeurFloat;
 	}
 	
 	void update_polyphony(uint8_t po)
