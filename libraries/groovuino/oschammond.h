@@ -26,7 +26,7 @@ int count2=0;
 
 void wavef_init()
 {
-  for(int fn=0; fn<44; fn++)
+  for(int fn=0; fn<4; fn++)
   {
     String nu = "/wavef" + String(fn+1) + ".wav";
     fs::File file = FFat.open(nu, "r");
@@ -72,7 +72,7 @@ void wavef_init()
       if(i>=(ind_data))
       {
         if(chan_num==1 && i%2==0) waveformTab[n+fn*1024]=val&0xFF;
-        if(chan_num==1 && i%2==1) {waveformTab[n+fn*1024]|=((int)val<<8)&0xFF00; waveformTab[n+fn*1024]=waveformTab[n+fn*1024]; n++;}
+        if(chan_num==1 && i%2==1) {waveformTab[n+fn*1024]|=((int)val<<8)&0xFF00; n++;}
         if(fn<=1 && i%2==1) {Serial.print((n-1)+fn*1024); Serial.print(" : "); Serial.println((int)waveformTab[(n-1)+fn*1024]);}
       }
       i++;
@@ -93,7 +93,7 @@ void wavef_init()
 class OscMonoPoly
 {
 public:
-	float volglb[8];                               // Volume global
+	float volglb;                               // Volume global
 	float volglbsave;                              // Volume global temporary save  
 	int32_t phase[NUM_OSC];
 	uint8_t waveform[NUM_OSC];                     // Waveform of each oscillator 
@@ -104,6 +104,7 @@ public:
 	uint8_t wavecnt;
 	int8_t octave[NUM_OSC];                        // Octave of each oscillator
 	float voldesc;
+	float volaccent;
 	float accent;
 
 //GLIDE
@@ -141,14 +142,18 @@ public:
 // initialize the synth. Here you can put your default values.   
 	void init()
 	{
+		Serial.println("hammond init");
 		waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
+		Serial.println("waveformTab OK");
 		wavef_init();
 		pol=4;
 		volglbsave = 0;
 		voldesc=0.5;
 		wavecnt=0;
 		wave_used=0;
-		accent=1.0;
+		volaccent=1.0;
+		
+		Serial.println("var OK");
  	 
 		for(int i=0; i<NUM_OSC; i++)
 		{
@@ -157,15 +162,6 @@ public:
 			Incrementfin[i] = 0;
 			octave[i] = 0;
 		}
-/*		volosc[0] = 0.4;
-		volosc[1] = 0.5;
-		volosc[2] = 0.35;
-		volosc[3] = 0.3;
-		volosc[4] = 0.2;
-		volosc[5] = 0.16;
-		volosc[6] = 0.15;
-		volosc[7] = 0.3;
-		volosc[8] = 0.15;*/
 		
 		volosc[0] = 0;
 		volosc[1] = 0.5;
@@ -182,6 +178,10 @@ public:
 			waves_mix1[j]=wave[j]*volosc[0]+wave[(j*2)%1024]*volosc[1]+wave[(j*3)%1024]*volosc[2]+wave[(j*4)%1024]*volosc[3]+wave[(j*6)%1024]*volosc[4]+wave[(j*8)%1024]*volosc[5]+wave[(j*10)%1024]*volosc[6]+wave[(j*12)%1024]*volosc[7]+wave[(j*16)%1024]*volosc[8];
 			wave_accent[j]=wave[(j*6)%1024];
 		}
+		
+		Serial.println("samples OK");
+		
+		volglb = 0.5;
 	
 		for(int i=0; i<8; i++)
 		{
@@ -195,7 +195,7 @@ public:
 			noteplaying[i] = 0;
 			play[i] = false;
 			midi_play[i] = false;
-			volglb[i] = 0.5;
+			
 			env[i].init();
 			env_accent[i].init();
 			env_accent[i].setA(5);
@@ -235,9 +235,10 @@ public:
 
 		 if(vol>0)
 		 {
+			 volglb = (float)vol/127.0;
 			 for(int i=0; i<8; i++)
 			 {
-				 if(!notepressed[i].isplaying)
+				 if(!play[i])
 				 {
 					 Serial.println("play note");
 					 Serial.println(i);
@@ -247,7 +248,7 @@ public:
 					 env[i].start();
 					 env_accent[i].start();
 					 play[i]=true;					 
-					 volglb[i] = (float)vol/127.0;
+					 
 					 for(int j=0; j<NUM_OSC; j++)
 					 {
 						 fFrequency[i] = compute_freq(note, j); 
@@ -358,6 +359,14 @@ public:
 			env[j].setA(val);
 		}
 	}
+	
+	void setenvAacc(uint32_t val)
+	{
+		for(int j=0; j<8; j++)
+		{
+			env_accent[j].setA(val);
+		}
+	}
 
 	void setenvD(uint32_t val)
 	{
@@ -382,6 +391,11 @@ public:
 			env[j].setR(val);
 		}
 	} 
+	
+	void setvolacc(uint32_t val)
+	{
+		volaccent=(float)val/127.0;
+	}
 
 // Compute the table position in the wavetable from increment values
    void next()
@@ -430,8 +444,8 @@ public:
 		{
 			//voldesc=0.0;
 			
-			float volenv=env[j].amount()*volglb[j];
-			float volacc=env_accent[j].amount()*volglb[j];
+			float volenv=env[j].amount()*volglb;
+			float volacc=env_accent[j].amount()*volglb*volaccent;
 			//if(j==0) Serial.println(volenv);
 			if(!env[j].started && play[j]) {play[j]=false; notepressed[j].isplaying=false; Serial.print("end env : "); Serial.println(j);}
 
