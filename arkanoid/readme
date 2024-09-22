@@ -1,1 +1,2 @@
-
+Used ESP32 board 2.0.14 in arduino IDE 2.3.2.
+Don't use most recent ESP32 board addon with arduino, there are some bugs.
