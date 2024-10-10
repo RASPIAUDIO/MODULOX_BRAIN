@@ -161,10 +161,10 @@ public:
 	int index_glob=0;
 	int name_num[MAX_SAMPLE_NUM];
 
-  int grain_start=0;
-  int grain_length=400;
-  float grain_env=0.5; //(0=square env, 1=triangle env)
-  float grain_index[10];
+        int grain_start=0;
+        int grain_length=400;
+        float grain_env=0.5; //(0=square env, 1=triangle env)
+        float grain_index[10];
   
 	
 	void init()
@@ -407,79 +407,93 @@ public:
 	  return true;
 	}
 
-int grain_start[num]=0;
-int grain_length=400;
-float grain_env=0.5; //(0=square env, 1=triangle env)
-float grain_speed=1.0;
-float grainenv[10];
+ typedef struct {
+  float start;
+  float position;
+  float amplitude;
+  float env;
+  bool active;
+} Grain;
+
+int grain_density=100;
+int grain_size;
+float grain_rate;
+int grain_env;
+
+float sample_pos;
+float sample_rate;
+float wait_for_grain=0;
+
+float time_new_grain;
   
   void init_grain()
   {
-    grain_env_rel=grain_length*grain_env/2;
-    grain_env_dec=grain_length-grain_length*grain_env/2;
+    grain_env_rel=grain_size*grain_env/2;
+    grain_env_dec=grain_size-grain_size*grain_env/2;
     float grain_env_inc=1/grain_env_rel;
+    time_new_grain = SAMPLE_RATE/grain_density;
   }
 
   float grain_read(int num)
 	{
 	  int16_t ret = 0;
-	  ret+=sample[grain_start[num] + int(grain_index[num])]*grainenv[num];
-	  grain_index[n]+=grain_speed;
-  	if(grain_index[num]<grain_env_rel) grainenv[num]+=grain_env_inc;
-    if(grain_index[num]>grain_env_dec) grainenv[num]-=grain_env_inc;
+	  ret+=sample[(int)(grains[num].position+grains[num].start)]*grainenv[num];
+	  grains[num].position+=grain_rate;
+	  if(grains[num].position>grain_size) grains[num].active=false;
+  	if(grains[num].position<grain_env_rel) grains[num].env += grain_env_inc;
+    if(grains[num].position>grain_env_dec) grains[num].env -= grain_env_inc;
 	
 	  //return (float)ret*0.0000305176;
 	  return (float)ret*0.000025;
 	}
 	
-	float sample_read()
+	float granulizer_read()
 	{
-	  int16_t ret = 0;
-	  for (int n = 0; n < MAX_SAMPLE_NUM; n++)
-	  {
-  		if(sample_playing[n] && sampenv[n]<(sample_volume[n])) 
-  		{
-  			sampenv[n]++;
-  		}
-  		if(!sample_playing[n] && sampenv[n]>0) 
-  		{
-  			sampenv[n]--;
-  		}
-  		if(sampenv[n]>0) 
-  		{
-  		  ret+=(sample[int(sample_index[n])]*(sampenv[n]))>>7;
-  		  //ret+=sample[sample_index[n]];
-  		  sample_index[n]+=sample_index_inc[n];
-  		  if(sample_index[n]>=(sample_end_index[n]-(param_end_sample[n]*sample_length[n]/127)))
-  		  {
-  			sample_playing[n]=0;
-  			sample_index[n]=sample_start_index[n]+(param_start_sample[n]*sample_length[n]/127);
-  			sampenv[n]=0;
-  		  }
-  		  //Serial.println(ret);
-  		}
-	  }
+		if(is_playing)
+		{
+		  int16_t ret = 0;
+		  for(int i=0; i<MAX_GRAIN_NUM; i++)
+		  {
+			  if(grains[i].active) ret+=grain_read(i);			  
+		  }
+		  sample_pos+=sample_rate;
+		  wait_for_grain+=1;
+		  if(wait_for_grain>time_new_grain)
+		  {
+			  wait_for_grain=0;
+			  for(int i=0; i<MAX_GRAIN_NUM; i++)
+			  {
+				  if(!grains[i].active) 
+				  {
+					  grains[i].active=true;
+					  grains[i].position=0;
+					  grains[i].start=sample_pos;
+					  break;
+				  }
+			  }
+		  }
+		}
 	  //return (float)ret*0.0000305176;
 	  return (float)ret*0.000025;
 	}
 	
-	void sample_stop(int smpnum)
+	void granulizer_stop(int smpnum)
 	{
 	  Serial.println("stop");
 	  Serial.println(smpnum);
-	  sample_playing[smpnum]=0;
-	  //sample_index[smpnum]=sample_start_index[smpnum]+(param_start_sample[smpnum]*sample_length[smpnum]/127);
+	  is_playing=false;
+		for(int i=0; i<MAX_GRAIN_NUM; i++)
+		{
+			grains[i].active=false;			  
+		}
 	}
 
-	void sample_launch(int smpnum, int vol)
+	void granulizer_launch(int smpnum, int vol)
 	{
 	  Serial.println("launch");
-	  sample_index_inc[smpnum]=1;
-	  sample_playing[smpnum]=1;
-	  sample_volume[smpnum]=vol;
-	  //sample_index[smpnum]=sample_start_index[smpnum];
-		sample_index[smpnum]=sample_start_index[smpnum]+(param_start_sample[smpnum]*sample_length[smpnum]/127);
-		sampenv[smpnum]=0;
+	  sample_pos=sample_start_index[smpnum];
+		wait_for_grain=0; 
+		is_playing=true;
 	}
 	
 	void sample_launch_raw(int smpnum, int vol)
