@@ -21,7 +21,6 @@ class TeeBeeFilter
 {
 
   public:
-
     /** Enumeration of the available filter modes. */
     enum modes
     {
@@ -293,6 +292,7 @@ class TeeBeeFilter
     inline void calculateCoefficientsApprox4()
 	{
 	  // calculate intermediate variables:
+	  
 	  float wc  = twoPiOverSampleRate * cutoff;
 	  float wc2 = wc * wc;
 	  float r   = resonanceSkewed;

@@ -14,9 +14,9 @@ public:
   float envS;
   float envR;
   
-  float valA;
+  //float valA;
   float valD;
-  float valS;
+  //float valS;
   float valR;
 
   float accu;
@@ -75,8 +75,11 @@ public:
   
   void setA(float val)
   {
+	  Serial.println("setA");
+	  Serial.println(val);
     envA = 0.1/(val*35+1);
-	valA=val;
+	Serial.println(envA);
+//	valA=val;
   }
   
   void setD(float val)
@@ -90,7 +93,7 @@ public:
     envS = val/127.0;
 	envD = 0.1*(1.0-envS)/(valD*35+1);
 	envR = envS*0.1/(valR*35+1);
-	valS=val;
+//	valS=val;
   }
   
   void setR(float val)

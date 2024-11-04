@@ -78,6 +78,7 @@ int count = 0;
 
 uint8_t param_midi[128];
 uint8_t param_focus[128];
+bool param_exclude[128];
 uint8_t midi_cc_val[128];
 
 boolean midi_learn=false;
@@ -207,9 +208,10 @@ void init_synth_param()
     Serial.println(i);
     Serial.println(param_midi[i]);
 	exclude_load=false;
-    if(i!=64 && i!=65 && i!=63 && i!=67 && i!=68 && i!=0) param_action(i);
+    if(!param_exclude[i]) param_action(i);
 	exclude_load=true;
   }
+  Serial.println("--focus--");
   for(int i=0; i<128; i++)
   {
     Serial.println(i);
@@ -232,16 +234,27 @@ void load_preset()
   else
   {
 	  filefound=true;
+	  Serial.println("--param--");
 	  for(int i=1; i<128; i++)
 	  {
-		param_midi[i] = file.read();
-		Serial.println(param_midi[i]);
+		if(!param_exclude[i]) 
+		{
+			param_midi[i] = file.read();
+			Serial.println(i);
+			Serial.println(param_midi[i]);
+		}
+		else file.read();
 	  }
+	  Serial.println("--focus--");
 	  for(int i=1; i<128; i++)
 	  {
-		
-		param_focus[i] = file.read();
-		Serial.println(param_focus[i]);
+		if(!param_exclude[i]) 
+		{
+			param_focus[i] = file.read();
+			Serial.println(i);
+			Serial.println(param_focus[i]);
+		}
+		else file.read();
 	  }
 	  file.close();
 	  Serial.println("file closed");
@@ -266,6 +279,7 @@ void save_preset()
   }
   for(int i=1; i<128; i++)
   {
+	Serial.println(i);
 	Serial.println(param_focus[i]);
     file.write(param_focus[i]);
   }
@@ -358,7 +372,7 @@ void setup_i2s()
 void Midi_Setup()
 {
 	Serial.println("MIDI setup");
-    //Serial2.begin(31250, SERIAL_8N1, RXD2, TXD2);
+    Serial2.begin(31250, SERIAL_8N1, RXD2, TXD2);
 	Serial.println("Serial2 OK");
     pinMode(SYNCRX,INPUT_PULLDOWN);
 	Serial.println("Sync OK");
@@ -782,9 +796,10 @@ void Midi_Process()
 	
 		
 
-		/*if (Serial2.available())
+		if (Serial2.available())
 		{
 			uint8_t incomingByte = Serial2.read();
+			Serial2.write(incomingByte);
 			//Serial.println("read");
 
 			//Serial.printf("%02x", incomingByte);
@@ -814,11 +829,12 @@ void Midi_Process()
 
 		  
 			inMsgWd = 0;
-		}*/
+		}
 		if(MIDI.read()) 
 		{
 		  switch(MIDI.getType())      // Get the type of the message we caught
 			{
+				
 				case midi::NoteOn:       // If it is a Note On,
 					Midi_NoteOn(MIDI.getChannel(),MIDI.getData1(),MIDI.getData2());  // blink the LED a number of times
 												// correponding to the program number
@@ -874,6 +890,7 @@ void modubrainInit()
   for(int i=0; i<128; i++)
   {
     midi_cc_val[i]=0;
+	param_exclude[i]=false;
   }
   
   Serial.println("1 Starting I2C codec comm");

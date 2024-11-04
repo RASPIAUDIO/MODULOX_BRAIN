@@ -386,8 +386,9 @@ public:
 		 }
 		 
 		 if(note2==129 ) {
-				 env[0].stop();
-				 midi_play[0]=false;
+			Serial.println("note2 129");
+			env[0].stop();
+			midi_play[0]=false;
 		 }
 		 if(note2<128 && (!glideon || (glideon && !midi_play[0])))
 		 {
@@ -457,6 +458,7 @@ public:
 				 {
 					 notepressed[i].on=false;
 					 notepressed[i].pitch=0;
+					 Serial.println("vol 0");
 					 env[i].stop();
 				 }
 			 }
@@ -828,6 +830,7 @@ public:
 			 {
 				 if(tim>time_stop && env[0].activated) 
 				 {
+					 Serial.println("time");
 					 env[0].stop();
 				 }
 			 }

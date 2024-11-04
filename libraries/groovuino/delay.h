@@ -1,5 +1,3 @@
-#define DELAY_SAMPLES 60000
-
 float* samp_rec;
 int pos;
 float feedback;
@@ -24,7 +22,9 @@ void set_feedback(int feed)
 
 void set_time(int ti)
 {
- deltime = ti/127.0;
+	Serial.print("set_time : ");
+	Serial.println(ti);
+    deltime = ti/127.0;
 }
 
 float delay_output(float input)
