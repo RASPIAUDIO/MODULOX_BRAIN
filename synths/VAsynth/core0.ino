@@ -40,6 +40,26 @@ void Core0Task(void *parameter)
       disp.cpu_usage(rec2);
       
     }
+
+    if(midi_changed)
+    {
+      if(midi_learn)
+      {
+        Serial.println("midi learning");
+        //dans Midi_ControlChange
+        disp.midi_learned(midi_cc_val[param_displayed]);
+        disp.display_window();
+        Serial.println("end CC");
+        midi_learn=false;
+      }
+      else
+      {
+        //dans change_CC
+        param_action(param_CC);
+        if(param_displayed==param_CC) display_param();
+      }
+      midi_changed=false;
+    }
     
     delay(1);
   }

@@ -1,102 +1,139 @@
 void param_action(int num)
 {
-  //Serial.println("param_action");
-  if(num==0) {
-    savenum=param_midi[num]%16; 
-    audio_start=false; 
-    delay(200);
-    load_preset();
-    delay(200);
-    audio_start=true;
-  }
-  if(num>0 && num<16)
+  Serial.print("param_action : ");
+  Serial.println(current_synth);
+  Serial.println(delay_on[1]);
+  
+  if(!param_exclude[num] || exclude_load) 
   {
-    int ind=(num-1)/5;
-    int tes=(num-1)%5;
-    if(tes == 0) oscA[0].setWaveform(ind, param_midi[num]/2);
-    if(tes == 1) oscA[0].setPWM(ind, param_midi[num]*100/127);
-    if(tes == 2) oscA[0].setFine(ind, ((int)param_midi[num]-64)*256 + param_midi[num+1]);
-    if(tes == 3) oscA[0].setFine(ind, ((int)param_midi[num-1]-64)*256 + param_midi[num]);
-    if(tes == 4) oscA[0].setVolOsc(ind, param_midi[num]);
+    if(num==0) {
+      savenum=param_midi[num]; 
+      audio_start=false; 
+      delay(200);
+      load_preset();
+      delay(200);
+      audio_start=true;
+    }
+    if(num>0 && num<16)
+    {
+      int ind=(num-1)/5;
+      int tes=(num-1)%5;
+      if(tes == 0) oscA[current_synth].setWaveform(ind, param_midi[num]/2);
+      if(tes == 1) {
+        oscA[current_synth].setPWM(ind, param_midi[num]*100/127);
+        synth2_lfo_pwm[ind][current_synth]=param_midi[num];
+      }
+      if(tes == 2) oscA[current_synth].setFine(ind, ((int)param_midi[num]-64)*256 + param_midi[num+1]);
+      if(tes == 3) oscA[current_synth].setFine(ind, ((int)param_midi[num-1]-64)*256 + param_midi[num]);
+      if(tes == 4) {
+        oscA[current_synth].setVolOsc(ind, param_midi[num]);
+        synth2_vol_osc[ind][current_synth]=param_midi[num];
+      }
+    }
+    
+    
+    
+    
+    if(num==16) oscA[current_synth].setenvA(param_midi[num]);
+    if(num==17) oscA[current_synth].setenvD(param_midi[num]);
+    if(num==18) oscA[current_synth].setenvS(param_midi[num]);
+    if(num==19) oscA[current_synth].setenvR(param_midi[num]);
+    if(num==20) {
+      env[0][current_synth].dest=param_midi[num]%16;
+      change_matrix(env[0][current_synth].dest, current_synth);
+    }
+    if(num==21) env[0][current_synth].setA(param_midi[num]);
+    if(num==22) env[0][current_synth].setD(param_midi[num]);
+    if(num==23) env[0][current_synth].setS(param_midi[num]);
+    if(num==24) env[0][current_synth].setR(param_midi[num]);
+    if(num==25) {
+      env[1][current_synth].dest=param_midi[num]%16;
+      change_matrix(env[1][current_synth].dest, current_synth);
+    }
+    if(num==26) env[1][current_synth].setA(param_midi[num]);
+    if(num==27) env[1][current_synth].setD(param_midi[num]);
+    if(num==28) env[1][current_synth].setS(param_midi[num]);
+    if(num==29) env[1][current_synth].setR(param_midi[num]);
+    if(num>=30 && num<=44)
+    {
+      int ind=(num-30)/5;
+      int tes=(num-30)%5;
+      if(tes == 0) {
+        lfo[ind][current_synth].dest=param_midi[num]%16;
+        change_matrix(lfo[ind][current_synth].dest, current_synth);
+      }
+      if(tes == 1) lfo[ind][current_synth].setWaveform(param_midi[num]%3);
+      if(tes == 2) lfo[ind][current_synth].setfreq((float)param_midi[num]*(float)param_midi[num]/127);
+      if(tes == 3) lfo[ind][current_synth].setvol(param_midi[num]);
+      if(tes == 4) lfo[ind][current_synth].setmaincutoff(param_midi[num]);
+  
+    }
+    if(num==45) 
+    {
+      Filter[current_synth].SetCutoff((float)param_midi[num],true);
+      synth2_cutoff[current_synth]=param_midi[num];
+    }
+    if(num==46) 
+    {
+      Filter[current_synth].SetResonance((float)param_midi[num],true);
+      synth2_reso[current_synth]=param_midi[num];
+    }
+    if(num==47 && current_synth==0) {set_time(param_midi[num]); synth2_delay_time[0]=param_midi[num]; Serial.print("delay0 "); Serial.println(param_midi[num]);}
+    if(num==47 && current_synth==1) {set_time2(param_midi[num]); synth2_delay_time[1]=param_midi[num]; Serial.print("delay1 "); Serial.println(param_midi[num]);}
+    if(num==48 && current_synth==0) {set_feedback(param_midi[num]); synth2_delay_release[0]=param_midi[num];}
+    if(num==48 && current_synth==1) {set_feedback2(param_midi[num]); synth2_delay_release[1]=param_midi[num];}
+    if(num==49) delay_mix[current_synth]=(float)param_midi[num]/127.0;
+    if(num==50) oscA[current_synth].update_polyphony((param_midi[num]%8)+1);
+    if(num==51) oscA[current_synth].setGlideTime(param_midi[num]);
+    if(num==52) oscA[current_synth].update_bpm(param_midi[num]);
+    if(num==53) {oscA[current_synth].arpmode=param_midi[num]%3; oscA[current_synth].compute_notes();}
+    if(num==54) oscA[current_synth].arprate=param_midi[num]%16;
+    if(num==55) oscA[current_synth].update_gate(param_midi[num]);
+    if(num==56) {oscA[current_synth].arpstep=param_midi[num]%5; oscA[current_synth].compute_notes();}
+    if(num==57) oscA[current_synth].unisson = (param_midi[num]%8)+1;
+    if(num==58) {oscA[current_synth].compute_detune(param_midi[num]); synth2_detune[current_synth]=param_midi[num];}
+    if(num==59) {oscA[current_synth].compute_unisson_vol(param_midi[num]); synth2_unisson[current_synth]=param_midi[num];}
+    if(num==60) disto[current_synth].set_gain(param_midi[num]);
+    if(num==61) tempo_source=param_midi[num]%3;
+    if(num==62) changlob=param_midi[num]%16;
+    if(num==63) {if(param_midi[num]%2==0) ES8960_Init2();
+                  if(param_midi[num]%2==1) hp_spk();}
+    if(num==64) savenum=param_midi[num]%16; 
+    if(num==65) savenum=param_midi[num]%16;
+    if(num==66) multi_mode=param_midi[num]%2;
+    if(num==67) {savenum=param_midi[num]%16;
+                  presetmulti1=savenum;
+                  audio_start=false; 
+                  delay(200);
+                  current_synth=0;
+                  delay(5);
+                  load_preset();
+                  delay(200);
+                  current_synth=0;
+                  audio_start=true;
+                  }
+    if(num==68) {savenum=param_midi[num]%16;
+                  presetmulti2=savenum;
+                  audio_start=false; 
+                  delay(200);
+                  current_synth=1;
+                  delay(5);
+                  load_preset();
+                  delay(200);
+                  current_synth=0;
+                  audio_start=true;
+                  }
+    if(num==69) chansynth1=(param_midi[num]%16)+1;
+    if(num==70) chansynth2=(param_midi[num]%16)+1;
+    Serial.println(delay_on[1]);
   }
-  
-  
-  
-  
-  if(num==16) oscA[0].setenvA(param_midi[num]);
-  if(num==17) oscA[0].setenvD(param_midi[num]);
-  if(num==18) oscA[0].setenvS(param_midi[num]);
-  if(num==19) oscA[0].setenvR(param_midi[num]);
-  if(num==20) env[1][current_synth].dest=param_midi[num]%16;
-  if(num==21) env[1][current_synth].setA(param_midi[num]);
-  if(num==22) env[1][current_synth].setD(param_midi[num]);
-  if(num==23) env[1][current_synth].setS(param_midi[num]);
-  if(num==24) env[1][current_synth].setR(param_midi[num]);
-  if(num==25) env[2][current_synth].dest=param_midi[num]%16;
-  if(num==26) env[2][current_synth].setA(param_midi[num]);
-  if(num==27) env[2][current_synth].setD(param_midi[num]);
-  if(num==28) env[2][current_synth].setS(param_midi[num]);
-  if(num==29) env[2][current_synth].setR(param_midi[num]);
-  if(num>=30 && num<=44)
-  {
-    int ind=(num-30)/5;
-    int tes=(num-30)%5;
-    if(tes == 0) lfo[ind][current_synth].dest=param_midi[num]%16;
-    if(tes == 1) lfo[ind][current_synth].setWaveform(param_midi[num]%3);
-    if(tes == 2) lfo[ind][current_synth].setfreq((float)param_midi[num]*(float)param_midi[num]/127);
-    if(tes == 3) lfo[ind][current_synth].setvol(param_midi[num]);
-    if(tes == 4) lfo[ind][current_synth].setmaincutoff(param_midi[num]);
-
-  }
-  if(num==45) Filter[current_synth].SetCutoff((float)param_midi[num],true);
-  if(num==46) Filter[current_synth].SetResonance((float)param_midi[num],true);
-  if(num==47) set_time(param_midi[num]);
-  if(num==48) set_feedback(param_midi[num]);
-  if(num==49) delay_mix=(float)param_midi[num]/127.0;
-  if(num==50) oscA[0].update_polyphony((param_midi[num]%8)+1);
-  if(num==51) oscA[0].setGlideTime(param_midi[num]);
-  if(num==52) oscA[0].update_bpm(param_midi[num]);
-  if(num==53) {oscA[0].arpmode=param_midi[num]%3; oscA[0].compute_notes();}
-  if(num==54) oscA[0].arprate=param_midi[num]%16;
-  if(num==55) oscA[0].update_gate(param_midi[num]);
-  if(num==56) {oscA[0].arpstep=param_midi[num]%5; oscA[0].compute_notes();}
-  if(num==57) oscA[0].unisson = (param_midi[num]%8)+1;
-  if(num==58) oscA[0].compute_detune(param_midi[num]);
-  if(num==59) oscA[0].compute_unisson_vol(param_midi[num]);
-  if(num==60) disto[current_synth].set_gain(param_midi[num]);
-  if(num==61) tempo_source=param_midi[num]%3;
-  if(num==62) changlob=(param_midi[num]%8)+1;
-  if(num==63) {if(param_midi[num]%2==0) ES8960_Init2();
-                if(param_midi[num]%2==1) hp_spk();}
-  if(num==64) savenum=param_midi[num]%16; 
-  if(num==65) savenum=param_midi[num]%16;
-  if(num==66) multi_mode=param_midi[num]%2;
-  if(num==67) {savenum=param_midi[num]%8;
-                load_preset();
-                current_synth=0;
-                init_synth_param();}
-  if(num==68) {savenum=param_midi[num]%8;
-                load_preset();
-                current_synth=0;
-                init_synth_param();}
-  if(num==69) chansynth1=(param_midi[num]%8)+1;
-  if(num==70) chansynth2=(param_midi[num]%8)+1;
-}
-
-void init_lfo_dest(int num)
-{
-  oscA[current_synth].setPWM(0, 0);
-  oscA[current_synth].setPWM(1, 0);
-  oscA[current_synth].setPWM(2, 0);
-  Filter[current_synth].SetCutoff( param_midi[40],true); 
-  Filter[current_synth].SetResonance( param_midi[41],true);
-  oscA[current_synth].set_pitch_lfo(0.5);
 }
 
 void param_action_focus(int num)
 {
   Serial.println("param_action_focus");
   Serial.println(num);
+  Serial.println(delay_on[1]);
   if(num>=45 && num<=46) {
     for(int i=45; i<=46; i++) param_focus[i]=param_focus[num];
     
@@ -107,20 +144,23 @@ void param_action_focus(int num)
     else filter_on[current_synth]=true;
   }
   if(num>=47 && num<=49) {
-    delay_on=!delay_on;
-    for(int i=47; i<=48; i++) param_focus[i]=delay_on;
+    delay_on[current_synth]=param_focus[num]%2;
+    Serial.print("delay");
+    Serial.println(current_synth);
+    for(int i=47; i<=49; i++) param_focus[i]=delay_on[current_synth];
   }
   if(num==60) {
-    disto_on[current_synth]=!disto_on[current_synth];
+    disto_on[current_synth]=param_focus[num]%2;
     param_focus[num]=disto_on[current_synth];
   }
   Serial.println(filter_on[current_synth]);
   
-  if(num==51) oscA[0].glideon=param_focus[num]%2;
+  if(num==51) oscA[current_synth].glideon=param_focus[num]%2;
   if(num>=52 && num<=56) {
     for(int i=52; i<=56; i++) param_focus[i]=param_focus[num];
     oscA[current_synth].arpon=param_focus[num]%2;
   }  
+  Serial.println(delay_on[1]);
 }
 
 

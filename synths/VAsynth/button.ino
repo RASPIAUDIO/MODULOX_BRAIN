@@ -1,6 +1,6 @@
 void enco_pressed()
 {
-  if(param_displayed != 0 && param_displayed!=64 && param_displayed!=65) learn_midi();
+  if(param_displayed != 0 && param_displayed<61) learn_midi();
 }
 
 void but_mid_pressed()
@@ -16,10 +16,12 @@ void but_mid_pressed()
   }
   if(param_displayed==65 && enco_focus==3) save_preset();
   if(param_displayed>=47 && param_displayed<=49) {
+    param_focus[param_displayed] = !param_focus[param_displayed];
     param_action_focus(param_displayed); 
-    disp.menu_bottom(param_displayed,(int)delay_on);      
+    disp.menu_bottom(param_displayed,(int)delay_on[current_synth]);      
   }
   if(param_displayed==60) {
+    param_focus[param_displayed] = !param_focus[param_displayed];
     param_action_focus(param_displayed);  
     disp.menu_bottom(param_displayed,(int)disto_on[current_synth]);     
   }

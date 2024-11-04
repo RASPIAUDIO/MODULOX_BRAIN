@@ -46,7 +46,35 @@ inline void Midi_NoteOff(uint8_t chan, uint8_t note)
 inline void Midi_ControlChange(uint8_t channel, uint8_t data1, uint8_t data2)
 {
  
-    
+    Serial.println("Midi_ControlChange");
+    Serial.println(data1);
+    Serial.println(data2);
+    Serial.println(param_displayed);
+    if(midi_learn)
+    {
+      //display_menu();
+      //display_param();
+      
+      midi_cc_val[param_displayed]=data1;
+      //Serial.println(midi_cc_val[param_displayed]);
+      //Serial.println("end CC");
+    }
+    else
+    {
+      Serial.println(data1);
+      Serial.println(midi_cc_val[3]);
+      for(int i=0; i<128; i++)
+      {
+        if(data1==midi_cc_val[i])  
+        {
+          param_CC=i;
+          change_CC(data2);
+          
+        }
+      }
+      //change_enco(1);
+    }
+    midi_changed=true;
 }
 
 /*

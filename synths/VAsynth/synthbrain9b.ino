@@ -11,14 +11,16 @@
 #include "rosic_TeeBeeFilter.h"
 #include "rosic_OnePoleFilter.h"
 #include "rosic_BiquadFilter.h"
+#define DELAY_SAMPLES 60000
 #include <delay.h>
+#include <delay2.h>
 
 #include "braindisplay.h"
 
-
+#define MAX_SYNTH       2
 
 int env_dest=0;
-bool delay_on=false;
+bool delay_on[MAX_SYNTH];
 bool save_bool=false;
 bool load_bool=false;
 int current_instru = 0;
@@ -36,7 +38,9 @@ uint8_t changlob=0;
 uint8_t chansynth1=0;
 uint8_t chansynth2=0;
 
-#define MAX_SYNTH       2
+uint8_t presetmulti1=0;
+uint8_t presetmulti2=0;
+
 int current_synth = 0;
 
 OscMonoPoly oscA[MAX_SYNTH];
@@ -46,10 +50,19 @@ TeeBeeFilter Filter[MAX_SYNTH];
 Env env[2][MAX_SYNTH];
 OnePoleFilter     highpass1;
 
+uint8_t synth2_lfo_pwm[3][MAX_SYNTH];
+uint8_t synth2_vol_osc[3][MAX_SYNTH];
+uint8_t synth2_cutoff[MAX_SYNTH];
+uint8_t synth2_reso[MAX_SYNTH];
+uint8_t synth2_delay_time[MAX_SYNTH];
+uint8_t synth2_delay_release[MAX_SYNTH];
+uint8_t synth2_detune[MAX_SYNTH];
+uint8_t synth2_unisson[MAX_SYNTH];
+
 bool disto_on[MAX_SYNTH];
 bool display_wave=false;
 bool display_par=true;
-float delay_mix=0.0;
+float delay_mix[MAX_SYNTH];
 bool filter_on[MAX_SYNTH];
 
 uint8_t poly=1;

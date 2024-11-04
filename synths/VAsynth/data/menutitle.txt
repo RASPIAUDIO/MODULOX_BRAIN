@@ -138,6 +138,6 @@ Multi Sound2
 no
 MIDI Multi1
 no
-MIDI Multi1
+MIDI Multi2
 no
 #end
