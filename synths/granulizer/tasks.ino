@@ -8,8 +8,9 @@ void taskOther(void *parameter) {
     enco_turned(); 
     button_pressed();
     //Handle USB communication
+    USB_Midi_Process();
 
     
-    vTaskDelay(10 / portTICK_PERIOD_MS);  // Pour éviter de surcharger le CPU
+    vTaskDelay(1 / portTICK_PERIOD_MS);  // Pour éviter de surcharger le CPU
   }
 }
