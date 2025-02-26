@@ -1,9 +1,9 @@
-#ifndef envfloat_h
-#define envfloat_h
+#ifndef envfloatlow_h
+#define envfloatlow_h
 
 #include <arduino.h>
 
-class Env
+class EnvLow
 {
   
 public:
@@ -29,10 +29,10 @@ public:
   void init()
   {
 	dest=0;
-    envA = 0.0001;
-    envD = 0.0001;
-    envS = 1.0;
-    envR = 0.0001;
+    envA = 0.000025;
+    envD = 0.000025;
+    envS = 0.25;
+    envR = 0.000025;
     accu = 0;
     phaseA = false;
     phaseD = false;
@@ -66,18 +66,18 @@ public:
   
   void setA(float val)
   {
-    envA = 0.1/(val*35+1);
+    envA = 0.025/(val*35+1);
   }
   
   void setD(float val)
   {
-    envD = 0.1*(1.0-envS)/(val*35+1);
+    envD = 0.1*(0.25-envS)/(val*35+1);
   }
   
   void setS(float val)
   {
-    envS = val/127.0;
-	envD = 0.1*(1.0-envS)/(val*35+1);
+    envS = val/512.0;
+	envD = 0.1*(0.25-envS)/(val*35+1);
 	envR = envS*0.1/(val*35+1);
   }
   
@@ -91,7 +91,7 @@ public:
 // ATTACK
     if(phaseA)
     {
-      if(accu >= 1.0)
+      if(accu >= 0.25)
       {
         phaseA = false;
         phaseD = true;

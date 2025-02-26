@@ -50,6 +50,12 @@ public:
 	
 	int cur[20];
 	
+	// Buffers pour les fichiers préchargés
+	char* menutitleBuffer = NULL;
+	size_t menutitleSize = 0;
+	char* menulistBuffer  = NULL;
+	size_t menulistSize = 0;
+	
 	Bdisplay() {
 		spr.setColorDepth(8);      // Create an 8bpp Sprite of 60x30 pixels
         spr.createSprite(280, 160);  // 8bpp requires 64 * 30 = 1920 bytes
@@ -74,6 +80,67 @@ public:
 			list_text[i]="";
 		  }
 		menu_level=0;
+		loadDisplayFiles();
+	}
+	
+	// Charge les fichiers d'organisation depuis la flash dans la RAM
+	void loadDisplayFiles() {
+		menutitleBuffer = loadFileToBuffer("/menutitle.txt", &menutitleSize);
+		if (menutitleBuffer) {
+		  Serial.printf("menutitle.txt chargé (%d octets)\n", menutitleSize);
+		} else {
+		  Serial.println("Échec du chargement de menutitle.txt");
+		}
+
+		menulistBuffer = loadFileToBuffer("/menulist.txt", &menulistSize);
+		if (menulistBuffer) {
+		  Serial.printf("menulist.txt chargé (%d octets)\n", menulistSize);
+		} else {
+		  Serial.println("Échec du chargement de menulist.txt");
+		}
+	}
+	// Fonction utilitaire pour charger un fichier dans un buffer en RAM
+	char* loadFileToBuffer(const char* filename, size_t* fileSize) {
+		fs::File file = FFat.open(filename, "r");
+		if (!file) {
+		  Serial.printf("Impossible d'ouvrir %s\n", filename);
+		  return NULL;
+		}
+		*fileSize = file.size();
+		char* buffer = (char*)malloc(*fileSize + 1);
+		if (buffer) {
+		  file.readBytes(buffer, *fileSize);
+		  buffer[*fileSize] = '\0'; // Terminaison chaîne
+		} else {
+		  Serial.printf("Erreur d'allocation pour %s\n", filename);
+		}
+		file.close();
+		return buffer;
+	}
+	// Exemple de fonction qui extrait une ligne du buffer
+	// lineIndex correspond au numéro de ligne désiré (0 pour la première)
+	String getLineFromBuffer(const char* buffer, int lineIndex) {
+		int currentLine = 0;
+		const char* p = buffer;
+		const char* lineStart = buffer;
+		while (*p) {
+		  if (*p == '\n' || *p == '\r') {
+			// Si c'est la ligne recherchée, on la retourne
+			if (currentLine == lineIndex) {
+			  int len = p - lineStart;
+			  return String(String(lineStart).substring(0, len));
+			}
+			// Passer aux lignes suivantes (ignorer séquences \n et \r consécutives)
+			currentLine++;
+			while (*p == '\n' || *p == '\r') {
+			  p++;
+			}
+			lineStart = p;
+		  } else {
+			p++;
+		  }
+		}
+		return "";
 	}
 	
 	void display_top()
@@ -126,170 +193,181 @@ public:
 		sprt.setTextColor(TFT_WHITE);
 		sprt.fillRect(0, 0, SCREEN_WIDTH, 40,  bcol);
 		sprt.drawRect(0, 0, SCREEN_WIDTH, 40, 0x3186);
-		fs::File file = FFat.open("/menutitle.txt", "r");
-		String titleSt="";
-		int i=0;
-		while( i<=titlenum && file.available()) 
-		{
-			//file.findUntil("","\r\n");
-			titleSt = file.readStringUntil('\r\n');
-			String men = file.readStringUntil('\r\n');
-			i++;
+		
+		if (menutitleBuffer == NULL) {
+		  Serial.println("menutitleBuffer vide");
+		  return;
 		}
-		//String titleSt = file.readStringUntil('\r\n');
+		int lineToRead = titlenum * 2;
+		String titleSt = getLineFromBuffer(menutitleBuffer, lineToRead);
 		Serial.println(titleSt);
-		file.close();
 		draw_title(titleSt);
 	}
 	
 	void menu_bottom(int selnum, int menuselect, int bcol=0x5ACB)
 	{
 		Serial.println("menu_bottom");
-		String titleSt;
-		
+ 		
 		sprt.fillRect(0, 0, SCREEN_WIDTH, 40,  bcol);
 		sprt.drawFastVLine(SCREEN_WIDTH/3, 0, 40, 0x3186);
 		sprt.drawFastVLine(SCREEN_WIDTH*2/3, 0, 40, 0x3186);
 		sprt.drawString("<", SCREEN_WIDTH/6, 10, 2);
 		sprt.drawString(">", SCREEN_WIDTH*5/6, 10, 2);
 		
-		fs::File file = FFat.open("/menutitle.txt", "r");
-		Serial.println("file opened");
-		for(int i=0; i<2*selnum; i++) 
-		{
-			titleSt = file.readStringUntil('\r\n');
+		// Vérifier que le buffer des titres est chargé
+		if (menutitleBuffer == NULL) {
+			Serial.println("menutitleBuffer vide");
+			return;
 		}
-		titleSt = file.readStringUntil('\r\n');
-		Serial.println(titleSt);
-		String menu=file.readStringUntil('\r\n');
-		Serial.println(menu);
 
+		// Selon votre format, on saute 2*selnum lignes puis on lit la ligne de titre
+		// suivie de la ligne de menu.
+		int titleLineIndex = 2 * selnum;      // La ligne de titre à afficher
+		int menuLineIndex  = titleLineIndex + 1; // La ligne suivante contient le code du menu
+
+		String titleSt = getLineFromBuffer(menutitleBuffer, titleLineIndex);
+		String menu    = getLineFromBuffer(menutitleBuffer, menuLineIndex);
+
+		Serial.println("Titre : " + titleSt);
+		Serial.println("Menu  : " + menu);
+
+		// Tester le contenu de la chaîne 'menu'
 		char Buf[20];
-        menu.toCharArray(Buf, 20);
+		menu.toCharArray(Buf, sizeof(Buf));
 
-		if(Buf[0]=='n' && Buf[1]=='o')
-		{
+		if (Buf[0] == 'n' && Buf[1] == 'o') {
 			Serial.println("no select");
 		}
-		
-		else
-		{
-			if(Buf[0]=='v' && Buf[1]=='a' && Buf[2]=='l')
-			{
-				Serial.println("validate");
-				draw_bottom_menu("validate");
-			}
-			else if(Buf[0]=='o' && Buf[1]=='n' && Buf[2]=='o')
-			{
-				if(menuselect==0) draw_bottom_menu("Off");
-				else draw_bottom_menu("On");
-			}
-			else if(Buf[0]=='o' && Buf[1]=='k')
-			{
-				draw_bottom_menu("OK"); 
-			}
-			else
-			{
-				file = FFat.open("/menulist.txt", "r");
-				Serial.println("file opened");
-				char Buf2[20];
-				bool test=true;
-				while(test)
-				{
-					titleSt = file.readStringUntil('\r\n');
-					Serial.println(titleSt);
-					titleSt.toCharArray(Buf2, 20);
-					if(Buf2[0]=='/')
-					{
-						if(Buf[0]==Buf2[1] && Buf[1]==Buf2[2]) test=false;
-					}
-				}
-				Serial.println(menuselect);
-				for(int i=0; i<menuselect; i++) 
-				{
-					titleSt = file.readStringUntil('\r\n');
-				}
-				titleSt = file.readStringUntil('\r\n');
-				Serial.println(titleSt);
-				draw_bottom_menu(titleSt);
-			}
+		else if (Buf[0] == 'v' && Buf[1] == 'a' && Buf[2] == 'l') {
+			Serial.println("validate");
+			draw_bottom_menu("validate");
 		}
-		file.close();
+		else if (Buf[0] == 'o' && Buf[1] == 'n' && Buf[2] == 'o') {
+			if (menuselect == 0)  draw_bottom_menu("Off");
+			else draw_bottom_menu("On");
+		}
+		else if (Buf[0] == 'o' && Buf[1] == 'k') {
+				draw_bottom_menu("OK");
+		}
+		else {
+			// Sinon, utiliser le buffer menulistBuffer pour obtenir la ligne détaillée.
+			if (menulistBuffer == NULL) {
+			  Serial.println("menulistBuffer vide");
+			  return;
+			}
+			int lineIndex = 0;
+			String line;
+			char Buf2[20];
+			bool markerFound = false;
+			// Parcourir le buffer menulistBuffer pour trouver une ligne commençant par '/'
+			// qui correspond aux deux premiers caractères de Buf.
+			while (true) {
+			  line = getLineFromBuffer(menulistBuffer, lineIndex);
+			  if (line.length() == 0) break;
+			  line.toCharArray(Buf2, sizeof(Buf2));
+			  if (Buf2[0] == '/') {
+				// Comparer les caractères 1 et 2 de Buf2 avec ceux de Buf
+				if (Buf[0] == Buf2[1] && Buf[1] == Buf2[2]) {
+				  markerFound = true;
+				  break;
+				}
+			  }
+			  lineIndex++;
+			  if (lineIndex > 100) break; // sécurité
+			}
+			Serial.println("Marqueur trouvé à la ligne " + String(lineIndex));
+			// Avancer de 'menuselect' lignes à partir du marqueur
+			for (int i = 0; i < menuselect; i++) {
+			  line = getLineFromBuffer(menulistBuffer, lineIndex);
+			  lineIndex++;
+			}
+			line = getLineFromBuffer(menulistBuffer, lineIndex);
+			Serial.println("Menu sélectionné : " + line);
+			draw_bottom_menu(line);
+		}
 	}
 	
 	int list_bottom(int selnum, int listselnum, int bcol=0x5ACB)
 	{
-		int ret=0;
-		Serial.println("list_bottom");
-		String titleSt;
-		
-		fs::File file = FFat.open("/menutitle.txt", "r");
-		Serial.println("file opened");
-		for(int i=0; i<2*selnum; i++) 
-		{
-			titleSt = file.readStringUntil('\r\n');
-		}
-		titleSt = file.readStringUntil('\r\n');
-		String menu=file.readStringUntil('\r\n');
+      int ret = 0;
+	  Serial.println("list_bottom");
 
-		char Buf[20];
-        menu.toCharArray(Buf, 20);
-
-		if(Buf[0]=='n' && Buf[1]=='o')
-		{
-			Serial.println("no select");
-		}
-		
-		else
-		{
-			if(Buf[0]=='v' && Buf[1]=='a' && Buf[2]=='l')
-			{
-				Serial.println("validate");
-			    draw_validate();
-				ret=-1;
-			}
-			else if(Buf[0]=='o' && Buf[1]=='k')
-			{
-				Serial.println("OK");
-				ret=-3;
-			}
-			else if(Buf[0]=='o' && Buf[1]=='n' && Buf[2]=='o')
-			{
-				ret=-2;
-			}
-			else
-			{
-				file = FFat.open("/menulist.txt", "r");
-				Serial.println("file opened");
-				char Buf2[20];
-				bool test=true;
-				while(test)
-				{
-					titleSt = file.readStringUntil('\r\n');
-					Serial.println(titleSt);
-					titleSt.toCharArray(Buf2, 20);
-					if(Buf2[0]=='/')
-					{
-						if(Buf[0]==Buf2[1] && Buf[1]==Buf2[2]) test=false;
-					}
-				}
-				int i=0;
-				while(Buf[0]!='/')
-				{
-					Serial.println(i);
-					list_text[i]=file.readStringUntil('\r\n');
-					Serial.println(list_text[i]);
-					list_text[i].toCharArray(Buf, 20);
-					i++;
-				}
-				list_size=i-1;
-				ret=list_size-1;
-				
-				display_list(listselnum,0,10,100);
-			}
-		}
-		file.close();
+	  // On vérifie que le buffer préchargé pour les titres est disponible
+	  if (menutitleBuffer == NULL) {
+		Serial.println("menutitleBuffer vide");
 		return ret;
+	  }
+	  
+	  // Dans ce format, on suppose que chaque entrée occupe 2 lignes.
+	  int skipLines = 2 * selnum;  // On saute 2*selnum lignes
+	  String titleSt = getLineFromBuffer(menutitleBuffer, skipLines);
+	  String menu    = getLineFromBuffer(menutitleBuffer, skipLines + 1);
+
+	  char Buf[20];
+	  menu.toCharArray(Buf, sizeof(Buf));
+	  
+	  if (Buf[0] == 'n' && Buf[1] == 'o') {
+		Serial.println("no select");
+	  } 
+	  else {
+		if (Buf[0] == 'v' && Buf[1] == 'a' && Buf[2] == 'l') {
+		  Serial.println("validate");
+		  draw_validate();
+		  ret = -1;
+		}
+		else if (Buf[0] == 'o' && Buf[1] == 'k') {
+		  Serial.println("OK");
+		  ret = -3;
+		}
+		else if (Buf[0] == 'o' && Buf[1] == 'n' && Buf[2] == 'o') {
+		  ret = -2;
+		}
+		else {
+		  // Si aucun des cas ci-dessus ne s'applique, on utilise le buffer menulistBuffer.
+		  if (menulistBuffer == NULL) {
+			Serial.println("menulistBuffer vide");
+			return ret;
+		  }
+		  // Recherche dans menulistBuffer du marqueur correspondant
+		  int lineIndex = 0;
+		  bool markerFound = false;
+		  char Buf2[20];
+		  while (lineIndex < 100 && !markerFound) {
+			String markerLine = getLineFromBuffer(menulistBuffer, lineIndex);
+			markerLine.toCharArray(Buf2, sizeof(Buf2));
+			Serial.println(markerLine);
+			if (Buf2[0] == '/') {
+			  // Comparer les deux premiers caractères du menu avec ceux du marqueur (à partir de l'indice 1)
+			  if (Buf[0] == Buf2[1] && Buf[1] == Buf2[2]) {
+				markerFound = true;
+				break;
+			  }
+			}
+			lineIndex++;
+		  }
+		  
+		  // Ensuite, à partir de ce marqueur, on lit les lignes de la liste
+		  int i = 0;
+		  while (true) {
+			String line = getLineFromBuffer(menulistBuffer, lineIndex);
+			line.toCharArray(Buf, sizeof(Buf));
+			if (Buf[0] == '/') {  // Arrêt si on rencontre un nouveau marqueur
+			  break;
+			}
+			Serial.println(i);
+			list_text[i] = line;
+			Serial.println(list_text[i]);
+			i++;
+			lineIndex++;
+			if (i >= 20) break; // Limite du tableau list_text
+		  }
+		  list_size = i - 1;
+		  ret = list_size - 1;
+		  
+		  display_list(listselnum, 0, 10, 100);
+		}
+	  }
+	  return ret;
 	}
 	
 	void display_array(String array[],int numwifi, int index)
@@ -387,44 +465,39 @@ public:
 	
 	int search_menutitle(String stringsearch)
 	{
-		int ret=200;
-		Serial.println("search_menutitle");
-		Serial.println(stringsearch);
-		fs::File file = FFat.open("/menutitle.txt", "r");
-		char Buf2[20];
-		for(int j=0; j<20; j++) Buf2[j]=' ';
-		stringsearch.toCharArray(Buf2, 20);	
-		Serial.println(Buf2[0]);
-		Serial.println(Buf2[1]);
-		Serial.println(Buf2[2]);
-		Serial.println(Buf2[3]);
-		Serial.println(Buf2[4]);
-		Serial.println(Buf2[5]);
-		Serial.println(Buf2[6]);
-		Serial.println(Buf2[7]);
-		Serial.println(Buf2[8]);
-		Serial.println(Buf2[9]);
-		Serial.println(Buf2[10]);
-		String titleSt;
-		int i=0;
-		char Buf[20];
-		while(Buf[0]!='#' && ret==200)
-		{
-			titleSt=file.readStringUntil('\r\n');
-			int lastIndex = titleSt.length() - 1;
-            titleSt.remove(lastIndex);
-			Serial.println(titleSt);
-			for(int j=0; j<20; j++) Buf[j]=' ';
-			titleSt.toCharArray(Buf, 20);
-			ret=i/2;
-			for(int j=0; j<titleSt.length(); j++)
-			{
-				if(Buf[j]!=Buf2[j]) ret=200;
-			}
-			i++;
+	  Serial.println("search_menutitle");
+	  Serial.println(stringsearch);
+	  
+	  // Vérifier que le buffer est chargé
+	  if (menutitleBuffer == NULL) {
+		Serial.println("menutitleBuffer vide");
+		return 200;
+	  }
+	  
+	  int lineIndex = 0;
+	  int ret = 200;
+	  
+	  while (true) {
+		// Extraire la ligne d'indice lineIndex depuis le buffer préchargé
+		String line = getLineFromBuffer(menutitleBuffer, lineIndex);
+		line.trim();  // Supprimer espaces et retours en début/fin
+		if (line.length() == 0 || line.startsWith("#")) {
+		  // Fin du contenu utile
+		  break;
 		}
-		file.close();
-		return ret;
+		
+		// Vérifier uniquement sur les lignes paires (titres)
+		if (lineIndex % 2 == 0) {
+		  Serial.println("Comparaison avec : " + line);
+		  if (line.equals(stringsearch)) {
+			ret = lineIndex / 2;
+			break;
+		  }
+		}
+		lineIndex++;
+	  }
+	  
+	  return ret;
 	}
 	
 	int menu_right()

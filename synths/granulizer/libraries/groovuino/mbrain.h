@@ -15,6 +15,8 @@
 #include <Rotary.h>
 #include "braindisplay.h"
 #include <SparkFun_WM8960_Arduino_Library.h> 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 void Synth_Process(int16_t *left, int16_t *right);
 void Midi_NoteOn(uint8_t chan, uint8_t note, uint8_t vol);
@@ -129,6 +131,65 @@ int savenum=1;
 
 WM8960 codec;
 
+
+TaskHandle_t TaskAudioHandle = NULL;
+TaskHandle_t TaskOtherHandle = NULL;
+
+// Compteurs du temps CPU accumulé par chaque tâche (en microsecondes)
+volatile uint64_t audioCpuTime = 0; 
+volatile uint64_t midiCpuTime  = 0;
+
+// Pour la tâche de monitoring
+TaskHandle_t MonitorTaskHandle = NULL;	
+
+void MonitorTask(void* pvParameters)
+{
+    vTaskDelay(pdMS_TO_TICKS(100));
+
+    const TickType_t period = pdMS_TO_TICKS(500); // 100 ms
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+
+    // On stocke la dernière valeur lue
+    uint64_t prevAudioTime = 0;
+    uint64_t prevMidiTime  = 0;
+
+    for (;;) {
+        vTaskDelayUntil(&xLastWakeTime, period);
+
+        // Lire les compteurs actuels
+        uint64_t audioNow = audioCpuTime;
+        uint64_t midiNow  = midiCpuTime;
+
+        // Calculer l'usage sur les 100 ms passées
+        uint64_t deltaAudio = audioNow - prevAudioTime;
+        uint64_t deltaMidi  = midiNow - prevMidiTime;
+
+        prevAudioTime = audioNow;
+        prevMidiTime  = midiNow;
+
+        // En 100 ms, chaque core a 100'000 µs de “budget”
+        float usageAudio = (float)deltaAudio / 500000.0f * 100.0f; 
+        float usageMidi  = (float)deltaMidi  / 500000.0f * 100.0f;
+        
+
+        // -- Stack HighWaterMark --
+        // (plus la valeur est grande, moins la tâche a consommé de pile)
+        UBaseType_t stackAudio = uxTaskGetStackHighWaterMark(TaskAudioHandle);
+        UBaseType_t stackMidi  = uxTaskGetStackHighWaterMark(TaskOtherHandle);
+		
+		Serial.printf("Audio %.1f %%, MIDI %.1f %%, Audio=%u words, MIDI=%u words\n", usageAudio, usageMidi, stackAudio, stackMidi);
+        
+
+        // -- Mémoire libre (heap global, alloué dynamiquement) --
+        size_t freeHeap    = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+        size_t minFreeHeap = heap_caps_get_minimum_free_size(MALLOC_CAP_8BIT);
+        /*Serial.printf("Free heap=%u bytes, min free heap=%u bytes\n",
+                      freeHeap, minFreeHeap);*/
+
+    }
+}
+
+
 void display_menu()
 {
   Serial.println("display_menu");
@@ -142,7 +203,7 @@ void display_menu()
 
 void change_enco(int sens)
 {
-  Serial.println("change_enco");
+  //Serial.println("change_enco");
   if(enco_focus==-1)
   {
     disp.change_menu_select(sens);
@@ -164,7 +225,7 @@ void change_enco(int sens)
   }
   if(enco_focus==0)
   {
-    Serial.println(param_midi[param_displayed]);
+    //Serial.println(param_midi[param_displayed]);
     if(sens<0) 
     {
        if(param_midi[param_displayed]>=-sens) param_midi[param_displayed]+=sens;
@@ -173,13 +234,13 @@ void change_enco(int sens)
     {
       if((127-param_midi[param_displayed])>=sens) param_midi[param_displayed]+=sens;
     }
-    Serial.println("param " + String(param_displayed) + " changed : " + String(param_midi[param_displayed]));
+    //Serial.println("param " + String(param_displayed) + " changed : " + String(param_midi[param_displayed]));
     param_action(param_displayed);
     display_param();
   }
     
   //if((param_displayed != 2 || env_dest!=1)&&display_par) display_param();
-  Serial.println("end change_enco");
+  //Serial.println("end change_enco");
 }
 
 static int32_t onWrite(uint32_t lba, uint32_t offset, uint8_t *buffer, uint32_t bufsize) {
@@ -488,6 +549,7 @@ void USB_Midi_Process()
 	midiEventPacket_t midi_packet_in = {0, 0, 0, 0};
 
     if (midi.readPacket(&midi_packet_in)) {
+		//Serial.println("midi USB");
 		uint8_t cable_num = MIDI_EP_HEADER_CN_GET(midi_packet_in.header);
 		midi_code_index_number_t code_index_num = MIDI_EP_HEADER_CIN_GET(midi_packet_in.header);
 		
@@ -505,20 +567,20 @@ void USB_Midi_Process()
 			  Serial.println("This a system exclusive (SysEx) event");
 			  break;
 			case MIDI_CIN_NOTE_ON:       
-				Serial.printf("This a Note-On event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3);
+				//Serial.printf("This a Note-On event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3);
 				Midi_NoteOn(cable_num,midi_packet_in.byte2,midi_packet_in.byte3);				
 				break;
 			case MIDI_CIN_NOTE_OFF:      
-				Serial.printf("This a Note-Off event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3); 
+				//Serial.printf("This a Note-Off event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3); 
 				Midi_NoteOff(cable_num,midi_packet_in.byte2	);
 				break;
 			case MIDI_CIN_POLY_KEYPRESS: Serial.printf("This a Poly Aftertouch event for Note %d and Value %d\n", midi_packet_in.byte2, midi_packet_in.byte3); break;
 			case MIDI_CIN_CONTROL_CHANGE:
-			  Serial.printf(
-				"This a Control Change/Continuous Controller (CC) event of Controller %d "
-				"with a Value of %d\n",
-				midi_packet_in.byte2, midi_packet_in.byte3
-			  );
+			  //Serial.printf(
+				//"This a Control Change/Continuous Controller (CC) event of Controller %d "
+				//"with a Value of %d\n",
+				//midi_packet_in.byte2, midi_packet_in.byte3
+			  //);
 			  Midi_ControlChange(cable_num, midi_packet_in.byte2, midi_packet_in.byte3);
 			  break;
 			case MIDI_CIN_PROGRAM_CHANGE:   Serial.printf("This a Program Change event with a Value of %d\n", midi_packet_in.byte2); break;
@@ -624,65 +686,6 @@ void hp_spk(void)
 	{
 		delay(1);
 	}
-/*	codec.reset();
-	
-	codec.enableVREF();
-	codec.enableAINL();
-	codec.enableAdcLeft();
-	codec.enableVMID();
-	codec.setVMID(WM8960_VMIDSEL_2X5KOHM);
-	codec.disableLB2LO();
-	codec.enableLD2LO();
-	codec.disableLoopBack();
-	codec.enableOUT3MIX(); // Provides VMID as buffer for headphone ground
-	
-	
-	codec.enableDacLeft();
-	codec.disableDacMute();
-	codec.enableOUT3MIX();
-	codec.enableRightHeadphone();
-	codec.enableLeftHeadphone();
-	codec.enableRightSpeaker();
-	codec.enableLeftSpeaker();
-	
-	codec.enableLMIC();
-	
-	// Enable output mixers
-	codec.enableLOMIX();
-	codec.enableROMIX();
-	
-	codec.connectLMN1();
-	
-	codec.disableLINMUTE();
-	codec.setLINVOLDB(0.00);
-	
-	codec.setLMICBOOST(WM8960_MIC_BOOST_GAIN_0DB);
-	codec.connectLMIC2B();
-	
-	codec.enablePLL();
-	codec.setCLKSEL(WM8960_CLKSEL_PLL);
-	codec.setSYSCLKDIV(WM8960_SYSCLK_DIV_BY_2);
-	codec.setBCLKDIV(4);
-	codec.setDCLKDIV(WM8960_DCLKDIV_16);
-    //codec.setPLLPRESCALE(false);
-	codec.setPLLPRESCALE(WM8960_PLLPRESCALE_DIV_2);
-	codec.setPLLN(7);
-	codec.setSMD(WM8960_PLL_MODE_FRACTIONAL);
-    codec.setPLLK(0x86, 0xC2, 0x26);
-	codec.setWL(WM8960_WL_16BIT);
-	
-	codec.enablePeripheralMode();
-
-    codec.disableDacMute();
-	codec.disableDac6dbAttentuation();
-	
-	codec.enableLeftSpeaker();
-	codec.enableRightSpeaker();
-	
-	codec.setDacLeftDigitalVolume(100);
-	codec.setDacRightDigitalVolume(100);
-	
-	codec.setHeadphoneVolumeDB(0.00);*/
 	
 	
 	Serial.println("Device is connected properly.");
@@ -725,8 +728,11 @@ void hp_spk(void)
 	codec.enableRD2RO();
 	
 	// For this loopback example, we are going to keep these as low as they go
-	codec.setLB2LOVOL(WM8960_OUTPUT_MIXER_GAIN_NEG_21DB); 
-	codec.setRB2ROVOL(WM8960_OUTPUT_MIXER_GAIN_NEG_21DB);
+	//codec.setLB2LOVOL(WM8960_OUTPUT_MIXER_GAIN_NEG_21DB); 
+	//codec.setRB2ROVOL(WM8960_OUTPUT_MIXER_GAIN_NEG_21DB);
+	
+	codec.setLB2LOVOL(WM8960_OUTPUT_MIXER_GAIN_0DB); 
+    codec.setRB2ROVOL(WM8960_OUTPUT_MIXER_GAIN_0DB); 
 	
 	codec.enableLOMIX();
 	codec.enableROMIX();
@@ -772,184 +778,18 @@ void hp_spk(void)
 	//st+= !codec.enableRightHeadphone();
 	//st+= !codec.enableLeftHeadphone();
 	
-	//codec.enableRightSpeaker();
-	//codec.enableLeftSpeaker();
+	/*codec.enableRightSpeaker();
+	codec.enableLeftSpeaker();
+	codec.setSpeakerVolume(64);*/
 	
+	codec.enableSpeakers();
+	codec.setSpeakerVolumeDB(0.00);
 	
-	
-    //st += ES8960_Write_Reg(20, 0x0F9);
-	//st+= !codec.setHeadphoneVolume(100);
 	codec.setHeadphoneVolumeDB(0.00);
-
-	/*st+= !codec.setSpeakerVolume(100);
-    usleep(500);
-    // OUTPUTS 0 XX11 0111 class D amp
-    // XX = 00 off , 11 speaker on R and L
-    st += ES8960_Write_Reg(49, 0x0FF);
-	//st+= !codec.enableLeftSpeaker();
-	//st+= !codec.enableRightSpeaker();*/
 	
 
-	Serial.print("st : ");
-    Serial.println(st);
-	
-	/*st += ES8960_Write_Reg(15, 0x00);
-    usleep(10000);
-    //Power
-    st += ES8960_Write_Reg(25, 0x1FC);
-    usleep(500);
-    st += ES8960_Write_Reg(26, 0x1F9);
-    usleep(500);
-    st += ES8960_Write_Reg(47, 0x03C);
-    usleep(10000);
-    //Clock PLL
-    st += ES8960_Write_Reg(4, 0x001);
-    usleep(10000);
-    st += ES8960_Write_Reg(52, 0x027);
-    usleep(10000);
-    st += ES8960_Write_Reg(53, 0x086);
-    usleep(10000);
-    st += ES8960_Write_Reg(54, 0x0C2);
-    usleep(10000);
-    st += ES8960_Write_Reg(55, 0x026);
-    usleep(10000);
-    //ADC/DAC
-    st += ES8960_Write_Reg(5, 0x000);
-    usleep(10000);
-    st += ES8960_Write_Reg(7, 0x002);
-    usleep(10000);
-    //Noise control
-    st += ES8960_Write_Reg(20, 0x0F9);
-    usleep(10000);
-    //OUT1 volume
-    st += ES8960_Write_Reg(2, 0x16F);
-    usleep(500);
-    st += ES8960_Write_Reg(3, 0x16F);
-    usleep(500);
-    //SPK volume
-    st += ES8960_Write_Reg(40, 0x17F);
-    usleep(500);
-    st += ES8960_Write_Reg(41, 0x17F);
-    usleep(500);
-    // OUTPUTS 0 XX11 0111 class D amp
-    // XX = 00 off , 11 speaker on R and L
-    st += ES8960_Write_Reg(49, 0x0FF);
-
-
-
-    usleep(10000);
-    st += ES8960_Write_Reg(10, 0x1FF);
-    usleep(10000);
-    st += ES8960_Write_Reg(11, 0x1FF);
-    usleep(10000);
-
-    st += ES8960_Write_Reg(34, 0x100);
-    usleep(10000);
-
-    st += ES8960_Write_Reg(37, 0x100);
-    usleep(10000);*/
-	
-	Serial.print("st : ");
-    Serial.println(st);
-
-
-}
-//////////////////////////////////////////////////////////////////////////////////////
-// DAC ===> HP L&R
-//////////////////////////////////////////////////////////////////////////////////////
-void dacToHp()
-{
-  int st;
-  do
-  {
-    st = 0;
-    st += ES8960_Write_Reg(15, 0x00);      //RESET
-    delay(10);
-    //ADC/DAC
-    st += ES8960_Write_Reg(5, 0x004);       //DAC att=0dB, ADC pol. not inverted, DAC mute, no de-emphasis
-    delay(10);
-    st += ES8960_Write_Reg(7, 0x002);       //ADC ch normal, BCLK nrmal, slave mode, DAC ch normal,LRCK not inverted, 16bits, I2S
-    delay(10);
-
-
-    st += ES8960_Write_Reg(25, 0x0C0);      // VMID = 50k VREF enabled
-    delay(10);
-    st += ES8960_Write_Reg(26, 0x1E0);      // enable DAC L/R LOUT1 ROUT1
-    delay(10);
-    st += ES8960_Write_Reg(47, 0x00C);      // enable output mixer L/R
-    delay(10);
-    st += ES8960_Write_Reg(34, 0x100);      // L DAC to L output mixer
-    delay(10);
-    st += ES8960_Write_Reg(37, 0x100);      // R DAC to R output mixer
-    delay(10);
-    st += ES8960_Write_Reg(2, 0x179);       // LOUT1 volume
-    delay(10);
-    st += ES8960_Write_Reg(3, 0x179);       // ROUT1 volume
-    delay(10);
-    st += ES8960_Write_Reg(5, 0x000);       // unmute DAC
-    delay(10);
-
-    if (st == 0) printf("init WS8960 OK....\n");
-    else
-    {
-      printf("init WS8960 failed...\n");
-      delay(1000);
-    }
-  } while (st != 0);
 }
 
-//////////////////////////////////////////////////////////////////////////////////////
-// DAC ===> SPR L/R and HP L/R
-//////////////////////////////////////////////////////////////////////////////////////
-void dacToSpkAndHp()
-{
-  int st;
-  do
-  {
-    st = 0;
-    st += ES8960_Write_Reg(15, 0x00);      //RESET
-    delay(10);
-
-    //ADC/DAC
-    st += ES8960_Write_Reg(5, 0x004);       //DAC att=0dB, ADC pol. not inverted, DAC mute, no de-emphasis
-    delay(10);
-    st += ES8960_Write_Reg(7, 0x002);       //ADC ch normal, BCLK nrmal, slave mode, DAC ch normal,LRCK not inverted, 16bits, I2S
-    delay(10);
-
-    st += ES8960_Write_Reg(25, 0x0C0);      // VMID = 50k VREF enabled
-    delay(10);
-    st += ES8960_Write_Reg(26, 0x1F8);      // DAC l/R SPK L/R enabled
-    delay(10);
-    st += ES8960_Write_Reg(47, 0x00C);      // L/R output mixer enabled
-    delay(10);
-    st += ES8960_Write_Reg(49, 0x0FF);      // spk L/R enabled
-    delay(10);
-    st += ES8960_Write_Reg(51, 0x0AD);      // DCGAIN = 3.6 dB  ACGAIN = 3.6 dB
-    delay(10);
-    st += ES8960_Write_Reg(34, 0x100);      // DAC L to left output mixer
-    delay(10);
-    st += ES8960_Write_Reg(37, 0x100);      // DAC R to right output mixer
-    delay(10);
-    st += ES8960_Write_Reg(40, 0x168);      // spk L volume
-    delay(10);
-    st += ES8960_Write_Reg(41, 0x168);      // spk R volume
-    st += ES8960_Write_Reg(2, 0x179);       // LOUT1 volume
-    delay(10);
-    st += ES8960_Write_Reg(3, 0x179);       // ROUT1 volume
-    delay(10);
-
-    delay(10);
-    st += ES8960_Write_Reg(5, 0x000);       // DAC unmute
-    delay(10);
-
-    if (st == 0) printf("init WS8960 OK....\n");
-    else
-    {
-      printf("init WS8960 failed...\n");
-      delay(1000);
-    }
-  } while (st != 0);
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////
 // setVol
@@ -983,84 +823,6 @@ void setVol(int vol)
   } while (st != 0);
 }
 
-//------------------CODEC SETUP END
-
-void ES8960_Init2(void)
-{
-
-
-  int st;
-
-  do
-  {
-    st = 0;
- 
-   st += ES8960_Write_Reg(15, 0x00);
-  usleep(10000);
-  //Power
-  st += ES8960_Write_Reg(25, 0x1FC);
-  usleep(500);  
-  st += ES8960_Write_Reg(26, 0x1F9);
-  usleep(500);  
-  st += ES8960_Write_Reg(47, 0x03C);
-  usleep(10000);  
-  //Clock PLL
-  st += ES8960_Write_Reg(4, 0x001);
-  usleep(10000);  
-  st += ES8960_Write_Reg(52, 0x027);
-  usleep(10000);  
-  st += ES8960_Write_Reg(53, 0x086);
-  usleep(10000);  
-  st += ES8960_Write_Reg(54, 0x0C2);
-  usleep(10000);  
-  st += ES8960_Write_Reg(55, 0x026);
-  usleep(10000);
-  //ADC/DAC
-  st += ES8960_Write_Reg(5, 0x000);
-  usleep(10000);  
-  st += ES8960_Write_Reg(7, 0x002);
-  usleep(10000);  
-  //Noise control
-  st += ES8960_Write_Reg(20, 0x0F9);
-  usleep(10000);  
-  //OUT1 volume
-  st += ES8960_Write_Reg(2, 0x16F);
-  usleep(500);  
-  st += ES8960_Write_Reg(3, 0x16F);
-  usleep(500);  
-  //SPK volume
-  st += ES8960_Write_Reg(40, 0x17F);
-  usleep(500);
-  st += ES8960_Write_Reg(41, 0x17F);
-  usleep(500);
-  // OUTPUTS
-//  st += ES8960_Write_Reg(49, 0x0F7);
-  usleep(10000);  
-  st += ES8960_Write_Reg(10, 0x1FF);
-  usleep(10000);
-  st += ES8960_Write_Reg(11, 0x1FF);
-  usleep(10000);
-
-  st += ES8960_Write_Reg(34, 0x100);
-  usleep(10000);
-  
-  st += ES8960_Write_Reg(37, 0x100);
-  usleep(10000);  
-
-
-    if (st == 0) printf("init WS8960 OK....\n");
-    else
-    {
-      //  printf(st);
-      printf("init WS8960 failed...\n");
-      delay(1000);
-    }
-
-  } while (st != 0);
-
-
-
-}
 
 void load_preset()
 {
@@ -1136,98 +898,128 @@ void modubrainInit()
     return;
   }
   Serial.println("Partition FATFS initialisée.");
-
-  waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
-
+  
   pinMode(BUT1, INPUT_PULLDOWN);
   pinMode(BUT2, INPUT_PULLDOWN);
   pinMode(BUT3, INPUT_PULLDOWN);
   pinMode(BUTENCO, INPUT_PULLDOWN);
   
-  for(int i=0; i<128; i++)
+  if(digitalRead(BUT1))
   {
-    midi_cc_val[i]=0;
+	  USB.onEvent(usbEventCallback);
+	  MSC.vendorID("ESP32");       //max 8 chars
+	  MSC.productID("USB_MSC");    //max 16 chars
+	  MSC.productRevision("1.0");  //max 4 chars
+	  MSC.onStartStop(onStartStop);
+	  MSC.onRead(onRead);
+	  MSC.onWrite(onWrite);
+
+	  MSC.mediaPresent(true);
+	  MSC.isWritable(true);  // true if writable, false if read-only
+
+	  MSC.begin(DISK_SECTOR_COUNT, DISK_SECTOR_SIZE);
+	  Serial.println("MSC OK");
+	  delay(100);
+	  
+	  USB.begin();  
+	  Serial.println("USB OK");
+  
+	  delay(1000);
   }
-  
-  Serial.println("1 Starting I2C codec comm");
-  //I2c init for codec
+  else
+  {
+	  waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
+	  
+	  for(int i=0; i<128; i++)
+	  {
+		midi_cc_val[i]=0;
+	  }
+	  
+	  Serial.println("1 Starting I2C codec comm");
+	  //I2c init for codec
 
-  Wire.begin(SDA, SCL);
-  Serial.println(digitalRead(0));
-  delay(1000);
+	  Wire.begin(SDA, SCL);
+	  Serial.println(digitalRead(0));
+	  delay(1000);
 
-  /*gpio_reset_pin((gpio_num_t)SD_CS);  
-  gpio_reset_pin((gpio_num_t)SPI_MOSI);  
-  gpio_reset_pin((gpio_num_t)SPI_MISO);  
-  gpio_reset_pin((gpio_num_t)SPI_SCK);  */
+	  /*gpio_reset_pin((gpio_num_t)SD_CS);  
+	  gpio_reset_pin((gpio_num_t)SPI_MOSI);  
+	  gpio_reset_pin((gpio_num_t)SPI_MISO);  
+	  gpio_reset_pin((gpio_num_t)SPI_SCK);  */
+
+	   
+	  //SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
+	  Serial.println("0 SD");
+	  delay(1000);
+	  
+	  int  volume = 10;
+	  
+	/*  */
+		
+
+	  /*Wire.begin(SDA, SCL);
+	  Serial.println("wire OK");
+	  delay(500);*/
+
+	  midi.begin();
+	  delay(100);
+	  Serial.println("MIDI OK");
+	  
+	  /*USB.begin();
+	  delay(100);
+	  Serial.println("USB OK");*/
+
+	  hp_spk();
+	  delay(100);
+	  Serial.println("I2C OK");
+	  
+
+	  //setVol(3);
+	  Serial.println("volume OK");
+	  delay(500);
+
+	  setup_i2s();
+	  delay(100);
+	  Serial.println("I2S OK");
+	  pinMode(0, INPUT_PULLUP);
 
    
-  //SPI.begin(SPI_SCK, SPI_MISO, SPI_MOSI);
-  Serial.println("0 SD");
-  delay(1000);
-  
-  int  volume = 10;
-  
-  USB.onEvent(usbEventCallback);
-  MSC.vendorID("ESP32");       //max 8 chars
-  MSC.productID("USB_MSC");    //max 16 chars
-  MSC.productRevision("1.0");  //max 4 chars
-  MSC.onStartStop(onStartStop);
-  MSC.onRead(onRead);
-  MSC.onWrite(onWrite);
+	  createSineTable();
+	  createSawTable();
+	  createSqTable();
 
-  MSC.mediaPresent(true);
-  MSC.isWritable(true);  // true if writable, false if read-only
+	  Synth_Init();
+	  Serial.println("1 synth init");
 
-  MSC.begin(DISK_SECTOR_COUNT, DISK_SECTOR_SIZE);
-  Serial.println("MSC OK");
+	  delay(500);
+	  
+	  Serial.println("1 search");
+	  
+	  Midi_Setup();
+	  Serial.println("midi setup");
+	  //MIDI.begin(MIDI_CHANNEL_OMNI);
 
-  Wire.begin(SDA, SCL);
-  Serial.println("wire OK");
-  delay(500);
+	  buildTables();
+	  Serial.println("build tables");
 
-  midi.begin();
-  Serial.println("MIDI OK");
-  
-  USB.begin();
-  Serial.println("USB OK");
+	  init_running=false;
+	  
 
-  hp_spk();
-  Serial.println("I2C OK");
+	  xTaskCreatePinnedToCore(taskAudio, "TaskAudio", 20000, NULL, 999, &TaskAudioHandle, 1); // Cœur 0
+	  xTaskCreatePinnedToCore(taskOther, "TaskOther", 4096, NULL, 1, &TaskOtherHandle, 0);   // Cœur 1
+	  
 
-  //setVol(3);
-  Serial.println("volume OK");
-  delay(500);
-
-  setup_i2s();
-  Serial.println("I2S OK");
-  pinMode(0, INPUT_PULLUP);
-
-  //ES8960_Init2(); //headphone OK, 
-  //dacToSpkAndHp();
-   
-  createSineTable();
-  createSawTable();
-  createSqTable();
-
-  Synth_Init();
-  Serial.println("1 synth init");
-
-  delay(500);
-  
-  Serial.println("1 search");
-  
-  Midi_Setup();
-  Serial.println("midi setup");
-  //MIDI.begin(MIDI_CHANNEL_OMNI);
-
-  buildTables();
-  Serial.println("build tables");
-
-  init_running=false;
-  
-  xTaskCreatePinnedToCore(taskAudio, "TaskAudio", 4096, NULL, 1, NULL, 1); // Cœur 0
-  xTaskCreatePinnedToCore(taskOther, "TaskOther", 4096, NULL, 1, NULL, 0);   // Cœur 1
+    // Créer la tâche Monitor (sur n'importe quel core, priorité moyenne)
+    xTaskCreatePinnedToCore(
+        MonitorTask,
+        "MonitorTask",
+        4096,
+        NULL,
+        2,   // une priorité un peu plus élevée que 1, pour être sûr de tourner régulièrement
+        &MonitorTaskHandle,
+        0
+    );
+  }
 }
 
 void core0_init()
