@@ -114,6 +114,7 @@ boolean WM8960::_writeRegisterBit(uint8_t registerAddress, uint8_t bitNumber, bo
 			res=true;
 		}
 		else res=false;
+		delay(1);
 	}
 	return res;
 
