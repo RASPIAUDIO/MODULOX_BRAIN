@@ -3,15 +3,22 @@ String dest_list[]={"None","Grain Size","Grain dens","Speed","Cutoff"};
 
 void but_mid_pressed()
 {
-  
+  if(param_displayed==24) 
+  {
+    disp.draw_warning("saving...");
+    disp.display_window();
+    delay(500);
+    save_preset();
+    display_param();
+  }
 
 }
 
 void enco_pressed()
 {
   playglb=false;
-  
   if(!record) {sample_index=0; record=true;}
+  
   granulizer.trace=0;
   playglb=true;
 }
@@ -41,20 +48,39 @@ void enco_released()
   granulizer.trace=0;
   
   playglb=true;
+
+  //codec.enableSpeakers();
  
 }
 
 void param_action(int num)
 {
-  Serial.print("param_action : ");
-  Serial.println(num);
-  if(num == 1) {String sfile = "/sample" + String(param_midi[num]) + ".wav"; granulizer.load_file(sfile, 0);}
+  //Serial.print("param_action : ");
+  //Serial.println(num);
+  if(num==0) {
+    savenum=param_midi[num]%16; 
+    vTaskSuspend(TaskAudioHandle); 
+    disp.draw_warning("loading...");
+    disp.display_window();
+    delay(200);
+    load_preset();
+    delay(200);
+    vTaskResume(TaskAudioHandle);
+  }
+  if(num == 1) {
+    vTaskSuspend(TaskAudioHandle); 
+    disp.draw_warning("loading...");
+    disp.display_window();
+    String sfile = "/sample" + String(param_midi[num]) + ".wav"; 
+    granulizer.load_file(sfile); 
+    vTaskResume(TaskAudioHandle);
+  }
   if(num == 2) granulizer.change_start(param_midi[num]);
   if(num == 3) granulizer.change_end(param_midi[num]);
   if(num == 4) granulizer.size_change(param_midi[num]);
   if(num == 5) granulizer.env_change(param_midi[num]);
   if(num == 6) granulizer.density_change(param_midi[num]);
-  if(num == 7) granulizer.rate_change(param_midi[num]);
+  //if(num == 7) granulizer.rate_change(param_midi[num]);
   if(num == 8) granulizer.sample_rate_change(param_midi[num]);
   if(num == 9) granulizer.change_random_start_grain(param_midi[num]);
   if(num==10) set_time(param_midi[num]);
@@ -70,6 +96,8 @@ void param_action(int num)
   if(num==20) granulizer.setenvD(param_midi[num]);
   if(num==21) granulizer.setenvS(param_midi[num]);
   if(num==22) granulizer.setenvR(param_midi[num]);
+  if(num==23) {volglobal=(float)param_midi[num]*80.0/127.0-74.0; codec.setHeadphoneVolumeDB(volglobal);}
+  if(num==24) savenum=param_midi[num]%16;
 
 }
 
@@ -105,6 +133,8 @@ void display_param()
   if(param_displayed == 20) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
   if(param_displayed == 21) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
   if(param_displayed == 22) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
+  if(param_displayed == 23) disp.draw_number_string_center((int)volglobal, " dB");
+  if(param_displayed == 24) disp.draw_string_number_center("User ", savenum);
 
   disp.display_window();
   
@@ -112,26 +142,26 @@ void display_param()
 
 inline void Midi_NoteOn(uint8_t ch, uint8_t note, uint8_t vol)
 {
-  //Serial.println("Midi_NoteOn");
+  Serial.println("Midi_NoteOn");
   granulizer.noteOn(note);
 }
 
 inline void Midi_NoteOff(uint8_t ch, uint8_t note)
 {
-  //Serial.println("Midi_NoteOff");
+  Serial.println("Midi_NoteOff");
   granulizer.noteOff(note);
 }
 
 inline void Midi_ControlChange(uint8_t ch, uint8_t note, uint8_t val)
 {
-  //Serial.println("Midi_CC");
+  Serial.println("Midi_CC");
 }
 
 void Synth_Init()
 {
   param_midi[3]=127;
   granulizer.init();
-  granulizer.load_file("/sample1.wav", 0);
+  granulizer.load_file("/sample1.wav");
   granulizer.change_end(127);
   granulizer.launch(0,100);
   delay_init();
@@ -148,6 +178,39 @@ void Synth_Init()
 inline void Synth_Process(int16_t *left, int16_t *right)
 {
 
+}
+
+inline void HandleShortMsg(uint8_t *data)
+{
+    uint8_t ch = data[0] & 0x0F;
+
+    Serial.println(data[0] & 0xF0);
+    Serial.print("channel : ");
+    Serial.println(ch);
+
+    switch (data[0] & 0xF0)
+    {
+    /* note on */
+      
+    case 0x90:
+        
+        if (data[2] > 0)
+        {
+          Midi_NoteOn(ch, data[1],data[2]);
+        }
+        else
+        {
+          Midi_NoteOff(ch, data[1]);
+        }
+        break;
+    /* note off */
+    case 0x80:
+        Midi_NoteOff(ch, data[1]);
+        break;
+    case 0xb0:
+        Midi_ControlChange(ch, data[1], data[2]);
+        break;
+    }
 }
 
 
