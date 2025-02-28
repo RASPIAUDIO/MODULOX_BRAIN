@@ -55,6 +55,8 @@ public:
 	size_t menutitleSize = 0;
 	char* menulistBuffer  = NULL;
 	size_t menulistSize = 0;
+	char* menuorgBuffer  = NULL;
+	size_t menuorgSize = 0;
 	
 	Bdisplay() {
 		spr.setColorDepth(8);      // Create an 8bpp Sprite of 60x30 pixels
@@ -97,6 +99,13 @@ public:
 		  Serial.printf("menulist.txt chargé (%d octets)\n", menulistSize);
 		} else {
 		  Serial.println("Échec du chargement de menulist.txt");
+		}
+		
+		menuorgBuffer = loadFileToBuffer("/menuorg.txt", &menuorgSize);
+		if (menulistBuffer) {
+		  Serial.printf("menuorg.txt chargé (%d octets)\n", menuorgSize);
+		} else {
+		  Serial.println("Échec du chargement de menuorg.txt");
 		}
 	}
 	// Fonction utilitaire pour charger un fichier dans un buffer en RAM
@@ -500,187 +509,164 @@ public:
 	  return ret;
 	}
 	
-	int menu_right()
-	{
-		Serial.println("menu_right");
-		int ret=200;
-		char Buf[20];
-		list_text[line_selected[menu_level]].toCharArray(Buf, 20);
-		if(Buf[0]=='@')	
-		{
-			String search = list_previous+" "+list_text[line_selected[menu_level]].substring(1);
-			//String search = list_previous+"aaa";
-			Serial.println(search);
-			ret=search_menutitle(search);
-		}
-		else
-		{
-			list_previous = list_text[line_selected[menu_level]];
-			menu_level++;
-			line_selected[menu_level]=0;
-			menu_hierarchy();
-		}
-		return ret;
+	int menu_right() {
+	  Serial.println("menu_right");
+	  int ret = 200;
+	  char Buf[20];
+	  list_text[line_selected[menu_level]].toCharArray(Buf, sizeof(Buf));
+	  
+	  // Si la ligne commence par '@', on recherche un titre dans le buffer de menutitle
+	  if (Buf[0] == '@') {
+		String search = list_previous + " " + list_text[line_selected[menu_level]].substring(1);
+		Serial.println(search);
+		ret = search_menutitle(search);
+	  }
+	  else {
+		// Sinon, on sauvegarde la ligne actuelle et on passe au niveau suivant
+		list_previous = list_text[line_selected[menu_level]];
+		menu_level++;
+		// Réinitialise la sélection pour le nouveau niveau
+		line_selected[menu_level] = 0;
+		menu_hierarchy();  // Mise à jour de la liste du nouveau niveau
+	  }
+	  return ret;
 	}
-	
-	void menu_hierarchy()
-	{
-		fs::File file = FFat.open("/menuorg.txt", "r");
+
+	// Cette fonction extrait et affiche la colonne de menu pour un niveau donné,
+	// en ne retenant que les lignes qui sont des enfants du parent sélectionné.
+	void populateMenuColumn(int lvl) {
+	  if (menuorgBuffer == NULL) {
+		Serial.println("menuorgBuffer vide");
+		return;
+	  }
+
+	  // Définir le préfixe attendu pour ce niveau
+	  char expectedPrefix;
+	  switch (lvl) {
+		case 0: expectedPrefix = '-'; break;
+		case 1: expectedPrefix = '/'; break;
+		case 2: expectedPrefix = '*'; break;
+		case 3: expectedPrefix = '+'; break;
+		default: expectedPrefix = ' '; break;
+	  }
+	  
+	  String tempList[20]; // Tableau temporaire pour stocker les lignes de ce niveau
+	  int count = 0;       // Nombre de lignes trouvées
+	  
+	  // Si le niveau est 0, on parcourt tout le buffer et on récupère toutes les lignes qui commencent par '-'
+	  if (lvl == 0) {
+		int lineIndex = 0;
+		while (true) {
+		  String line = getLineFromBuffer(menuorgBuffer, lineIndex);
+		  if (line.length() == 0 || line.startsWith("#")) break;
+		  line.trim();
+		  if (line.charAt(0) == expectedPrefix) {
+			// On retire le premier caractère (pour le niveau 0, lvl+1 = 1)
+			String displayLine = (line.length() > 1) ? line.substring(1) : "";
+			tempList[count++] = displayLine;
+			if (count >= 20) break;
+		  }
+		  lineIndex++;
+		}
+	  }
+	  else {
+		// Pour lvl >= 1, on doit d'abord localiser le parent dans le buffer.
+		// Le parent correspond au niveau précédent (lvl - 1) dont le préfixe est défini ci-dessous :
+		char parentPrefix;
+		switch (lvl - 1) {
+		  case 0: parentPrefix = '-'; break;
+		  case 1: parentPrefix = '/'; break;
+		  case 2: parentPrefix = '*'; break;
+		  case 3: parentPrefix = '+'; break;
+		  default: parentPrefix = ' '; break;
+		}
 		
-		Serial.println("hierarchy");
-		Serial.println(menu_level);
+		// Le numéro de sélection du parent est stocké dans line_selected[lvl - 1].
+		int parentSel = line_selected[lvl - 1];
+		int parentCount = 0;
+		int lineIndex = 0;
+		int parentStartLine = -1;
 		
-		int niv=0;
-		int i=0;
-		char Buf[20];
-		String titleSt;
+		// Rechercher la ligne du parent sélectionné
+		while (true) {
+		  String line = getLineFromBuffer(menuorgBuffer, lineIndex);
+		  if (line.length() == 0 || line.startsWith("#")) break;
+		  line.trim();
+		  if (line.charAt(0) == parentPrefix) {
+			if (parentCount == parentSel) {
+			  parentStartLine = lineIndex;
+			  break;
+			}
+			parentCount++;
+		  }
+		  lineIndex++;
+		}
 		
-		if(menu_level>=0)
-		{
-			while(Buf[0]!='#')
-			{
-				list_text[i]=file.readStringUntil('\r\n');
-				//mystring[length-1] = '\0';
-				int lastIndex = list_text[i].length() - 1;
-                list_text[i].remove(lastIndex);
-				list_text[i].toCharArray(Buf, 20);
-				list_text[i]=list_text[i].substring(1);
-				if(Buf[0]=='-')	i++;
+		// Si le parent a été trouvé, on lit à partir de parentStartLine+1
+		if (parentStartLine >= 0) {
+		  lineIndex = parentStartLine + 1;
+		  while (true) {
+			String line = getLineFromBuffer(menuorgBuffer, lineIndex);
+			if (line.length() == 0 || line.startsWith("#")) break;
+			line.trim();
+			// Si on rencontre une ligne qui commence par le parentPrefix ou un marqueur de niveau supérieur,
+			// cela signifie qu'on est sorti du bloc enfant du parent.
+			if (line.charAt(0) == parentPrefix) break;
+			// Si la ligne a le préfixe attendu pour le niveau courant, on la conserve.
+			if (line.charAt(0) == expectedPrefix) {
+			  // Pour enlever le préfixe hiérarchique, on retire (lvl+1) caractères.
+			  int removeCount = lvl + 1;
+			  String displayLine = (line.length() > removeCount) ? line.substring(removeCount) : "";
+			  tempList[count++] = displayLine;
+			  if (count >= 20) break;
 			}
-			line_selected_max[0]=i-1;
-			list_size=i;
-			display_list(line_selected[0],0,10,80);
-			
+			lineIndex++;
+		  }
 		}
-		file.close();
-		file = FFat.open("/menuorg.txt", "r");
-		if(menu_level>=1)
-		{
-			i=0;
-			while(i<(line_selected[0]+1))
-			{
-				titleSt=file.readStringUntil('\r\n');
-				titleSt.toCharArray(Buf, 20);
-				if(Buf[0]=='-')	i++;
-			}
-			i=0;
-			Buf[0]='a';
-			while(Buf[0]!='-' && Buf[0]!='#')
-			{
-				Serial.println(i);
-				list_text[i]=file.readStringUntil('\r\n');
-				Serial.println(list_text[i]);
-				int lastIndex = list_text[i].length() - 1;
-                list_text[i].remove(lastIndex);
-				list_text[i].toCharArray(Buf, 20);
-				list_text[i]=list_text[i].substring(2);
-				if(Buf[0]=='/')	i++;
-			}
-			Serial.println(i);
-			line_selected_max[1]=i-1;
-			list_size=i;
-			display_list(line_selected[1],80,10,65);		
-		}
-		file.close();
-		file = FFat.open("/menuorg.txt", "r");
-		if(menu_level>=2)
-		{
-			i=0;
-			while(i<(line_selected[0]+1))
-			{
-				titleSt=file.readStringUntil('\r\n');
-				titleSt.toCharArray(Buf, 20);
-				if(Buf[0]=='-')	i++;
-			}
-			i=0;
-			Buf[0]='a';
-			while(i<(line_selected[1]+1))
-			{
-				titleSt=file.readStringUntil('\r\n');
-				titleSt.toCharArray(Buf, 20);
-				if(Buf[0]=='/')	i++;
-			}
-			i=0;
-			Buf[0]='a';
-			while(Buf[0]!='/' && Buf[0]!='-' && Buf[0]!='#')
-			{
-				Serial.println(i);
-				list_text[i]=file.readStringUntil('\r\n');
-				Serial.println(list_text[i]);
-				int lastIndex = list_text[i].length() - 1;
-                list_text[i].remove(lastIndex);
-				list_text[i].toCharArray(Buf, 20);
-				list_text[i]=list_text[i].substring(3);
-				if(Buf[0]=='*')	i++;
-			}
-			Serial.println(i);
-			line_selected_max[2]=i-1;
-			list_size=i;
-			display_list(line_selected[2],145,10,65);	
-		}
-		file.close();
-		file = FFat.open("/menuorg.txt", "r");
-		if(menu_level>=3)
-		{
-			i=0;
-			while(i<(line_selected[0]+1))
-			{
-				titleSt=file.readStringUntil('\r\n');
-				titleSt.toCharArray(Buf, 20);
-				if(Buf[0]=='-')	i++;
-			}
-			i=0;
-			Buf[0]='a';
-			while(i<(line_selected[1]+1))
-			{
-				titleSt=file.readStringUntil('\r\n');
-				titleSt.toCharArray(Buf, 20);
-				if(Buf[0]=='/')	i++;
-			}
-			i=0;
-			Buf[0]='a';
-			while(i<(line_selected[2]+1))
-			{
-				titleSt=file.readStringUntil('\r\n');
-				titleSt.toCharArray(Buf, 20);
-				if(Buf[0]=='*')	i++;
-			}
-			i=0;
-			Buf[0]='a';
-			while(Buf[0]!='*' && Buf[0]!='/' && Buf[0]!='-' && Buf[0]!='#')
-			{
-				Serial.println(i);
-				list_text[i]=file.readStringUntil('\r\n');
-				Serial.println(list_text[i]);
-				int lastIndex = list_text[i].length() - 1;
-                list_text[i].remove(lastIndex);
-				list_text[i].toCharArray(Buf, 20);
-				list_text[i]=list_text[i].substring(4);
-				if(Buf[0]=='+')	i++;
-			}
-			Serial.println(i);
-			line_selected_max[3]=i-1;
-			list_size=i;
-			display_list(line_selected[3],210,10,75);	
-		}
-		/*niv=0;
-		while(niv!=line_selected[1])
-		{
-			Serial.println(i);
-			list_text[i]=file.readStringUntil('\r\n');
-			Serial.println(list_text[i]);
-			list_text[i].toCharArray(Buf, 20);
-			if(Buf[0]=='/')	niv++;
-		}
-		if(Buf[2]=='@') display_list(line_selected[0],0,10,80);
-		*/
-		file.close();
+	  }
+	  
+	  // Mise à jour des variables globales pour ce niveau
+	  list_size = count;
+	  line_selected_max[lvl] = (count > 0) ? count - 1 : 0;
+	  // Copier dans le tableau global list_text (pour affichage)
+	  for (int i = 0; i < count; i++) {
+		list_text[i] = tempList[i];
+	  }
+	  
+	  // Choix des coordonnées d'affichage pour ce niveau
+	  int x, y, h;
+	  switch (lvl) {
+		case 0: x = 0;   y = 10; h = 80;  break;
+		case 1: x = 80;  y = 10; h = 65;  break;
+		case 2: x = 145; y = 10; h = 65;  break;
+		case 3: x = 210; y = 10; h = 75;  break;
+		default: x = 0;  y = 10; h = 80;  break;
+	  }
+	  
+	  // Affichage de la colonne avec la fonction existante
+	  display_list(line_selected[lvl], x, y, h);
 	}
+
+	// La fonction menu_hierarchy() affiche systématiquement les colonnes des niveaux 0 jusqu'au niveau actif.
+	// Pour le niveau actif, la colonne ne contiendra que les options enfants du parent sélectionné.
+	void menu_hierarchy() {
+	  if (menuorgBuffer == NULL) {
+		Serial.println("menuorgBuffer vide");
+		return;
+	  }
+	  
+	  // Pour chaque niveau allant de 0 jusqu'au niveau actif, on affiche la colonne correspondante.
+	  for (int lvl = 0; lvl <= menu_level; lvl++) {
+		populateMenuColumn(lvl);
+	  }
+	}
+
 	
 	void cpu_usage(int cpu)
 	{
-		String aff = String(cpu/6) + " %";
-        tft.fillRect(SCREEN_WIDTH/2+100, 0, 40, 39,  0x5ACB);
+		String aff = String(cpu) + " %";
+        if(cpu<80) tft.fillRect(SCREEN_WIDTH/2+90, 0, 50, 39,  TFT_BLUE);
+		else tft.fillRect(SCREEN_WIDTH/2+90, 0, 50, 39,  TFT_RED);
         //tft.drawString(aff, SCREEN_WIDTH/2+100, 10, 2);
 		
 		tft.setCursor(SCREEN_WIDTH/2+100, 10);	
@@ -699,7 +685,8 @@ public:
 	
 	void draw_warning(String txt)
 	{
-		spr.fillRect(60, 20, 160, 120, TFT_RED);
+		spr.fillRect(60, 30, 160, 100, TFT_RED);
+		spr.drawRect(60,30,160,100, TFT_WHITE);
 		draw_centered(70, txt, SMALLCHAR);
 	    //spr.drawString(txt, SCREEN_WIDTH/2-20, 70, 4);
 	}

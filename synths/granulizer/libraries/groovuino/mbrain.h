@@ -141,6 +141,7 @@ volatile uint64_t midiCpuTime  = 0;
 
 // Pour la tâche de monitoring
 TaskHandle_t MonitorTaskHandle = NULL;	
+int cpuaudio=0;
 
 void MonitorTask(void* pvParameters)
 {
@@ -170,6 +171,8 @@ void MonitorTask(void* pvParameters)
         // En 100 ms, chaque core a 100'000 µs de “budget”
         float usageAudio = (float)deltaAudio / 500000.0f * 100.0f; 
         float usageMidi  = (float)deltaMidi  / 500000.0f * 100.0f;
+		
+		
         
 
         // -- Stack HighWaterMark --
@@ -177,6 +180,8 @@ void MonitorTask(void* pvParameters)
         UBaseType_t stackAudio = uxTaskGetStackHighWaterMark(TaskAudioHandle);
         UBaseType_t stackMidi  = uxTaskGetStackHighWaterMark(TaskOtherHandle);
 		
+		cpuaudio=(int)usageAudio;
+		//Serial.println(cpuaudio);
 		Serial.printf("Audio %.1f %%, MIDI %.1f %%, Audio=%u words, MIDI=%u words\n", usageAudio, usageMidi, stackAudio, stackMidi);
         
 
@@ -610,10 +615,10 @@ void Midi_Process()
 		if (Serial2.available())
 		{
 			uint8_t incomingByte = Serial2.read();
-			//Serial.println("read");
+			Serial.println("read");
 
-			//Serial.printf("%02x", incomingByte);
-			//Serial.println("");
+			Serial.printf("%02x", incomingByte);
+			Serial.println("");
 			// ignore live messages 
 			if ((incomingByte & 0xF0) == 0xF0)
 			{
@@ -782,8 +787,8 @@ void hp_spk(void)
 	codec.enableLeftSpeaker();
 	codec.setSpeakerVolume(64);*/
 	
-	codec.enableSpeakers();
-	codec.setSpeakerVolumeDB(0.00);
+	//codec.enableSpeakers();
+	//codec.setSpeakerVolumeDB(0.00);
 	
 	codec.setHeadphoneVolumeDB(0.00);
 	

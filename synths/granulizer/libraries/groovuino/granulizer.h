@@ -163,11 +163,11 @@ public:
 	Serial.println("note On");
 	bool end_noteon=false;
 	for (int i = 0; i < POLYPHONY; i++) {
-		Serial.print("occurence ");
+		/*Serial.print("occurence ");
 		Serial.println(i);
 		Serial.println(notepressed[i].isplaying);
 		Serial.println(notepressed[i].pitch);
-		Serial.println(pitch);
+		Serial.println(pitch);*/
 	  if (notepressed[i].isplaying && notepressed[i].pitch == pitch) {
         env[i].start();
 		Serial.println("same");
