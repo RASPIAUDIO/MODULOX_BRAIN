@@ -19,13 +19,14 @@ bool record=false;
 
 bool playglb=true;
 
-#define bufferLen 64
-int16_t sBuffer[bufferLen];
+#define bufferLen 32
+int16_t sBuffer[bufferLen*2];
 
 int sample_index=0;
 int play_ind=0;
 
 float lfoamount_prev=0;
+float volglobal=0.0;
 
 void setup() {
   Serial.begin(115200);
@@ -54,7 +55,7 @@ int cou=0;
 // Fonction pour lire les grains et les mixer
 void mixGrains(int16_t *outputBuffer, size_t numSamples) {
   //memset(outputBuffer, 0, numSamples * sizeof(int16_t));  // Initialisation du buffer de sortie à zéro
-
+  //granulizer.load_buffers();
   for (int j = 0; j < numSamples; j++) {
     float lfoamount=lfo.output();
     if(lfoamount<0) lfoamount=0;
@@ -65,7 +66,7 @@ void mixGrains(int16_t *outputBuffer, size_t numSamples) {
       lfoamount_prev=lfoamount;
     }
     outputBuffer[j] = granulizer.process();
-    if(outputBuffer[j]>16000) Serial.println(outputBuffer[j]);
+    //if(outputBuffer[j]>16000) Serial.println(outputBuffer[j]);
     outputBuffer[j] = delay_output(outputBuffer[j]);
     outputBuffer[j]=32767.0*filter.Process((float)outputBuffer[j]/32767.0);
     
@@ -74,29 +75,34 @@ void mixGrains(int16_t *outputBuffer, size_t numSamples) {
 }
 
 void taskAudio(void *parameter) {
-  int16_t audioBuffer[32*2];
+  int16_t audioBuffer[bufferLen*2];
   int numpass=0;
   play_ind=granulizer.sample_start_index[0];
   while (1) {
-    
-    
     if(!record) 
     {
-      int16_t monoBuffer[32];
-      int16_t testbuf[32];
-      if(playglb) mixGrains(monoBuffer, 32);
+      // Début de la mesure
+      uint32_t start = micros();
+        
+      int16_t monoBuffer[bufferLen];
+      int16_t testbuf[bufferLen];
+      if(playglb) mixGrains(monoBuffer, bufferLen);
       else
       {
-        for (int i = 0; i < 32; i++) {
+        for (int i = 0; i < bufferLen; i++) {
           monoBuffer[i]=0;          
         }
       }
       
-      for (int i = 0; i < 32; i++) {
+      for (int i = 0; i < bufferLen; i++) {
         
         audioBuffer[2 * i] = monoBuffer[i];     // Canal gauche
         audioBuffer[2 * i + 1] = monoBuffer[i]; // Canal droit
       }
+      // Fin de la mesure
+      uint32_t end = micros();
+      // On accumule la durée
+      audioCpuTime += (end - start);
       size_t bytes_written = 0;
       i2s_write(i2s_num, audioBuffer, sizeof(audioBuffer), &bytes_written, portMAX_DELAY);
     }
@@ -107,7 +113,7 @@ void taskAudio(void *parameter) {
       
       //numpass++;
       //Serial.println(bytesIn);
-      for (int i = 0; i < 32; i++) {
+      for (int i = 0; i < bufferLen; i++) {
         sample[sample_index]=sBuffer[i*2];  
         audioBuffer[2 * i + 1] = sBuffer[i*2]; 
         audioBuffer[2 * i] = sBuffer[i*2];     
@@ -138,5 +144,5 @@ void taskAudio(void *parameter) {
 
 void loop() {
   // put your main code here, to run repeatedly:
-    
+    Midi_Process();
 }
