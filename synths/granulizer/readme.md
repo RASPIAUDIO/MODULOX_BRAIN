@@ -1,47 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modu-Grain: The Granular Synth for MODULOX BRAIN</title>
-</head>
-<body>
-    <h1>🎛️ Modu-Grain: The Granular Synth for MODULOX BRAIN! 🎛️</h1>
-    <p>Welcome to the official repository for Modu-Grain, a powerful granular synthesizer developed specifically for the MODULOX BRAIN. Built for musicians and sound designers, Modu-Grain opens up a world of granular sound exploration and creativity. 🎶</p>
-    
-    <h2>🔗 Get Yours:</h2>
-    <p>Learn more and purchase the MODULOX BRAIN <a href="https://raspiaudio.com/produit/brain">here</a>.</p>
-    
-    <h2>🎥 Video Demo</h2>
-    <p>Check out our <a href="https://www.youtube.com/watch?v=SvOY9AalfjM">video demo</a> to see Modu-Grain in action!</p>
-    
-    <h2>⚡ Why Choose Modu-Grain?</h2>
-    <p>Modu-Grain is not just another synthesizer; it's a creative platform designed to inspire and empower:</p>
-    <ul>
-        <li><strong>Pre-recorded Samples</strong>: A library of built-in samples to kickstart your production.</li>
-        <li><strong>Four-Voice Polyphony</strong>: Create complex, layered sounds for richer audio experiences.</li>
-        <li><strong>Advanced Sound Control</strong>:
-            <ul>
-                <li>Adjust <strong>grain size</strong> for texture variation.</li>
-                <li>Fine-tune <strong>density</strong> and <strong>envelope</strong> for precise sound shaping.</li>
-                <li>Introduce <strong>random playback</strong> for dynamic performances.</li>
-                <li>Control <strong>sample duration</strong> to fit your creative needs.</li>
-            </ul>
-        </li>
-        <li><strong>Real-Time Interaction</strong>:
-            <ul>
-                <li>Visualize and adjust waveforms live.</li>
-                <li>Record samples on the go using the built-in mic or external input.</li>
-            </ul>
-        </li>
-        <li><strong>Dynamic Effects</strong>: Customize your sound with real-time effects like Filter, Delay, and an assignable LFO.</li>
-        <li><strong>Seamless MIDI Integration</strong>: Enhances compatibility with diverse audio setups.</li>
-    </ul>
+# 🎛️ Modu-Grain: The Granular Synth for MODULOX BRAIN! 🎛️
 
-    <h2>💾 Community-Driven Development</h2>
-    <ul>
-        <li><strong>Precompiled Firmware</strong>: Ready to download from our <a href="apps.raspiaudio.com">app store</a>.</li>
-        <li><strong>Open Source</strong>: Collaborate, modify, enhance, and share community-created features.</li>
-    </ul>
-</body>
-</html>
+Welcome to the official repository for Modu-Grain, a powerful granular synthesizer developed specifically for the MODULOX BRAIN. Built for musicians and sound designers, Modu-Grain opens up a world of granular sound exploration and creativity. 🎶
+
+## 🔗 Get Yours:
+Learn more and purchase the MODULOX BRAIN [here](https://raspiaudio.com/produit/brain).
+
+## 🎥 Video Demo
+Check out our [video demo](https://www.youtube.com/watch?v=SvOY9AalfjM) to see Modu-Grain in action!
+
+## ⚡ Why Choose Modu-Grain?
+
+Modu-Grain is not just another synthesizer; it's a creative platform designed to inspire and empower:
+
+- **Pre-recorded Samples**: A library of built-in samples to kickstart your production.
+- **Four-Voice Polyphony**: Create complex, layered sounds for richer audio experiences.
+- **Advanced Sound Control**:
+  - Adjust **grain size** for texture variation.
+  - Fine-tune **density** and **envelope** for precise sound shaping.
+  - Introduce **random playback** for dynamic performances.
+  - Control **sample duration** to fit your creative needs.
+- **Real-Time Interaction**:
+  - Visualize and adjust waveforms live.
+  - Record samples on the go using the built-in mic or external input.
+- **Dynamic Effects**: Customize your sound with real-time effects like Filter, Delay, and an assignable LFO.
+- **Seamless MIDI Integration**: Enhances compatibility with diverse audio setups.
+
+## 💾 Community-Driven Development
+
+- **Precompiled Firmware**: Ready to download from our [app store](apps.raspiaudio.com).
+- **Open Source**: Collaborate, modify, enhance, and share community-created features.
