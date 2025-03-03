@@ -28,4 +28,4 @@ Modu-Grain is not just another synthesizer; it's a creative platform designed to
 ## 💾 Community-Driven Development
 
 - **Precompiled Firmware**: Ready to download from our [app store](apps.raspiaudio.com).
-- **Open Source**: Collaborate, modify, enhance, and share community-created features.
+- **Open Source**: Collaborate, modify, enhance, and share community-created features. [github](https://github.com/RASPIAUDIO/MODULOX_BRAIN)
