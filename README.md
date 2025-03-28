@@ -1,4 +1,5 @@
 ESP32 SDK 3.0.5
+![unnamed](https://github.com/user-attachments/assets/25636b25-534b-4022-aa1e-ea9872185071)
 
 # MODULOX_BRAIN
 
