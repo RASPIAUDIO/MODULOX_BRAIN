@@ -1,3 +1,5 @@
+ESP32 SDK 3.0.5
+
 # MODULOX_BRAIN
 
 This is the repo code for Raspiaudio Modulox Brain. It is developped with arduino IDE.
