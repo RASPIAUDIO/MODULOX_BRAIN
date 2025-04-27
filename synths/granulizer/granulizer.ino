@@ -1,5 +1,5 @@
-#include "mbrain.h"
-#include "braindisplay.h"
+#include "mb.h"
+#include "mbdisplay.h"
 #include "granulizer.h"
 #include <TFT_eSPI.h>
 #include <lfofloat.h>
@@ -27,6 +27,10 @@ int play_ind=0;
 
 float lfoamount_prev=0;
 float volglobal=0.0;
+float delay_mix=0.0;
+
+int16_t maxaudio=0;
+int lastind=0;
 
 void setup() {
   Serial.begin(115200);
@@ -67,7 +71,7 @@ void mixGrains(int16_t *outputBuffer, size_t numSamples) {
     }
     outputBuffer[j] = granulizer.process();
     //if(outputBuffer[j]>16000) Serial.println(outputBuffer[j]);
-    outputBuffer[j] = delay_output(outputBuffer[j]);
+    outputBuffer[j]=outputBuffer[j]*(1.0-delay_mix) + delay_output(outputBuffer[j])*delay_mix;
     outputBuffer[j]=32767.0*filter.Process((float)outputBuffer[j]/32767.0);
     
     cou++;
@@ -116,9 +120,10 @@ void taskAudio(void *parameter) {
       for (int i = 0; i < bufferLen; i++) {
         sample[sample_index]=sBuffer[i*2];  
         audioBuffer[2 * i + 1] = sBuffer[i*2]; 
-        audioBuffer[2 * i] = sBuffer[i*2];     
+        audioBuffer[2 * i] = sBuffer[i*2];   
         sample_index++;
       }
+      if(sample_index>200000) but_record();
 
       if (result == ESP_OK)
       {

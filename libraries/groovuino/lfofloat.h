@@ -42,7 +42,7 @@ public:
 
 	void setfreq(float freq)
 	{
-		fFrequency = (freq*TICKS_LFO_PER_CYCLE+TICKS_LFO_PER_CYCLE);
+		fFrequency = (freq*TICKS_LFO_PER_CYCLE+TICKS_LFO_PER_CYCLE)/8.0;
 		phase_inc = fFrequency; 
 	}
 
