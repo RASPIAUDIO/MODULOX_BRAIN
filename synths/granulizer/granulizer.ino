@@ -3,6 +3,7 @@
 #include "granulizer.h"
 #include <TFT_eSPI.h>
 #include <lfofloat.h>
+#include <envfloat.h>
 #define TINY 0.000001f;
 #include "rosic_TeeBeeFilter.h"
 #include "rosic_OnePoleFilter.h"
@@ -26,11 +27,14 @@ int sample_index=0;
 int play_ind=0;
 
 float lfoamount_prev=0;
+float envamount_prev=0;
 float volglobal=0.0;
 float delay_mix=0.0;
 
 int16_t maxaudio=0;
 int lastind=0;
+
+Env env2;
 
 void setup() {
   Serial.begin(115200);
@@ -54,6 +58,27 @@ void test_matrix(int desti, float amoun)
   if(desti==4) filter.SetCutoff(amoun*127.0,true);
 }
 
+void change_matrix(int desti)
+{
+  if(desti==1) {
+    granulizer.density_change(param_midi[5]);;
+  }
+  if(desti==2) 
+  {
+    granulizer.size_change(param_midi[3]);
+    granulizer.sample_rate_change(param_midi[6]);
+  }
+  if(desti==3) 
+  {
+    granulizer.density_change(param_midi[5]);
+    filter.SetCutoff((float)param_midi[12],true);
+  }
+  if(desti==4) 
+  {
+    granulizer.sample_rate_change(param_midi[6]);
+  }
+}
+
 
 int cou=0;
 // Fonction pour lire les grains et les mixer
@@ -61,6 +86,15 @@ void mixGrains(int16_t *outputBuffer, size_t numSamples) {
   //memset(outputBuffer, 0, numSamples * sizeof(int16_t));  // Initialisation du buffer de sortie à zéro
   //granulizer.load_buffers();
   for (int j = 0; j < numSamples; j++) {
+    if(env2.dest>0)
+    {
+      float env2amount=env2.amount();
+      if(env2amount<envamount_prev-0.01 || env2amount>envamount_prev+0.01 )
+      {
+        test_matrix(env2.dest, env2amount);
+        envamount_prev=env2amount;
+      }
+    }
     float lfoamount=lfo.output();
     if(lfoamount<0) lfoamount=0;
     if(lfoamount>=1.0) lfoamount=1.0;
@@ -149,5 +183,6 @@ void taskAudio(void *parameter) {
 
 void loop() {
   // put your main code here, to run repeatedly:
-    Midi_Process();
+    //Midi_Process();
+    delay(1000);
 }

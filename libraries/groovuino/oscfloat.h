@@ -386,9 +386,8 @@ public:
 		 }
 		 
 		 if(note2==129 ) {
-			Serial.println("note2 129");
-			env[0].stop();
-			midi_play[0]=false;
+				 env[0].stop();
+				 midi_play[0]=false;
 		 }
 		 if(note2<128 && (!glideon || (glideon && !midi_play[0])))
 		 {
@@ -458,7 +457,6 @@ public:
 				 {
 					 notepressed[i].on=false;
 					 notepressed[i].pitch=0;
-					 Serial.println("vol 0");
 					 env[i].stop();
 				 }
 			 }
@@ -639,6 +637,7 @@ public:
 	 
 	void setPWM(uint8_t num, uint8_t val)
 	 {
+		 Serial.println("SetPWM 1");
 		 float val2=val;
 		 if(val2<64)
 		 {
@@ -830,7 +829,6 @@ public:
 			 {
 				 if(tim>time_stop && env[0].activated) 
 				 {
-					 Serial.println("time");
 					 env[0].stop();
 				 }
 			 }
@@ -895,8 +893,7 @@ public:
    {
 	   for(int k=0; k<UNI_MAX; k++)
 	   {
-		   int fact=(k+1)/2;
-		   unisenv[k]=1.0-(float)val/512.0*fact;
+		   unisenv[k]=(float)val*(k+1)/127.0/((k+2))+1/(k+2);
 		   if(unisenv[k]<0) unisenv[k]=0;
 		   for(int i=0; i<NUM_OSC; i++)
 			 {
@@ -971,12 +968,14 @@ public:
 					if(pwm_conv[0]>64) 
 					{
 						int ind = (fact1[0]-fact2[0]/((1023-phase_accu[0][j][k]+fl[0])))*phase_accu[0][j][k];
-						ret+= wave[0][ind]* volosc[0]*volenv;
+						//ret+= wave[0][ind]* volosc[0]*volenv;
+						ret+= wave[0][ind]* volc[0][k]*volenv;
 					}
 					if(pwm_conv[0]>0 && pwm_conv[0]<=64)
 					{
 						int ind = (fact1[0]+fact2[0]/(phase_accu[0][j][k]+fl[0]))*phase_accu[0][j][k];
-						ret+= wave[0][ind]* volosc[0]*volenv;
+						//ret+= wave[0][ind]* volosc[0]*volenv;
+						ret+= wave[0][ind]* volc[0][k]*volenv;
 					}
 					//voldesc+=volosc[i];
 				}
@@ -989,10 +988,8 @@ public:
 				{
 					if(pwm_conv[i]==0)
 					{
-						ret+= wave[i][(int)phase_accu[i][j][0]]* volc[i][0]*volenv;
-						//ret+= wave[i][(int)phase_accu[i][j][k]]* volosc[i]*volenv*;
-						//ret+= wave[i][(int)phase_accu[i][j][k]]* volosc[i];
-						//ret+= wave[i][(int)phase_accu[i][j][k]];
+						//+= wave[i][(int)phase_accu[i][j][0]]* volc[i][0]*volenv;
+						ret+= wave[i][(int)phase_accu[i][j][0]]* volosc[i]*volenv;
 					}
 					if(pwm_conv[i]>64) 
 					{

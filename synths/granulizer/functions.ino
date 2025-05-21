@@ -65,7 +65,7 @@ void but_mid_pressed()
 {
   Serial.println("but mid pressed");
   Serial.println(param_displayed);
-  if(param_displayed==24) 
+  if(param_displayed==29) 
   {
     disp.draw_warning("saving...");
     disp.display_wave();
@@ -74,7 +74,7 @@ void but_mid_pressed()
     load_window(9);
     display_window(24);
   }
-  if(param_displayed==23) 
+  if(param_displayed==28) 
   {
     disp.draw_warning("loading...");
     disp.display_wave();
@@ -83,7 +83,7 @@ void but_mid_pressed()
     load_window(9);
     display_window(23);
   }
-  if(param_displayed != 0 && param_displayed!=24 && param_displayed!=23 && enco_focus==0) learn_midi();
+  if(param_displayed != 0 && param_displayed!=28 && param_displayed!=29 && enco_focus==0) learn_midi();
 }
 
 void enco_pressed()
@@ -184,13 +184,32 @@ void load_window(int screen_n, bool init_s)
   if(screen_n==8) 
   {
     if(init_s) param_displayed=23;
+    disp.controller_val[0]=param_midi[23];
+    disp.init_window();
+    disp.draw_adsr(param_midi[24], param_midi[25], param_midi[26], param_midi[27], 0);
+  }
+  if(screen_n==9) 
+  {
+    if(init_s) param_displayed=24;
+    disp.controller_val[0]=param_midi[24];
+    disp.controller_val[1]=param_midi[25];
+    disp.controller_val[2]=param_midi[26];
+    disp.controller_val[3]=param_midi[27];
+    disp.init_window();
+    disp.draw_adsr(param_midi[24], param_midi[25], param_midi[26], param_midi[27], 0);
+  }
+  if(screen_n==10) 
+  {
+    if(init_s) param_displayed=28;
     disp.controller_val[0]=0;
     disp.controller_val[1]=0;
     disp.init_window();
   }
-  if(screen_n==9) 
+  if(screen_n==11) 
   {
-    if(init_s) param_displayed=25;
+    if(init_s) param_displayed=30;
+    disp.controller_val[0]=param_midi[30];
+    disp.controller_val[1]=param_midi[31];
     disp.init_window();
   }
 }
@@ -203,7 +222,7 @@ void param_action(int num)
     vTaskSuspend(TaskAudioHandle); 
     disp.draw_warning("loading...");
     disp.display_wave();
-    String sfile = "/sample" + String(param_midi[num]) + ".wav"; 
+    String sfile = "sample" + String(param_midi[num]) + ".wav"; 
     granulizer.load_file(sfile); 
     vTaskResume(TaskAudioHandle);
   }
@@ -247,7 +266,7 @@ void param_action(int num)
   }
   if(num==12) filter.SetCutoff((float)param_midi[num],true);
   if(num==13) {filter.SetResonance((float)param_midi[num],true);}
-  if(num==14) lfo.dest=param_midi[num]%16;
+  if(num==14) {lfo.dest=param_midi[num];  change_matrix(param_midi[num]);}
   if(num==15) lfo.setWaveform(param_midi[num]%3);
   if(num==16) lfo.setfreq((float)param_midi[num]*(float)param_midi[num]/127);
   if(num==17) lfo.setvol(param_midi[num]);
@@ -256,9 +275,14 @@ void param_action(int num)
   if(num==20) granulizer.setenvD(param_midi[num]);
   if(num==21) granulizer.setenvS(param_midi[num]);
   if(num==22) granulizer.setenvR(param_midi[num]);
-  if(num==23) savenum=param_midi[num]%16;
-  if(num==24) savenum=param_midi[num]%16;
-  if(num==25) {volglobal=(float)param_midi[num]*80.0/127.0-74.0; codec.setHeadphoneVolumeDB(volglobal);}
+  if(num==23) {env2.dest=param_midi[num]; change_matrix(param_midi[num]);}
+  if(num==24) env2.setA(param_midi[num]);
+  if(num==25) env2.setD(param_midi[num]);
+  if(num==26) env2.setS(param_midi[num]);
+  if(num==27) env2.setR(param_midi[num]);
+  if(num==28) savenum=param_midi[num]%16;
+  if(num==29) savenum=param_midi[num]%16;
+  if(num==30) {volglobal=(float)param_midi[num]*80.0/127.0-74.0; codec.setHeadphoneVolumeDB(volglobal);}
 }
 
 void param_action_focus(int num)
@@ -335,65 +359,35 @@ void display_window(int num)
     disp.draw_adsr(param_midi[19], param_midi[20], param_midi[21], param_midi[22], param_displayed-19);
     disp.display_wave();
   }
-  if(param_displayed >= 23 && param_displayed <= 24) 
+  if(param_displayed >= 24 && param_displayed <= 27) 
+  {
+    disp.draw_adsr(param_midi[24], param_midi[25], param_midi[26], param_midi[27], param_displayed-24);
+    disp.display_wave();
+  }
+  if(param_displayed >= 28 && param_displayed <= 30) 
   {
     disp.display_wave();
   }
 }
 
-void display_param()
-{
-  //disp.clear();
-  //disp.display_back();
-  //disp.display();
-  Serial.println("display_param");
-  
-  if(param_displayed == 0) disp.updateController(1);
-  if(param_displayed == 1) {
-    disp.draw_wave(sample, granulizer.sample_start_index[0], granulizer.sample_length[0], param_midi[param_displayed+1], 127-param_midi[param_displayed+2]);
-    //disp.draw_bottom_menu("Rec");
-  }
-  if(param_displayed == 2) disp.draw_wave(sample, granulizer.sample_start_index[0], granulizer.sample_length[0], param_midi[param_displayed], 127-param_midi[param_displayed+1]);
-  if(param_displayed == 3) disp.draw_wave(sample, granulizer.sample_start_index[0], granulizer.sample_length[0], param_midi[param_displayed-1], 127-param_midi[param_displayed]);
-  if(param_displayed == 4) disp.draw_number_string_center(((int)param_midi[param_displayed]*(int)param_midi[param_displayed]+50)/44, " ms");
-  if(param_displayed == 5) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 6) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 7) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 8) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 9) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 10) disp.draw_number_string_center(param_midi[param_displayed]*1000/64*param_midi[param_displayed]/127, " ms");
-  if(param_displayed == 11) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 12) disp.draw_filter(filter.GetCutoff(), param_midi[param_displayed+1], 1, filt_pente, filt_pente2); 
-  if(param_displayed == 13) disp.draw_filter(filter.GetCutoff(), param_midi[param_displayed], 1, filt_pente, filt_pente2);
-  if(param_displayed == 14) disp.draw_string_center(dest_list[param_midi[param_displayed]%16]);
-  if(param_displayed == 15) disp.draw_waveform_lfo(lfo.wave, lfo.lfovol, lfo.maincutoff);
-  if(param_displayed == 16) disp.draw_number_string_center(param_midi[param_displayed]*param_midi[param_displayed]*0.0034724, " Hz");
-  if(param_displayed == 17) disp.draw_waveform_lfo(lfo.wave, lfo.lfovol, lfo.maincutoff);
-  if(param_displayed == 18) disp.draw_waveform_lfo(lfo.wave, lfo.lfovol, lfo.maincutoff);
-  if(param_displayed == 19) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 20) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 21) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 22) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");
-  if(param_displayed == 23) disp.draw_number_string_center((int)volglobal, " dB");
-  if(param_displayed == 24) disp.draw_string_number_center("User ", savenum);
-  //disp.display();
- 
-}
 
 inline void Midi_NoteOn(uint8_t ch, uint8_t note, uint8_t vol)
 {
   Serial.println("Midi_NoteOn");
-  if(param_midi[26]==ch || param_midi[26]==0) 
+  if(param_midi[31]==ch || param_midi[31]==0) 
   {
     if(vol==0) granulizer.noteOff(note);
-    else granulizer.noteOn(note);
+    else {
+      granulizer.noteOn(note);
+      if(env2.dest>0) env2.start(); 
+    }
   }
 }
 
 inline void Midi_NoteOff(uint8_t ch, uint8_t note)
 {
   Serial.println("Midi_NoteOff");
-  if(param_midi[26]==ch || param_midi[26]==0) granulizer.noteOff(note);
+  if(param_midi[31]==ch || param_midi[31]==0) granulizer.noteOff(note);
 }
 
 uint32_t previous_time = micros();
@@ -416,11 +410,13 @@ inline void Midi_ControlChange(uint8_t ch, uint8_t note, uint8_t val)
         {    
           change_CC(i, val);
           uint32_t CC_time = millis()-previous_time;
-          if(param_screen[i]==disp.current_screen) disp.encoder(val,param_numinscreen[i]);
+          
           if(CC_time>200) {
+            if(param_screen[i]==disp.current_screen) disp.encoder(val,param_numinscreen[i]);
             display_window(i);
             previous_time=millis();
           }
+          param_action(i);
           
         }
       }
@@ -431,7 +427,7 @@ void Synth_Init()
 {
   param_midi[3]=127;
   granulizer.init();
-  granulizer.load_file("/sample0.wav");
+  granulizer.load_file("sample0.wav");
   granulizer.change_end(127);
   granulizer.launch(0,100);
   delay_init();
@@ -442,43 +438,10 @@ void Synth_Init()
   lfo.setmaincutoff(64);
   lfo.setvol(8);
   lfo.start(); 
-
+  env2.init();
 }
 
 inline void Synth_Process(int16_t *left, int16_t *right)
 {
 
-}
-
-inline void HandleShortMsg(uint8_t *data)
-{
-    uint8_t ch = data[0] & 0x0F;
-
-    Serial.println(data[0] & 0xF0);
-    Serial.print("channel : ");
-    Serial.println(ch);
-
-    switch (data[0] & 0xF0)
-    {
-    /* note on */
-      
-    case 0x90:
-        
-        if (data[2] > 0)
-        {
-          Midi_NoteOn(ch, data[1],data[2]);
-        }
-        else
-        {
-          Midi_NoteOff(ch, data[1]);
-        }
-        break;
-    /* note off */
-    case 0x80:
-        Midi_NoteOff(ch, data[1]);
-        break;
-    case 0xb0:
-        Midi_ControlChange(ch, data[1], data[2]);
-        break;
-    }
 }

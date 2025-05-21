@@ -28,14 +28,15 @@ class Arp
 	uint32_t previous_step = 0; 
 	
 	float time_stop=100;
-	
-	String arpmodes[]={"Up","Up/Down","Down"};
-	
+	int current_step=0;
+	int step_time=300;
+		
 	void add_note(int note)
 	{
+		Serial.println("add note");
 		for(int i=0; i<8; i++)
 		{
-			if(note_pressed[i]<0) 
+			if(note_pressed[i]<0 || note_pressed[i]==note) 
 			{
 				note_pressed[i]=note;
 				i=9;
@@ -54,6 +55,7 @@ class Arp
 	
 	void delete_note(int note)
 	{
+		Serial.println("delete note");
 		for(int i=0; i<8; i++)
 		{
 			if(note_pressed[i]==note) 
@@ -73,11 +75,6 @@ class Arp
 			Serial.print(" ; ");
 			Serial.println(note_to_play[i]);
 		}
-	}
-	
-	String arpmodename(uint8_t num)
-	{
-		return arpmodes[num];
 	}
 	
 	void compute_notes()
@@ -144,9 +141,10 @@ class Arp
 		time_stop = step_time*(float)arpgate/127;
 	}
 	
-	void stop()
+	void stop(OscMonoPoly* osc)
 	{
 		play=false;
+		osc->setNote(note_to_play[current_step], 0); 
 	}
 	
 	void update_gate(uint8_t _gate)
@@ -163,9 +161,21 @@ class Arp
 	void update_mode(uint8_t _mode)
 	{
 		arpmode = _mode;
+		compute_notes();
+	}
+	
+	void update_step(uint8_t _step)
+	{
+		arpstep = _step;
+		compute_notes();
+	}
+	
+	void update_bpm(uint8_t _bpm)
+	{
+		step_time=15000/(_bpm+50);
 	}
 
-  void update()
+  void update(OscMonoPoly* osc)
 	{
 		int tim = millis()-previous_step;
 		if(tim>(step_time*arprate) && nb_note_to_play>0) 
@@ -175,9 +185,7 @@ class Arp
 			if(current_step>=nb_note_to_play) current_step=0;
 			Serial.println(current_step);
 			Serial.println(note_to_play[current_step]);
-			oscA[0].setNote(note_to_play[current_step], 127); 
-		    f3.start(); 
-		    env.start();
+			osc->setNote(note_to_play[current_step], 127); 
 			previous_step=millis();
 			
 		}
@@ -186,9 +194,7 @@ class Arp
 			if(tim>time_stop && note_playing) 
 			{
 				Serial.println("stop");
-				oscA[0].setNote(note_to_play[current_step], 0); 
-				f3.stop(); 
-				env.stop();
+				osc->setNote(note_to_play[current_step], 0); 
 				note_playing=false;
 			}
 		}

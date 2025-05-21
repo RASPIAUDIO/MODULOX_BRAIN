@@ -112,11 +112,9 @@ public:
 	int8_t octave[NUM_OSC];                        // Octave of each oscillator
 	float volc[NUM_OSC][UNI_MAX];
 	float voldesc;
-	int bpm;
-	int step_time;
 
 //GLIDE
-	uint8_t noteplaying[8];                           // true : a note is already playing - false : no note is playing
+	//uint8_t noteplaying[8];                           // true : a note is already playing - false : no note is playing
 	boolean glideon;                               // true : glide is ON - false : glide is OFF
 	boolean glidestart[8];                         // true : glide already started - false : glide is not started
 	boolean play[8];                               // true : le son joue (même avec le release de l'enveloppe)
@@ -125,16 +123,6 @@ public:
 	float Incrementglide[NUM_OSC][UNI_MAX];              // glide speed
 	float Incrementfin[NUM_OSC][UNI_MAX];                // target frequency
 
-//ARP
-	bool arpon;
-	uint8_t arpmode;
-	uint8_t arprate;
-	uint8_t arpstep;
-	int8_t arphigh;
-	uint8_t arpgate ;
-	int note_to_play[64];
-	int nb_note_to_play;
-	float time_stop;
 	float ecartunis;
 	
 	float unisenv[8];
@@ -165,8 +153,6 @@ public:
     int current_step;
 	
 	uint8_t pol;
-	
-	String arpmodes[3]={"Up","Up/Down","Down"};
    
 	float convp[64];
 	
@@ -181,9 +167,6 @@ public:
 		ecartunis=0.01;
 		volglbsave = 0;
 		voldesc=0.5;
-		previous_step=0;
-	    current_step=0;
-	    time_stop=100;
 		unisenv[0]=1.0;
 		unisenv[1]=0.8;
 		unisenv[2]=0.8;
@@ -193,8 +176,6 @@ public:
 		unisenv[6]=0.6;
 		unisenv[7]=0.5;
 		wavecnt=0;
-		bpm = 80;
-	    step_time=15000/bpm;
 		float convp2[]={0,3,3.8,4.4,4.9,5.2,5.7,6,6.3,6.5,6.7,6.9,7.2,7.4,7.6,7.9,8.1,8.3,8.5,8.7,8.9,9.2,9.4,9.6,9.8,10.1,10.3,10.6,10.8,11.1,11.3,11.6,11.8,12,12.3,12.6,12.8,13,13.3,13.6,13.9,14.2,14.5,14.9,15.2,15.6,15.9,16.4,16.9,17.5,18,18.8,19.3,20.2,20.8,21.6,23.5,25,26,29,32,36,51,64};
 		for(int i=0; i<64; i++)	convp[i]=convp2[i];
  	 
@@ -240,7 +221,7 @@ public:
 				}
 			}
 			glidestart[i] = false;
-			noteplaying[i] = 0;
+			//noteplaying[i] = 0;
 			play[i] = false;
 			midi_play[i] = false;
 			volglb[i] = 0.5;
@@ -250,17 +231,7 @@ public:
 	//GLIDE
 		glideon = true;
 		glidetime = 200.0; // (en ms)
-		 
-		
-	
-		arpmode=0;
-		arpon=false;
-		arprate = 1;
-	   	arpstep = 1;
-	   	arphigh = 0;
-	   	arpgate = 100;
-	   	note_to_play[64];
-	  	nb_note_to_play = 0;
+
 	}
 	
 	
@@ -428,35 +399,57 @@ public:
 	 //----------------- POLYPHONIC -------------------
 	 else
 	 {
+		 Serial.println("play note");
 		 if(vol>0)
 		 {
-			 for(int i=0; i<8; i++)
+			 int found_note=-1;
+			 Serial.println(pol);
+			 Serial.println(note);
+			 for(int i=0; i<pol; i++)
 			 {
-				 if(!notepressed[i].isplaying)
-				 {
-					 Serial.println("play note");
-					 Serial.println(i);
-					 notepressed[i].on=true;
-					 notepressed[i].pitch=note;
-					 notepressed[i].isplaying=true;
-					 env[i].start();
-					 play[i]=true;					 
-					 volglb[i] = (float)vol/127.0;
-					 for(int j=0; j<NUM_OSC; j++)
-					 {
-						 fFrequency[i] = compute_freq(note, j); 
-						 for(int k=0; k<UNI_MAX; k++)
-						 {
-							 int fact=k%2;
-					         fact=fact*2-1;
-							 phase_inc[j][i][k] = fFrequency[i]*pow((1.0+(float)fact*ecartunis),k); 
-							 phase_inc_save[j][i][k]=phase_inc[j][i][k];
-							 phase_accu[j][i][k] = phase[j];
-						 }
-					 }
-					 i=100;
-				 }
+				 Serial.println("test 1");
+				 Serial.println(i);
+				 Serial.println(notepressed[i].isplaying);
+				 Serial.println(notepressed[i].pitch);
+				 if(notepressed[i].isplaying && notepressed[i].pitch==note) {found_note=i; i=100;}
+				 
 			 }
+			 Serial.println(found_note);
+			 if(found_note<0)
+			 {
+				 for(int i=0; i<pol; i++) 
+				 {
+					 Serial.println("test 2");
+					 Serial.println(i);
+					 Serial.println(notepressed[i].isplaying);
+					 if(!notepressed[i].isplaying) {found_note=i; i=100;}
+				 }
+					 
+			 }
+			 Serial.println(found_note);
+			 if(found_note>=0)
+			 {
+				 Serial.println("play note");
+				 Serial.println(found_note);
+				 notepressed[found_note].on=true;
+				 notepressed[found_note].pitch=note;
+				 notepressed[found_note].isplaying=true;
+				 env[found_note].start();
+				 play[found_note]=true;					 
+				 volglb[found_note] = (float)vol/127.0;
+				 for(int j=0; j<NUM_OSC; j++)
+				 {
+					 fFrequency[found_note] = compute_freq(note, j); 
+					 for(int k=0; k<UNI_MAX; k++)
+					 {
+						 int fact=k%2;
+						 fact=fact*2-1;
+						 phase_inc[j][found_note][k] = fFrequency[found_note]*pow((1.0+(float)fact*ecartunis),k); 
+						 phase_inc_save[j][found_note][k]=phase_inc[j][found_note][k];
+						 phase_accu[j][found_note][k] = phase[j];
+					 }
+				 }
+			 }		 
 		 }
 		 if(vol==0)
 		 {
@@ -465,7 +458,7 @@ public:
 				 if(notepressed[i].on && notepressed[i].pitch==note)
 				 {
 					 notepressed[i].on=false;
-					 notepressed[i].pitch=0;
+					 //notepressed[i].pitch=0;
 					 env[i].stop();
 				 }
 			 }
@@ -476,7 +469,7 @@ public:
 		 }
 
 		 Serial.println("tableau");
-		 for(int i=0; i<8; i++)
+		 for(int i=0; i<pol; i++)
 		 {
 			Serial.print("note ");
 			Serial.println(i);
@@ -486,109 +479,23 @@ public:
 		 }
 		 
      }
-	 if(arpon)
-	 {
-		 compute_notes();
-	 }
+
 	 return ret;
 
    }
    
-    void update_gate(uint8_t _gate)
-	{
-		arpgate = _gate;
-		time_stop = step_time*(float)arpgate*0.00787401574;
-	}
+ 
 	
-	void update_bpm(uint8_t _bpm)
-	{
-		bpm=_bpm+50;
-		step_time=15000/bpm;
-	}
+
 
 // Stop the playing of the synth
    void stop(uint8_t note)
    {
 		 for(int j=0; j<8; j++)
 		 {
-			 if(note==noteplaying[j]) play[j] = false;
+			 if(note==notepressed[j].pitch) play[j] = false;
 		 }
    }
-   
-   String arpmodename(uint8_t num)
-	{
-		return arpmodes[num];
-	}
-
-   void compute_notes()
-	 {
-		 Serial.println("compute notes");
-		 int ind=0;
-		 Serial.print("arpmode : ");
-		 Serial.println(arpmode);
-		 Serial.print("arpstep : ");
-		 Serial.println(arpstep);
-		 // UP
-		 if(arpmode==0)
-		 {
-			 for(int j=0; j<arpstep; j++)
-			 {
-				 int i=0;
-				 while(notepressed[i].on)
-			     {
-					 note_to_play[ind]=notepressed[i].pitch+12*j;
-					 i++;
-					 ind++;
-				 }
-			 }
-		 }
-		 // UP/DOWN
-		 if(arpmode==1)
-		 {
-			 for(int j=0; j<arpstep; j++)
-			 {
-			 	 int i=0;
-			     while(notepressed[i].on)
-				 {
-				 	 note_to_play[ind]=notepressed[i].pitch+12*j;
-					 i++;
-					 ind++;
-				 }
-
-			 }
-			 int totind=ind;
-			 for(int j=arpstep-1; j>=0; j--)
-			 {
-				 int i=totind/arpstep-1;
-				 if(j==arpstep-1 && i>0) i--;
-			 	 while(i>0)
-				 {
-					 note_to_play[ind]=notepressed[i].pitch+12*j;
-					 i--;
-					 ind++;
-				 }
-			 }
-		 }
-		// DOWN
-		if(arpmode==2)
-		{
-			for(int j=arpstep-1; j>=0; j--)
-			{
-				int i=7;
-				while(i>=0)
-				{
-					if(notepressed[i].on)
-					{
-						note_to_play[ind]=notepressed[i].pitch+12*j;
-						ind++;
-					}
-					i--;
-				}
-			}
-		}
-		nb_note_to_play=ind;
-		Serial.println(nb_note_to_play);
-	}
 
 // Set the volume of one oscillator
    void setVolOsc(uint8_t num, int32_t vol)
@@ -628,18 +535,22 @@ public:
 // Set the fine tune of one oscillator
    void setFine(uint8_t num, int val)
    {
+	   Serial.println("SetFine");
 		fine[num] = val;
 		for(int j=0; j<8; j++)
 		{
-			fFrequency[j] = compute_freq(noteplaying[j], num); 
-		 
-			for(int k=0; k<unisson; k++)
+			if(notepressed[j].isplaying) 
 			{
-			    int fact=k%2;
-			    fact=fact*2-1;
-				phase_inc[num][j][k] = fFrequency[j]*pow((1.0+(float)fact*ecartunis),k); 
-				phase_inc_save[num][j][k]=phase_inc[num][j][k];
-				if(!polyphony) Incrementfin[num][k] = phase_inc[num][j][k];
+				fFrequency[j] = compute_freq(notepressed[j].pitch, num); 
+		 
+				for(int k=0; k<unisson; k++)
+				{
+					int fact=k%2;
+					fact=fact*2-1;
+					phase_inc[num][j][k] = fFrequency[j]*pow((1.0+(float)fact*ecartunis),k); 
+					phase_inc_save[num][j][k]=phase_inc[num][j][k];
+					if(!polyphony) Incrementfin[num][k] = phase_inc[num][j][k];
+				}
 			}
 		}
     }
@@ -650,13 +561,13 @@ public:
 			uint16_t idx;
 
 			if (val2 == 0.0f) {                  /* 50 % */
-				idx = k;
+				idx = k+waveform[num]*SAMPLES_PER_CYCLE;
 			} else if (val2 > 64.0f) {
-				idx = (uint16_t)((fact1[num] - fact2[num] / (1023 - k + fl[num])) * k);
+				idx = (uint16_t)((fact1[num] - fact2[num] / (1023 - k + fl[num])) * k)+waveform[num]*SAMPLES_PER_CYCLE;
 			} else {                             /* 0 < val ≤ 64 */
-				idx = (uint16_t)((fact1[num] + fact2[num] / (k + fl[num])) * k);
+				idx = (uint16_t)((fact1[num] + fact2[num] / (k + fl[num])) * k)+waveform[num]*SAMPLES_PER_CYCLE;
 			}
-			idx &= (SAMPLES_PER_CYCLE - 1);      /* wrap mod 1024 */
+			//idx &= (SAMPLES_PER_CYCLE - 1);      /* wrap mod 1024 */
 			dest[k] = (float)waveformTab[idx] * (1.0f / 32768.0f);   /* ré-échantillonnage */
 		}
 	}
@@ -735,6 +646,7 @@ public:
 		}
 	} 
 
+
 // Compute the table position in the wavetable from increment values
    void next()
    {
@@ -812,61 +724,7 @@ public:
 				 }
 			 }
 		 }
-	 }
-
-	 if(arpon && !polyphony  && nb_note_to_play>0)
-		 {
-			 int tim = millis()-previous_step;
-			 if(tim>(step_time*arprate)) 
-			 {
-				 Serial.println(tim);
-				 if(arpgate<127)
-				 {
-					 for(int i=0; i<NUM_OSC; i++)
-					 {
-						 fFrequency[0] = compute_freq(note_to_play[current_step], i); 
-						 for(int k=0; k<unisson; k++)
-						 {
-							 int fact=k%2;
-			                 fact=fact*2-1;
-							 phase_inc[i][0][k] = fFrequency[0]*pow((1+fact*ecartunis),k); 
-							 phase_inc_save[i][0][k]=phase_inc[i][0][k];
-							 Incrementfin[i][k] = phase_inc[i][0][k]; 
-							 phase_accu[i][0][k]=phase[i];
-						 }
-					 }
-					 env[0].start();
-				 }
-				 else
-				 {
-					 for(int i=0; i<NUM_OSC; i++)
-		             {
-						 fFrequency[0] = compute_freq(note_to_play[current_step], i);
-						 for(int k=0; k<unisson; k++)
-						 {			
-							int fact=k%2;
-			                 fact=fact*2-1;
-							 Incrementfin[i][k] = fFrequency[0]*pow((1+fact*ecartunis),k);
-							 Incrementglide[i][k] = fabs(Incrementfin[i][k] - phase_inc[i][0][k])/44.1/glidetime;
-							 if(Incrementglide[i][k]==0) Incrementglide[i][k] = 1;
-						 }
-					 }
-				 }
-				 play[0]=true;
-				 current_step++;
-				 if(current_step>=nb_note_to_play) current_step=0;
-				 
-				 previous_step=millis();
-				
-			 }
-			 else
-			 {
-				 if(tim>time_stop && env[0].activated) 
-				 {
-					 env[0].stop();
-				 }
-			 }
-		 }
+	 }	 
 		 //Serial.println(phase_accu[0][0][0]);
    }
    
@@ -925,10 +783,14 @@ public:
    
    void compute_unisson_vol(int val)
    {
-	   for(int k=0; k<UNI_MAX; k++)
+	   unisenv[0]=1.0;
+	   for(int i=0; i<NUM_OSC; i++)
+		 {
+			volc[i][0]=volosc[i];
+		 }
+	   for(int k=1; k<UNI_MAX; k++)
 	   {
-		   int fact=(k+1)/2;
-		   unisenv[k]=1.0-(float)val/512.0*fact;
+		   unisenv[k]=(float)val*(float)k/127.0/(((float)k+1.0))+1.0/((float)k+1.0);
 		   if(unisenv[k]<0) unisenv[k]=0;
 		   for(int i=0; i<NUM_OSC; i++)
 			 {
@@ -1006,7 +868,7 @@ public:
 				//for(int i=0; i<1; i++)
 				{
 					
-					ret+= wave[i][(int)phase_accu[i][j][0]]* volc[i][0]*volenv;
+					ret+= wave[i][(int)phase_accu[i][j][0]]* volosc[i]*volenv;
 					
 				}
 			}	

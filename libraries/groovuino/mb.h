@@ -21,14 +21,13 @@
 void Synth_Process(int16_t *left, int16_t *right);
 void Midi_NoteOn(uint8_t chan, uint8_t note, uint8_t vol);
 void Midi_NoteOff(uint8_t chan, uint8_t note);
-void HandleShortMsg(uint8_t *data);
+//void HandleShortMsg(uint8_t *data);
 void Midi_ControlChange(uint8_t channel, uint8_t data1, uint8_t data2);
 void param_action(int num);
 void param_action_focus(int num);
 void display_window(int num);
 void taskAudio(void *parameter);
 void Synth_Init();
-void display_param();
 void but_mid_pressed();
 void enco_pressed();
 void enco_released();
@@ -141,6 +140,33 @@ volatile uint64_t midiCpuTime  = 0;
 TaskHandle_t MonitorTaskHandle = NULL;	
 int cpuaudio=0;
 
+static uint8_t pageBuf[4096]; 
+static uint32_t pageBase = 0xFFFFFFFF;
+uint8_t* buf;
+
+
+
+/*void dumpPartitions()
+{
+  Serial.println(F("\n--- Partition Table ---"));
+  esp_partition_iterator_t it =
+      esp_partition_find(ESP_PARTITION_TYPE_ANY,
+                         ESP_PARTITION_SUBTYPE_ANY,
+                         NULL);
+
+  while (it) {
+    const esp_partition_t* p = esp_partition_get(it);
+    Serial.printf("%-16s @ 0x%06X  size=0x%X (%u Ko)  %s\n",
+                  p->label,
+                  p->address,
+                  p->size,
+                  p->size / 1024,
+                  (p->encrypted ? "enc" : ""));
+    it = esp_partition_next(it);
+  }
+  esp_partition_iterator_release(it);
+}*/
+
 void MonitorTask(void* pvParameters)
 {
     vTaskDelay(pdMS_TO_TICKS(100));
@@ -193,20 +219,13 @@ void MonitorTask(void* pvParameters)
 }
 
 
-
-
 void change_enco(int sens)
 {
   Serial.println("change_enco");
   if(enco_focus==-1)
   {
-	  disp.current_screen+=sens;
-	  if(disp.current_screen<0) disp.current_screen=0;
-	  if(disp.current_screen>disp.max_screen-1) disp.current_screen=disp.max_screen-1;
-	  disp.clear();
-	  disp.display_menu();
-	  disp.display();
-    //disp.change_menu_select(sens);
+	  disp.encoder_menu(sens);
+	  
   }
   if(enco_focus==0)
   {
@@ -222,6 +241,7 @@ void change_enco(int sens)
     }
     else
     {
+	  Serial.println(param_midi_max[param_displayed]);
       if((param_midi_max[param_displayed]-param_midi[param_displayed])>=sens) {
 		   param_midi[param_displayed]+=sens;
 		   param_action(param_displayed);
@@ -245,23 +265,39 @@ static int32_t onWrite(uint32_t lba, uint32_t offset, uint8_t *buffer, uint32_t 
     return -1;
   }
   
-  Serial.println("Write");
-  Serial.println(lba);
-  Serial.println(offset);
-  Serial.println(bufsize);
-
-  /*esp_err_t err = esp_partition_write(fatfs_partition, address, buffer, bufsize);
-  if (err != ESP_OK) {
-    Serial.printf("Erreur d'écriture dans la partition: %s\n", esp_err_to_name(err));
-    return -1;
-  }*/
-  // Erase block before writing as to not leave any garbage
-  _flash.partitionEraseRange(fatfs_partition, address, bufsize);
+   Serial.printf("WRITE10  lba=%lu  addr(part)=%lu  abs=0x%06X  len=%u\n",
+                lba, address, fatfs_partition->address + address, bufsize);
+  
+  //_flash.partitionEraseRange(fatfs_partition, address, bufsize);
+  esp_partition_erase_range(fatfs_partition, address, bufsize);
 
   // Write data to flash memory in blocks from buffer
   _flash.partitionWrite(fatfs_partition, address, (uint32_t*)buffer, bufsize);
   return bufsize;
+  /*uint32_t addr = lba * 512;                    // offset relatif partition
+    uint32_t base = addr & ~0xFFF;                // base du bloc de 4 k
+
+    if (base != pageBase) {                       // nouvelle page ?
+        if (pageBase != 0xFFFFFFFF) {             // -> flusher l’ancienne
+            esp_partition_erase_range(fatfs_partition, pageBase, 4096);
+            esp_partition_write      (fatfs_partition, pageBase, pageBuf, 4096);
+        }
+        esp_partition_read(fatfs_partition, base, pageBuf, 4096);
+        pageBase = base;
+    }
+    memcpy(pageBuf + (addr & 0xFFF), buf, bufsize);   // insère les 512 o
+    return bufsize;*/
 }
+
+/*void onFlush()   // appelé par MSC.flush_cb() ou SCSI 0x35
+{
+    if (pageBase != 0xFFFFFFFF) {
+        esp_partition_erase_range(fatfs_partition, pageBase, 4096);
+        esp_partition_write      (fatfs_partition, pageBase, pageBuf, 4096);
+        pageBase = 0xFFFFFFFF;
+    }
+}*/
+
 
 static int32_t onRead(uint32_t lba, uint32_t offset, void *buffer, uint32_t bufsize) {
   uint32_t address = (lba * DISK_SECTOR_SIZE) + offset;
@@ -270,17 +306,12 @@ static int32_t onRead(uint32_t lba, uint32_t offset, void *buffer, uint32_t bufs
     Serial.println("Lecture au-delà de la taille de la partition");
     return -1;
   }
-  Serial.println("Read");
-  Serial.println(lba);
-  Serial.println(offset);
-  Serial.println(bufsize);
-
-  //esp_err_t err = esp_partition_read(fatfs_partition, address, buffer, bufsize);
+  
+  Serial.printf("READ10  lba=%lu  addr(part)=%lu  abs=0x%06X  len=%u\n",
+                lba, address, fatfs_partition->address + address, bufsize);
+				
   _flash.partitionRead(fatfs_partition, address, (uint32_t*)buffer, bufsize);
-  /*if (err != ESP_OK) {
-    Serial.printf("Erreur de lecture de la partition: %s\n", esp_err_to_name(err));
-    return -1;
-  }*/
+
   return bufsize;
 }
 
@@ -299,6 +330,15 @@ void unmountFFat() {
 
 static bool onStartStop(uint8_t power_condition, bool start, bool load_eject) {
   Serial.printf("MSC START/STOP: power: %u, start: %u, eject: %u\n", power_condition, start, load_eject);
+  // Windows : start = 0, load_eject = 1  lorsqu'on "Éjecte le lecteur"
+  if (!start && load_eject) {        // PC ferme le volume
+      Serial.println("MSC: host EJECT → remount FFat côté MCU");
+      mountFFat();                   // on peut relire instantanément
+  }
+  if (start && !load_eject) {        // PC vient d’ouvrir le volume
+      Serial.println("MSC: host MOUNT → démonte FFat côté MCU");
+      unmountFFat();
+  }
   return true;
 }
 
@@ -306,8 +346,8 @@ static void usbEventCallback(void *arg, esp_event_base_t event_base, int32_t eve
   if (event_base == ARDUINO_USB_EVENTS) {
     arduino_usb_event_data_t *data = (arduino_usb_event_data_t *)event_data;
     switch (event_id) {
-      case ARDUINO_USB_STARTED_EVENT: Serial.println("USB PLUGGED"); unmountFFat(); break;
-      case ARDUINO_USB_STOPPED_EVENT: Serial.println("USB UNPLUGGED"); mountFFat(); break;
+      case ARDUINO_USB_STARTED_EVENT: Serial.println("USB PLUGGED"); break;
+      case ARDUINO_USB_STOPPED_EVENT: Serial.println("USB UNPLUGGED"); break;
       case ARDUINO_USB_SUSPEND_EVENT: Serial.printf("USB SUSPENDED: remote_wakeup_en: %u\n", data->suspend.remote_wakeup_en); break;
       case ARDUINO_USB_RESUME_EVENT:  Serial.println("USB RESUMED"); break;
 
@@ -532,9 +572,13 @@ void Sync_Process()
   }
 }
 
+int count_midi=0;
+
 void USB_Midi_Process()
 {
 	midiEventPacket_t midi_packet_in = {0, 0, 0, 0};
+	count_midi++;
+	if(count_midi==30) disp.display_input(0);				
 
     if (midi.readPacket(&midi_packet_in)) {
 		//Serial.println("midi USB");
@@ -555,12 +599,16 @@ void USB_Midi_Process()
 			  Serial.println("This a system exclusive (SysEx) event");
 			  break;
 			case MIDI_CIN_NOTE_ON:       
-				//Serial.printf("This a Note-On event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3);
-				Midi_NoteOn(cable_num,midi_packet_in.byte2,midi_packet_in.byte3);				
+				//Serial.printf("This a Note-On event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3);			
+				Midi_NoteOn(cable_num,midi_packet_in.byte2,midi_packet_in.byte3);
+				disp.display_input(1);
+				count_midi=0;				
 				break;
-			case MIDI_CIN_NOTE_OFF:      
+			case MIDI_CIN_NOTE_OFF:    
 				//Serial.printf("This a Note-Off event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3); 
 				Midi_NoteOff(cable_num,midi_packet_in.byte2	);
+				disp.display_input(2);
+				count_midi=0;
 				break;
 			case MIDI_CIN_POLY_KEYPRESS: Serial.printf("This a Poly Aftertouch event for Note %d and Value %d\n", midi_packet_in.byte2, midi_packet_in.byte3); break;
 			case MIDI_CIN_CONTROL_CHANGE:
@@ -570,6 +618,8 @@ void USB_Midi_Process()
 				//midi_packet_in.byte2, midi_packet_in.byte3
 			  //);
 			  Midi_ControlChange(cable_num, midi_packet_in.byte2, midi_packet_in.byte3);
+			  disp.display_input(3);
+		      count_midi=0;
 			  break;
 			case MIDI_CIN_PROGRAM_CHANGE:   Serial.printf("This a Program Change event with a Value of %d\n", midi_packet_in.byte2); break;
 			case MIDI_CIN_CHANNEL_PRESSURE: Serial.printf("This a Channel Pressure event with a Value of %d\n", midi_packet_in.byte2); break;
@@ -581,12 +631,60 @@ void USB_Midi_Process()
 	}
 }
 
+inline void HandleShortMsg(uint8_t *data)
+{
+    uint8_t ch = data[0] & 0x0F;
+
+    Serial.println(data[0] & 0xF0);
+    Serial.print("channel : ");
+    Serial.println(ch);
+
+    switch (data[0] & 0xF0)
+    {
+    /* note on */
+      
+    case 0x90:
+        
+        if (data[2] > 0)
+        {
+		  
+          Midi_NoteOn(ch, data[1],data[2]);
+		  //disp.display_input(1);
+		  //count_midi=0;
+        }
+        else
+        {
+		  
+          Midi_NoteOff(ch, data[1]);
+		  //disp.display_input(2);
+		  //count_midi=0;
+        }
+        break;
+    /* note off */
+    case 0x80:
+		
+        Midi_NoteOff(ch, data[1]);
+		//disp.display_input(2);
+		//count_midi=0;
+        break;
+    case 0xb0:
+	    
+        Midi_ControlChange(ch, data[1], data[2]);
+		//disp.display_input(3);
+		//count_midi=0;
+        break;
+    }
+}
+
 void Midi_Process()
 {
 
     static uint32_t inMsgWd = 0;
     static uint8_t inMsg[3];
     static uint8_t inMsgIndex = 0;
+	
+	//count_midi++;
+	//if(count_midi==5000) disp.display_input(0);	
 
     //Serial.println(digitalRead(RXD2));
 
@@ -630,6 +728,8 @@ void Midi_Process()
 		}
 
 }
+
+
 
 
 
@@ -816,46 +916,84 @@ void load_preset()
 {
   Serial.println("load preset");
   String aff = String(savenum);
-  aff = "/save" + aff + ".txt";
+  aff = "save" + aff + ".txt";
   Serial.println(aff);
-  fs::File file = FFat.open(aff, "r");
-  Serial.println(file.name());
-  if (!file) {
-	  filefound=false;
+  const esp_partition_t* fatPart =
+        esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
+                                 ESP_PARTITION_SUBTYPE_DATA_FAT, nullptr);
+  FatConfig cfg {
+        .part          = fatPart,
+        .bytesPerSec   = 4096,
+        .secsPerClus   = 1,
+        .firstDataSec  = 34,     // 1 secteur réservé + 1 secteur FAT
+        .rootDirSec    = 2,     // racine = cluster 2
+        .rootDirEnt    = 4096
+    };
+  size_t size;
+  uint32_t clus, off;
+  if (!fat_find_file(cfg, aff.c_str(), clus, size, off)) {
+	  Serial.println("Impossible d'ouvrir le fichier wave !");
+	return ;
   }
-  else
+  FlashFile file;
+  file.open(cfg.part, off, size);
+  size = file.size();
+  if (size == 0) {
+	Serial.println("Fichier wave vide !");
+	return ;
+  }
+  
+  for(int i=0; i<127; i++)
   {
-	  filefound=true;
-	  for(int i=0; i<127; i++)
-	  {
-		
-		if(param_save[i]) param_midi[i] = file.read();
-		else file.read();
-		Serial.println(param_midi[i]);
-	  }
-	  for(int i=0; i<127; i++)
-	  {
-		
-		if(param_save[i]) midi_cc_val[i] = file.read();
-		else file.read();
-		Serial.println(midi_cc_val[i]);
-	  }
-	  file.close();
-	  Serial.println("file closed");
-	  init_synth_param();
-	  i2s_stop(i2s_num);
-	  delay(200);
-	  i2s_start(i2s_num);
+	
+	if(param_save[i]) param_midi[i] = file.read1();
+	else file.read1();
+	Serial.println(param_midi[i]);
   }
+  for(int i=0; i<127; i++)
+  {
+	
+	if(param_save[i]) midi_cc_val[i] = file.read1();
+	else file.read1();
+	Serial.println(midi_cc_val[i]);
+  }
+  Serial.println("file closed");
+  i2s_stop(i2s_num);
+  init_synth_param();
+  delay(200);
+  i2s_start(i2s_num);
 }
 
 void save_preset()
 {
   String aff = String(savenum);
-  aff = "/save" + aff + ".txt";
+  aff = "save" + aff + ".txt";
   Serial.println(aff);
-  fs::File file = FFat.open(aff, FILE_WRITE);
-  Serial.println(file.name());
+  const esp_partition_t* fatPart =
+        esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
+                                 ESP_PARTITION_SUBTYPE_DATA_FAT, nullptr);
+  FatConfig cfg {
+        .part          = fatPart,
+        .bytesPerSec   = 4096,
+        .secsPerClus   = 1,
+        .firstDataSec  = 34,     // 1 secteur réservé + 1 secteur FAT
+        .rootDirSec    = 2,     // racine = cluster 2
+        .rootDirEnt    = 4096
+    };
+  size_t size;
+  uint32_t clus, off;
+  if (!fat_find_file(cfg, aff.c_str(), clus, size, off)) {
+	  Serial.println("Impossible d'ouvrir le fichier wave !");
+	return ;
+  }
+  FlashFile file;
+  file.open(cfg.part, off, size);
+  size = file.size();
+  if (size == 0) {
+	Serial.println("Fichier wave vide !");
+	return ;
+  }
+  file.erase(4096);
   for(int i=0; i<127; i++)
   {
 	Serial.println(param_midi[i]);
@@ -866,30 +1004,29 @@ void save_preset()
 	Serial.println(midi_cc_val[i]);
     file.write(midi_cc_val[i]);
   }
-  file.close();
   Serial.println("file closed");
 }
 
 void modubrainInit()
 {
-
-  
-  
   fatfs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "ffat");
-  //FFat.format();
+  if (!fatfs_partition){ Serial.println("Partition \"ffat\" absente"); for(;;); }
+
+  DISK_SECTOR_COUNT = fatfs_partition->size / DISK_SECTOR_SIZE;
+  Serial.printf("ffat @0x%06X  %u o  (%u secteurs)\n",
+                fatfs_partition->address, fatfs_partition->size, DISK_SECTOR_COUNT);
+  delay(100);
+
   if (fatfs_partition == NULL) {
     Serial.println("Partition FATFS introuvable !");
     return;
   }
-  DISK_SECTOR_COUNT = fatfs_partition->size / DISK_SECTOR_SIZE;
+  
 
-  // Initialiser FFat
-  //if (!FFat.begin(true, "/ffat", 5 , "ffat")) { // true pour formater si nécessaire
-  if (!FFat.begin()) { // true pour formater si nécessaire
-    Serial.println("Échec du montage de la partition FATFS.");
-    return;
-  }
-  Serial.println("Partition FATFS initialisée.");
+  //FFat.format();
+
+  
+  //dumpPartitions();
   
   pinMode(BUT1, INPUT_PULLDOWN);
   pinMode(BUT2, INPUT_PULLDOWN);
@@ -898,9 +1035,10 @@ void modubrainInit()
   
   if(digitalRead(BUT1))
   {
-	  USB.onEvent(usbEventCallback);
+	  
+	  //unmountFFat();                    // au cas où (prudent)
 	  MSC.vendorID("ESP32");       //max 8 chars
-	  MSC.productID("USB_MSC");    //max 16 chars
+	  MSC.productID("FLASH_DISK");    //max 16 chars
 	  MSC.productRevision("1.0");  //max 4 chars
 	  MSC.onStartStop(onStartStop);
 	  MSC.onRead(onRead);
@@ -913,13 +1051,80 @@ void modubrainInit()
 	  Serial.println("MSC OK");
 	  delay(100);
 	  
+	  //USB.onEvent(usbEventCallback);
 	  USB.begin();  
 	  Serial.println("USB OK");
   
-	  delay(1000);
+	  //delay(1000);
   }
   else
   {
+	  // Initialiser FFat
+	  if (!FFat.begin()) {
+		//FFat.format();
+		//delay(500);
+		//const uint8_t erasef[4] = {0x00,0x00,0x00,0x00};
+		//_flash.partitionWrite(fatfs_partition, 8192, (uint32_t*)erasef, 4);
+		//const uint8_t erasef[4] = {0x01,0x00, 0x10, 0xCA};
+		//_flash.partitionEraseRange(fatfs_partition, 16, 4);
+		//esp_partition_erase_range(fatfs_partition, 0, 512);
+		//delay(100);
+		//_flash.partitionWrite(fatfs_partition, 16, (uint32_t*)erasef, 4);
+		/*uint8_t bs[4096] = {0};
+		static const uint8_t bootHdr[11] = {0xEB,0x3C,0x90,
+                                    'M','S','D','O','S','5','.','0'};
+		memcpy(bs, bootHdr, 11);
+		bs[11]=0x00;
+		bs[12]=0x10;    // 0x1000
+		bs[13]=0x01;                                 // 1
+		bs[14]=0x01; 
+		bs[15]=0x00;
+		bs[16]=0x01;
+		bs[17]=0x00; 
+		bs[18]=0x10;
+		bs[19]=0xCA;
+		bs[20]=0x09;
+		bs[21]=0xF8;
+		bs[22]=0x01;
+		bs[23]=0x00;
+		bs[24]=0x3F; 
+		bs[25]=0x00;
+		bs[26]=0xFF;
+		bs[36]=0x29;
+		bs[510]=0x55; bs[511]=0xAA;
+		esp_partition_write(fatfs_partition, 0, bs, 4096);
+		
+		memset(bs, 0x00, sizeof(bs));
+        bs[0]=0xF8; bs[1]=0xFF; bs[2]=0xFF; bs[3]=0xFF;
+		esp_partition_write(fatfs_partition, 4096, bs, 4096);
+		
+		memset(bs, 0x00, sizeof(bs));
+		const uint8_t root_dir[96] = {
+		  0x42, 0x20, 0x00, 0x49, 0x00, 0x6E, 0x00, 0x66,
+		  0x00, 0x6F, 0x00, 0x0F, 0x00, 0x72, 0x72, 0x00,
+		  0x6D, 0x00, 0x61, 0x00, 0x74, 0x00, 0x69, 0x00,
+		  0x6F, 0x00, 0x00, 0x00, 0x6E, 0x00, 0x00, 0x00,
+		  0x01, 0x53, 0x00, 0x79, 0x00, 0x73, 0x00, 0x74,
+		  0x00, 0x65, 0x00, 0x0F, 0x00, 0x72, 0x6D, 0x00,
+		  0x20, 0x00, 0x56, 0x00, 0x6F, 0x00, 0x6C, 0x00,
+		  0x75, 0x00, 0x00, 0x00, 0x6D, 0x00, 0x65, 0x00,
+		  0x53, 0x59, 0x53, 0x54, 0x45, 0x4D, 0x7E, 0x31,
+		  0x20, 0x20, 0x20, 0x16, 0x00, 0x44, 0x72, 0x0E,
+		  0x7D, 0x5A, 0x7D, 0x5A, 0x00, 0x00, 0x73, 0x0E,
+		  0x7D, 0x5A, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00
+		};
+		memcpy(bs, root_dir, 96);
+		esp_partition_write(fatfs_partition, 8192, bs, 4096);
+		
+		memset(bs, 0x00, sizeof(bs));
+		for(int i=0; i<31; i++) esp_partition_write(fatfs_partition, 12288+i*4096, bs, 4096);
+		Serial.println("Échec du montage de la partition FATFS.");
+		return;*/
+	  }
+	  Serial.println("Partition FATFS initialisée.");
+	  //const esp_partition_t* ffat = ffatPartition();   // dispo dans core 3.1+
+	  Serial.printf("FFat monte partition @0x%06X, size=0x%X\n",
+              fatfs_partition->address, fatfs_partition->size);
 	  waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
 	  
 	  for(int i=0; i<128; i++)
@@ -1045,7 +1250,6 @@ void core0_init()
   Serial.println("0 suite");
   
   disp.clear();
-  display_param();
   r.begin(true);
   detect_button();
   
@@ -1122,32 +1326,11 @@ void button_pressed()
       {
           param_displayed += 1;
 		  Serial.println(param_displayed);
-		  //if(param_displayed>=num_title) param_displayed=num_title-1;
-		  //Serial.println(param_displayed);
-		  disp.screen_right();
-		  //display_param();
-          //display_menu();
-          
-       }
+		  disp.screen_right();        
+      }
       if(enco_focus==-1)
       {
-        /*int disppar = disp.menu_right();
-          if(disppar<200) 
-          {
-            enco_focus=0;
-            param_displayed=disppar;
-            disp.clear();
-			display_param();
-            display_menu();
-            
-          }
-          else
-          {
-            disp.clear();
-            display_menu();
-            //disp.menu_hierarchy();
-          }*/
-          
+	     disp.encoder_menu(2);
        
       }
  
@@ -1158,19 +1341,12 @@ void button_pressed()
       Serial.println("but left");
       if(enco_focus==-1)
       {
-          disp.menu_level--;
-          disp.clear();
-          display_param();
-          /*disp.menu_top(param_displayed);
-          disp.display_top();
-          disp.menu_hierarchy();*/     
+          disp.encoder_menu(3);     
       }
       if(enco_focus==0)
       { 
           param_displayed -= 1;
           if(param_displayed<0) param_displayed=0;
-		  //display_param();
-          //display_menu();
 		  disp.screen_left();
           
       }
@@ -1189,7 +1365,6 @@ void button_pressed()
         //menu_level=0;
         enco_focus=-1;
         disp.clear();
-		display_param();
         disp.display_menu();
 		disp.display();
         
@@ -1198,6 +1373,7 @@ void button_pressed()
       else
       {
         enco_focus=0;
+		disp.current_screen = disp.selected_menu;
 		disp.load_screen(disp.current_screen);
 		disp.control_focus=0; 
 		load_window(disp.current_screen, true);
