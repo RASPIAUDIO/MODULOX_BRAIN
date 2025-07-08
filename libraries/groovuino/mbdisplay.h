@@ -218,7 +218,7 @@ public:
         spr_wave.fillSprite(TFT_BLACK); // Fill the Sprite with black
 		
 		spr_param.setColorDepth(16);      // Create an 8bpp Sprite of 60x30 pixels
-        spr_param.createSprite(60, 20);  // 8bpp requires 64 * 30 = 1920 bytes
+        spr_param.createSprite(80, 20);  // 8bpp requires 64 * 30 = 1920 bytes
         spr_param.fillSprite(TFT_BLACK); // Fill the Sprite with black
 		
 		spr_controller_switch.setColorDepth(16);      // Create an 8bpp Sprite of 60x30 pixels
@@ -397,6 +397,7 @@ public:
 			//display_wave();
 		}
 		else {
+			Serial.println(current_screen);
 			if (current_screen<max_screen-1)
 			{
 				current_screen++; 
@@ -414,6 +415,8 @@ public:
 	
 	void screen_left()
 	{
+		Serial.println("screen left");
+		Serial.println(control_focus);
 		if(control_focus>0) {
 			control_focus--; 
 			//display_screen(current_screen);
@@ -421,6 +424,7 @@ public:
 			display_controllers();
 		}
 		else {
+			Serial.println(current_screen);
 			if(current_screen>0) 
 			{
 				current_screen--; 
@@ -446,11 +450,11 @@ public:
 		updateController(control_focus);
 	}
 	
-	void encoder(int val, int num)
+	void encoder(int val, int num, bool show=true)
 	{
-		Serial.println("encoder");
+		Serial.println("encoder2");
 		controller_val[num]=val;
-		updateController(num);
+		if(show) updateController(num);
 	}
 	
 	void display()
@@ -460,7 +464,7 @@ public:
 	
 	void display_wave()
 	{
-		Serial.println("display_wave");
+		//Serial.println("display_wave");
 		spr_wave.pushSprite(10, 34);
 	}
 	
@@ -499,6 +503,8 @@ public:
 		Serial.println("load all");
 		Serial.print("count_open : ");
 	    Serial.println(count_open);
+		Serial.print("focus : ");
+		Serial.println(control_focus);
 		// Lecture du fichier JSON depuis FFat
 	  /*fs::File file = FFat.open("/screens.jso", FILE_READ);
 	  count_open++;
@@ -572,27 +578,36 @@ public:
 			int posX             = ctrl["x"];
 			int posY             = ctrl["y"];
 
+			Serial.println(i);
+			Serial.print("focus : ");
+		    Serial.println(control_focus);
 			Serial.printf("Contrôleur : %s (ID: %s), Texte: %s, Unité: %s, min: %d, max: %d, x: %d, y: %d\n",
 						  ctrlType, id, text, unit, minVal, maxVal, posX, posY);
 
 			// Afficher un sprite ou élément graphique en fonction du type de contrôleur et de sa position
 			if (strcmp(id, "load_list") == 0 || strcmp(id, "save_list") == 0) param_save[i]=false;
-			if (strcmp(ctrlType, "dummy") == 0) {
+			Serial.print("focus : ");
+		    Serial.println(control_focus);
+			/*if (strcmp(ctrlType, "dummy") == 0) {
 				controller_type[i]=1000;
-			}
+			}*/
 			if (strcmp(ctrlType, "encoder") == 0) {
-				controller_type[i]=0;
+				//controller_type[i]=0;
 				if((maxVal-minVal)>=100) param_midi_max[i]=127;
 				else param_midi_max[i]=maxVal-minVal;
 			}
 			if (strcmp(ctrlType, "switch") == 0) {
-				controller_type[i]=2;
+				//controller_type[i]=2;
 				param_midi_max[i]=1;
 			}
 			if (strcmp(ctrlType, "list") == 0) {
-				controller_type[i]=1;
+				Serial.print("focus : ");
+		        Serial.println(control_focus);
+				//controller_type[i]=1;
 				if (ctrl.containsKey("ext")) {
 				  const char* extension = ctrl["ext"];
+				  Serial.print("focus : ");
+		          Serial.println(control_focus);
 				  initFileList(0, extension);
 				  param_midi_max[i] = fileCount[0]-1;
 				  // Par exemple, vous pouvez stocker fileCount dans une variable associée au contrôleur
@@ -608,6 +623,8 @@ public:
 			param_numinscreen[i]=k;
 			Serial.println(i);
 			Serial.println(param_save[i]);
+			Serial.print("focus : ");
+		    Serial.println(control_focus);
 			
 			i++;
 			k++;
@@ -617,6 +634,8 @@ public:
 		}
 	    
 	  }
+	  Serial.print("focus : ");
+	  Serial.println(control_focus);
 	  Serial.print("count_open : ");
 	  Serial.println(count_open);
 	  
@@ -861,6 +880,9 @@ public:
 	
 	void load_screen(int screen_id, bool loaded=false)
 	{
+		Serial.println("load screen");
+		Serial.print("focus : ");
+		Serial.println(control_focus);
 	  
 		// Lecture du fichier JSON depuis FFat
 	  /*fs::File file = FFat.open("/screens.jso", FILE_READ);
@@ -1054,6 +1076,9 @@ public:
 	void initFileList(int num, const char* extension) {
 		Serial.println("initFileList");
 		Serial.println(num);
+		Serial.print("focus : ");
+		Serial.println(control_focus);
+		
 	  /*fs::File root = FFat.open("/");
 	  count_open++;
 	  if (!root) {
@@ -1087,6 +1112,8 @@ public:
 			Serial.println(fileList[num][fileCount[num]]);
 			fileCount[num]++;
 			Serial.println(fileCount[num]);
+			Serial.print("focus : ");
+		    Serial.println(control_focus);
 		  }
 	  }
 	  
@@ -1132,6 +1159,8 @@ public:
 	  for (int i = 0; i < fileCount[num]; i++) {
 		Serial.println(fileList[num][i]);
 	  }
+	  Serial.print("focus : ");
+	  Serial.println(control_focus);
 	}
 	
 	// Fonction pour dessiner la liste dans le sprite spr_controller_list
@@ -1434,18 +1463,21 @@ public:
 	void draw_param(int num, String txt)
 	{
 		Serial.println("draw_param");
+		Serial.println(txt);
 		spr_param.fillSprite(TFT_BLACK);
-		spr_param.setCursor(30-spr_param.textWidth(txt)/2, 0);	
+		spr_param.setCursor(40-spr_param.textWidth(txt)/2, 0);	
 	  spr_param.setTextColor(TFT_WHITE, TFT_BLACK);
 	  spr_param.println(txt);
-	  spr_param.pushSprite(controller_posx[num]-11, 120);
+	  if(num%2==0) spr_param.pushSprite(controller_posx[num]-11, 120);
+	  else spr_param.pushSprite(controller_posx[num]-11, 100);
 	}
 	
 	void load_param(int num, String txt)
 	{
 		Serial.println("load_param");
 		//spr_wave.fillSprite(TFT_BLACK);
-		spr_wave.setCursor(controller_posx[num]-spr_wave.textWidth(txt)/2+8, 86);	
+		if(num%2==0) spr_wave.setCursor(controller_posx[num]-spr_wave.textWidth(txt)/2+8, 86);
+		else spr_wave.setCursor(controller_posx[num]-spr_wave.textWidth(txt)/2+8, 66);		
 	  spr_wave.setTextColor(TFT_WHITE, TFT_BLACK);
 	  spr_wave.println(txt);
 	}
@@ -1718,8 +1750,8 @@ public:
 	
 	void draw_filter(float freq, float res, float mode, int pente, int pente2)
 	{
-		Serial.println("draw_filter");
-		Serial.println(freq);
+		//Serial.println("draw_filter");
+		//Serial.println(freq);
 		spr_wave.fillSprite(TFT_BLACK);
 		for(int i=1; i<10; i++)
 		{

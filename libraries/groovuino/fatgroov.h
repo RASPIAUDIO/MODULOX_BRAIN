@@ -240,7 +240,9 @@ public:
      *   - ex. nextFileExt("WAV", name)                                */
     bool nextFileExt(const char* ext, String& name)
     {
+		Serial.println("nextFileExt");
         String target = ext;           target.toUpperCase();
+		Serial.println(target);
         while (rawNext(name)) {
             /* isoler l’extension dans name */
             int dot = name.lastIndexOf('.');

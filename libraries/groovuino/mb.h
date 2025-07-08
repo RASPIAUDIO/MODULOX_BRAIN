@@ -144,6 +144,14 @@ static uint8_t pageBuf[4096];
 static uint32_t pageBase = 0xFFFFFFFF;
 uint8_t* buf;
 
+int data_from_MIDI=0; // 1 : NoteOn
+                      // 2 : NoteOff
+					  // 3 : MIDI CC
+uint8_t val_from_MIDI=0;
+uint8_t num_from_MIDI=0;
+
+int data_from_enco=0;
+
 
 
 /*void dumpPartitions()
@@ -222,11 +230,12 @@ void MonitorTask(void* pvParameters)
 void change_enco(int sens)
 {
   Serial.println("change_enco");
-  if(enco_focus==-1)
+  data_from_enco=sens;
+  /*if(enco_focus==-1)
   {
 	  disp.encoder_menu(sens);
 	  
-  }
+  }*/
   if(enco_focus==0)
   {
     //Serial.println(param_midi[param_displayed]);
@@ -235,8 +244,8 @@ void change_enco(int sens)
        if(param_midi[param_displayed]>=-sens) {
 		   param_midi[param_displayed]+=sens;
 		   param_action(param_displayed);
-		   disp.encoder(param_midi[param_displayed]);
-		   display_window(param_displayed);
+		   //disp.encoder(param_midi[param_displayed]);
+		   //display_window(param_displayed);
 	   }
     }
     else
@@ -245,8 +254,8 @@ void change_enco(int sens)
       if((param_midi_max[param_displayed]-param_midi[param_displayed])>=sens) {
 		   param_midi[param_displayed]+=sens;
 		   param_action(param_displayed);
-		   disp.encoder(param_midi[param_displayed]);
-		   display_window(param_displayed);
+		   //disp.encoder(param_midi[param_displayed]);
+		   //display_window(param_displayed);
 	  }
     }
     Serial.println("param " + String(param_displayed) + " changed : " + String(param_midi[param_displayed]));
@@ -572,16 +581,43 @@ void Sync_Process()
   }
 }
 
-int count_midi=0;
+//int count_midi=0;
+
+/********************************************************************
+ * 2)  Helper : convertit un paquet USB-MIDI vers DIN-MIDI (Serial2)
+ ********************************************************************/
+static void sendUsbPacketToDin(const midiEventPacket_t& p)
+{
+    /* Nombre d’octets réels (hors header) pour chaque CIN        *
+     * (cf. “USB-MIDI Event Packet” spec)                         */
+    static constexpr uint8_t cinLen[16] = {
+        0, 0,
+        2, 3,        // 0x2 0x3 : System Common
+        3, 1, 2, 3,  // 0x4-0x7 : SysEx (start/continue/end)
+        3, 3, 3, 3,  // 0x8-0xB : NoteOff, NoteOn, PolyAT, CC
+        2, 2,        // 0xC-0xD : Prog Ch, Ch Pressure
+        3, 1         // 0xE-0xF : PitchBend, 1-byte (RT clock, etc.)
+    };
+
+    uint8_t cin   = MIDI_EP_HEADER_CIN_GET(p.header) & 0x0F;
+    uint8_t len   = cinLen[cin];
+    const uint8_t data[3] = { p.byte1, p.byte2, p.byte3 };
+
+    for (uint8_t i = 0; i < len; ++i) {          // envoie uniquement les
+	Serial.println("write");
+        if (data[i] != 0) Serial2.write(data[i]); // zéros de bourrage sont ignorés
+    }
+}
 
 void USB_Midi_Process()
 {
 	midiEventPacket_t midi_packet_in = {0, 0, 0, 0};
-	count_midi++;
-	if(count_midi==30) disp.display_input(0);				
+	//count_midi++;
+	//if(count_midi==30) disp.display_input(0);				
 
     if (midi.readPacket(&midi_packet_in)) {
-		//Serial.println("midi USB");
+		Serial.println("midi USB");
+		
 		uint8_t cable_num = MIDI_EP_HEADER_CN_GET(midi_packet_in.header);
 		midi_code_index_number_t code_index_num = MIDI_EP_HEADER_CIN_GET(midi_packet_in.header);
 		
@@ -600,15 +636,15 @@ void USB_Midi_Process()
 			  break;
 			case MIDI_CIN_NOTE_ON:       
 				//Serial.printf("This a Note-On event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3);			
+				sendUsbPacketToDin(midi_packet_in);
 				Midi_NoteOn(cable_num,midi_packet_in.byte2,midi_packet_in.byte3);
-				disp.display_input(1);
-				count_midi=0;				
+				data_from_MIDI=1;
 				break;
 			case MIDI_CIN_NOTE_OFF:    
 				//Serial.printf("This a Note-Off event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3); 
+				sendUsbPacketToDin(midi_packet_in);
 				Midi_NoteOff(cable_num,midi_packet_in.byte2	);
-				disp.display_input(2);
-				count_midi=0;
+				data_from_MIDI=2;
 				break;
 			case MIDI_CIN_POLY_KEYPRESS: Serial.printf("This a Poly Aftertouch event for Note %d and Value %d\n", midi_packet_in.byte2, midi_packet_in.byte3); break;
 			case MIDI_CIN_CONTROL_CHANGE:
@@ -617,9 +653,9 @@ void USB_Midi_Process()
 				//"with a Value of %d\n",
 				//midi_packet_in.byte2, midi_packet_in.byte3
 			  //);
+			  sendUsbPacketToDin(midi_packet_in);
 			  Midi_ControlChange(cable_num, midi_packet_in.byte2, midi_packet_in.byte3);
-			  disp.display_input(3);
-		      count_midi=0;
+			  data_from_MIDI=3;
 			  break;
 			case MIDI_CIN_PROGRAM_CHANGE:   Serial.printf("This a Program Change event with a Value of %d\n", midi_packet_in.byte2); break;
 			case MIDI_CIN_CHANNEL_PRESSURE: Serial.printf("This a Channel Pressure event with a Value of %d\n", midi_packet_in.byte2); break;
@@ -649,6 +685,7 @@ inline void HandleShortMsg(uint8_t *data)
         {
 		  
           Midi_NoteOn(ch, data[1],data[2]);
+		  data_from_MIDI=1;
 		  //disp.display_input(1);
 		  //count_midi=0;
         }
@@ -656,6 +693,7 @@ inline void HandleShortMsg(uint8_t *data)
         {
 		  
           Midi_NoteOff(ch, data[1]);
+		  data_from_MIDI=2;
 		  //disp.display_input(2);
 		  //count_midi=0;
         }
@@ -664,12 +702,14 @@ inline void HandleShortMsg(uint8_t *data)
     case 0x80:
 		
         Midi_NoteOff(ch, data[1]);
+		data_from_MIDI=2;
 		//disp.display_input(2);
 		//count_midi=0;
         break;
     case 0xb0:
 	    
         Midi_ControlChange(ch, data[1], data[2]);
+		data_from_MIDI=3;
 		//disp.display_input(3);
 		//count_midi=0;
         break;
@@ -700,6 +740,7 @@ void Midi_Process()
 
 			Serial.printf("%02x", incomingByte);
 			Serial.println("");
+			Serial2.write(incomingByte);
 			// ignore live messages 
 			if ((incomingByte & 0xF0) == 0xF0)
 			{
@@ -1060,7 +1101,7 @@ void modubrainInit()
   else
   {
 	  // Initialiser FFat
-	  if (!FFat.begin()) {
+	  /*if (!FFat.begin()) {
 		//FFat.format();
 		//delay(500);
 		//const uint8_t erasef[4] = {0x00,0x00,0x00,0x00};
@@ -1070,7 +1111,7 @@ void modubrainInit()
 		//esp_partition_erase_range(fatfs_partition, 0, 512);
 		//delay(100);
 		//_flash.partitionWrite(fatfs_partition, 16, (uint32_t*)erasef, 4);
-		/*uint8_t bs[4096] = {0};
+		uint8_t bs[4096] = {0};
 		static const uint8_t bootHdr[11] = {0xEB,0x3C,0x90,
                                     'M','S','D','O','S','5','.','0'};
 		memcpy(bs, bootHdr, 11);
@@ -1117,10 +1158,10 @@ void modubrainInit()
 		esp_partition_write(fatfs_partition, 8192, bs, 4096);
 		
 		memset(bs, 0x00, sizeof(bs));
-		for(int i=0; i<31; i++) esp_partition_write(fatfs_partition, 12288+i*4096, bs, 4096);
+		for(int i=0; i<32; i++) esp_partition_write(fatfs_partition, 12288+i*4096, bs, 4096);
 		Serial.println("Échec du montage de la partition FATFS.");
-		return;*/
-	  }
+		return;
+	  }*/
 	  Serial.println("Partition FATFS initialisée.");
 	  //const esp_partition_t* ffat = ffatPartition();   // dispo dans core 3.1+
 	  Serial.printf("FFat monte partition @0x%06X, size=0x%X\n",

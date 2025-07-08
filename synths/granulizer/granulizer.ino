@@ -8,9 +8,10 @@
 #include "rosic_TeeBeeFilter.h"
 #include "rosic_OnePoleFilter.h"
 #include "rosic_BiquadFilter.h"
+#include <VL53L0X.h>
 
 #define DELAY_SAMPLES 100000
-#include "delayint.h"
+#include "delaystereo.h"
 
 Granulizer granulizer;
 TeeBeeFilter filter;
@@ -36,12 +37,33 @@ int lastind=0;
 
 Env env2;
 
+#define PERIOD_MS 20  // sensor cadence
+#define MAX_MM 2000   // clip anything beyond 2 m
+#define BAR_COLS 80   // full-width bar at MAX_MM
+
+VL53L0X tof;
+bool tof_connected=true;
+
 void setup() {
   Serial.begin(115200);
   delay(2000);
   Serial.setDebugOutput(true);
 
   modubrainInit();
+
+  delay(500);
+  if (!tof.init()) {
+    Serial.println("VL53L0X not found – check wiring");
+    tof_connected=false;
+  }
+  else
+  {
+    tof.setMeasurementTimingBudget(20000);  // 20 000 µs budget
+    tof.startContinuous(PERIOD_MS);
+    tof_connected=true;
+  }
+  
+  delay(500);
 
   Serial.println("setup mbrain OK");
 
@@ -82,7 +104,8 @@ void change_matrix(int desti)
 
 int cou=0;
 // Fonction pour lire les grains et les mixer
-void mixGrains(int16_t *outputBuffer, size_t numSamples) {
+//void mixGrains(int16_t *outputBuffer, size_t numSamples) {
+void mixGrains(int16_t *outL, int16_t *outR, size_t numSamples) {
   //memset(outputBuffer, 0, numSamples * sizeof(int16_t));  // Initialisation du buffer de sortie à zéro
   //granulizer.load_buffers();
   for (int j = 0; j < numSamples; j++) {
@@ -103,11 +126,16 @@ void mixGrains(int16_t *outputBuffer, size_t numSamples) {
       test_matrix(lfo.dest, lfoamount);
       lfoamount_prev=lfoamount;
     }
-    outputBuffer[j] = granulizer.process();
-    //if(outputBuffer[j]>16000) Serial.println(outputBuffer[j]);
-    outputBuffer[j]=outputBuffer[j]*(1.0-delay_mix) + delay_output(outputBuffer[j])*delay_mix;
+    /*outputBuffer[j] = granulizer.process();
     outputBuffer[j]=32767.0*filter.Process((float)outputBuffer[j]/32767.0);
-    
+    //if(outputBuffer[j]>16000) Serial.println(outputBuffer[j]);
+    outputBuffer[j]=outputBuffer[j]*(1.0-delay_mix) + delay_output(outputBuffer[j])*delay_mix;*/
+    int16_t dry = granulizer.process();
+    dry=32767.0*filter.Process((float)dry/32767.0);
+    int16_t dl, dr;
+    delay_output(dry, dry, &dl, &dr);    
+    outL[j] = dry*(1.0-delay_mix) + dl*delay_mix;
+    outR[j] = dry*(1.0-delay_mix) + dr*delay_mix;
     cou++;
   }
 }
@@ -122,20 +150,27 @@ void taskAudio(void *parameter) {
       // Début de la mesure
       uint32_t start = micros();
         
-      int16_t monoBuffer[bufferLen];
+      /*int16_t monoBuffer[bufferLen];
       int16_t testbuf[bufferLen];
-      if(playglb) mixGrains(monoBuffer, bufferLen);
+      if(playglb) mixGrains(monoBuffer, bufferLen);*/
+      int16_t leftBuffer[bufferLen];
+      int16_t rightBuffer[bufferLen];
+      if(playglb) mixGrains(leftBuffer, rightBuffer, bufferLen);
       else
       {
         for (int i = 0; i < bufferLen; i++) {
-          monoBuffer[i]=0;          
+          //monoBuffer[i]=0; 
+          leftBuffer[i]=0;
+          rightBuffer[i]=0;         
         }
       }
       
       for (int i = 0; i < bufferLen; i++) {
         
-        audioBuffer[2 * i] = monoBuffer[i];     // Canal gauche
-        audioBuffer[2 * i + 1] = monoBuffer[i]; // Canal droit
+        /*audioBuffer[2 * i] = monoBuffer[i];     // Canal gauche
+        audioBuffer[2 * i + 1] = monoBuffer[i]; // Canal droit*/
+        audioBuffer[2 * i] = leftBuffer[i];
+        audioBuffer[2 * i + 1] = rightBuffer[i];
       }
       // Fin de la mesure
       uint32_t end = micros();
@@ -180,9 +215,48 @@ void taskAudio(void *parameter) {
   }
 }
 
+int prev_mm=0;
+uint32_t t_prev=0;
 
 void loop() {
   // put your main code here, to run repeatedly:
-    //Midi_Process();
-    delay(1000);
+    Midi_Process();
+    USB_Midi_Process();
+    enco_turned();
+    if(tof_connected)
+    {
+      uint32_t t=millis();
+      if(t-t_prev>=20)
+      {
+        uint16_t mm = tof.readRangeContinuousMillimeters();
+        if(mm<25) mm=25;
+        if(mm>533) mm=533;
+        mm=127-(mm-25)/4;
+        if(mm!=prev_mm)
+        {
+          data_from_MIDI=3;
+          Midi_ControlChange(0, 129, mm);
+          prev_mm=mm;
+        }
+        t_prev=t;
+      }      
+    }
+    uint32_t t=millis();
+    if(t-t_prev>=20)
+    {
+      uint16_t mm = tof.readRangeContinuousMillimeters();
+      if(mm<25) mm=25;
+      if(mm>533) mm=533;
+      mm=127-(mm-25)/4;
+      if(mm!=prev_mm)
+      {
+        data_from_MIDI=3;
+        Midi_ControlChange(0, 129, mm);
+        prev_mm=mm;
+      }
+      t_prev=t;
+    }
+    
+    
+    //Serial.println(127-(mm-25)/4);
 }

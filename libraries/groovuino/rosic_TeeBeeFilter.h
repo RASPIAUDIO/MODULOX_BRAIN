@@ -21,24 +21,25 @@ class TeeBeeFilter
 {
 
   public:
+
     /** Enumeration of the available filter modes. */
     enum modes
     {
       FLAT = 0,
       LP_6,
-	  BP_12_12,
-	  BP_6_6,
-	  HP_6,
-      LP_24,
-      HP_24,
 	  LP_12,
-      LP_18,
+	  LP_18,
+      LP_24,
+	  HP_6,
 	  HP_12,
-      HP_18,
+	  HP_18,
+	  HP_24,
+	  BP_12_12,
 	  BP_6_18,
-      BP_18_6,
-      BP_6_12,
-      BP_12_6,
+	  BP_18_6,
+	  BP_6_12,
+	  BP_12_6,
+	  BP_6_6,
 	  TB_303,      // ala mystran & kunn (page 40 in the kvr-thread)
       NUM_MODES
     };
@@ -92,7 +93,7 @@ class TeeBeeFilter
 	  //newCutoff=(newCutoff*80.0f)+200.0f;
 	  //newCutoff=pow(10.0, ((newCutoff+5.0)/25.0f))+200.0f;
 	  //newCutoff=midi_pitches[(int)newCutoff]/2+40.0f;
-	  newCutoff= 100.0f  * pow(2, (newCutoff / 12.0));
+	  newCutoff= 100.0f  * pow(2, (newCutoff / 16.5));
 	  if ( newCutoff != cutoff )
 	  {
 		if ( newCutoff < 200.0f ) // an absolute floor for the cutoff frequency - tweakable
@@ -209,7 +210,7 @@ class TeeBeeFilter
 		y2 += b0 * (y1 - 2.0f * y2 + y3);
 		y3 += b0 * (y2 - 2.0f * y3 + y4);
 		y4 += b0 * (y3 - 2.0f * y4);
-		return 2.0f * g * y4;
+		return fast_tanh(40.0f * g * y4);
 	  }
 
 	  // apply drive and feedback to obtain the filter's input signal:
@@ -292,7 +293,6 @@ class TeeBeeFilter
     inline void calculateCoefficientsApprox4()
 	{
 	  // calculate intermediate variables:
-	  
 	  float wc  = twoPiOverSampleRate * cutoff;
 	  float wc2 = wc * wc;
 	  float r   = resonanceSkewed;
