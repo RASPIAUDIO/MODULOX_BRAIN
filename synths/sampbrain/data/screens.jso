@@ -1,0 +1,1060 @@
+{
+  "screens": [
+    {
+	  "group": "Sample1",
+      "name": "sample1",
+      "title": "Sample1 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample1",
+      "name": "sample1",
+      "title": "Sample1 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample2",
+      "name": "sample2",
+      "title": "Sample2 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample2",
+      "name": "sample2",
+      "title": "Sample2 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample3",
+      "name": "sample3",
+      "title": "Sample3 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample3",
+      "name": "sample3",
+      "title": "Sample3 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample4",
+      "name": "sample4",
+      "title": "Sample4 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample4",
+      "name": "sample4",
+      "title": "Sample4 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample5",
+      "name": "sample5",
+      "title": "Sample5 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample5",
+      "name": "sample5",
+      "title": "Sample5 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample6",
+      "name": "sample6",
+      "title": "Sample6 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample6",
+      "name": "sample6",
+      "title": "Sample6 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample7",
+      "name": "sample7",
+      "title": "Sample7 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample7",
+      "name": "sample7",
+      "title": "Sample7 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample8",
+      "name": "sample8",
+      "title": "Sample8 select",
+      "background": "bg_waveform",
+	  "window": "wave",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "sample_select",
+          "text": "Select sample",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "WAV"
+        },
+		{
+          "type": "encoder",
+          "id": "sample_start",
+          "text": "Start",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+        {
+          "type": "encoder",
+          "id": "sample_end",
+          "text": "End",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Sample8",
+      "name": "sample8",
+      "title": "Sample8 param",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+        {
+          "type": "list",
+          "id": "voice_chan",
+          "text": "MIDI ch",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+		     "omni",
+			 "chan 1",
+			 "chan 2",
+			 "chan 3",
+			 "chan 4",
+			 "chan 5",
+			 "chan 6",
+			 "chan 7",
+			 "chan 8",
+			 "chan 9",
+			 "chan 10",
+			 "chan 11",
+			 "chan 12",
+			 "chan 13",
+			 "chan 14",
+			 "chan 15",
+			 "chan 16"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "voice_note",
+          "text": "Note",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "voice_vol",
+          "text": "Vol",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 230,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Effects",
+      "name": "disto",
+      "title": "Distortion",
+      "background": "bg_waveform",
+	  "window": "global",
+      "controllers": [
+	    {
+          "type": "switch",
+          "id": "distoon",
+          "text": "On/Off",
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "x": 60,
+          "y": 170
+        },
+		{
+          "type": "encoder",
+          "id": "distogain",
+          "text": "Gain",
+          "unit": "%",
+          "min": 0,
+          "max": 100,
+          "x": 150,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Effect",
+      "name": "delay",
+      "title": "Delay Effect",
+      "background": "bg_waveform",
+	  "window": "delay",
+      "controllers": [
+	    {
+          "type": "switch",
+          "id": "pingpong",
+          "text": "",
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "x": 15,
+          "y": 170
+        },
+        {
+          "type": "encoder",
+          "id": "timeL",
+          "text": "TimeL",
+          "unit": "ms",
+          "min": 1,
+          "max": 1000,
+          "x": 60,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "timeR",
+          "text": "TimeR",
+          "unit": "ms",
+          "min": 1,
+          "max": 1000,
+          "x": 110,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "feedback",
+          "text": "Fdbk",
+          "unit": "%",
+          "min": 0,
+          "max": 100,
+          "x": 160,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "dwet",
+          "text": "Dry",
+          "unit": "%",
+          "min": 0,
+          "max": 100,
+          "x": 210,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Effect",
+      "name": "filter",
+      "title": "Filter Effect",
+      "background": "bg_waveform",
+	  "window": "filter",
+      "controllers": [
+	    {
+          "type": "list",
+          "id": "cuttype",
+          "text": "Type",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 15,
+          "y": 160,
+		  "items": [
+			 "FLAT",
+			 "LP_6",
+			 "LP_12",
+			 "LP_18",
+			 "LP_24",
+			 "HP_6",
+			 "HP_12",
+			 "HP_18",
+			 "HP_24",
+			 "BP_12_12",
+			 "BP_6_18",
+			 "BP_18_6",
+			 "BP_6_12",
+			 "BP_12_6",
+			 "BP_6_6",
+			 "TB303"
+		  ]
+        },
+        {
+          "type": "encoder",
+          "id": "cuttof",
+          "text": "Cutoff",
+          "unit": "Hz",
+          "min": 30,
+          "max": 5000,
+          "x": 150,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "release",
+          "text": "Release",
+          "unit": "%",
+          "min": 0,
+          "max": 100,
+          "x": 220,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Effect",
+      "name": "compressor",
+      "title": "Comp Effect",
+      "background": "bg_waveform",
+	  "window": "comp",
+      "controllers": [
+	    {
+          "type": "switch",
+          "id": "comp_on",
+          "text": "",
+          "unit": "",
+          "min": 0,
+          "max": 1,
+          "x": 15,
+          "y": 170
+        },
+        {
+          "type": "encoder",
+          "id": "threshold",
+          "text": "Threshold",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 60,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "attack",
+          "text": "Attack",
+          "unit": "ms",
+          "min": 0,
+          "max": 127,
+          "x": 110,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "release",
+          "text": "Release",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 160,
+          "y": 160
+        },
+		{
+          "type": "encoder",
+          "id": "ratio",
+          "text": "Ratio",
+          "unit": "",
+          "min": 0,
+          "max": 127,
+          "x": 210,
+          "y": 160
+        }
+      ]
+    },
+	{
+	  "group": "Load/Save",
+      "name": "files",
+      "title": "Load/Save",
+      "background": "bg_waveform",
+	  "window": "lsave",
+      "controllers": [
+	    {
+          "type": "list",
+          "id": "load_list",
+          "text": "Load",
+          "unit": "",
+          "min": 0,
+          "max": 16,
+          "x": 15,
+          "y": 160,
+		  "ext": "TXT"
+        },
+        {
+          "type": "list",
+          "id": "save_list",
+          "text": "Save",
+          "unit": "",
+          "min": 0,
+          "max": 5,
+          "x": 150,
+          "y": 160,
+		  "items": [
+		     "save0",
+			 "save1",
+			 "save2",
+			 "save3",
+			 "save4",
+			 "save5",
+			 "save6",
+			 "save7",
+			 "save8",
+			 "save9",
+			 "save10",
+			 "save11",
+			 "save12",
+			 "save13",
+			 "save14",
+			 "save15",
+			 "save16"
+		  ]
+        }
+      ]
+    },
+	{
+	  "group": "Global",
+      "name": "param",
+      "title": "Parameters",
+      "background": "bg_waveform",
+	  "window": "",
+      "controllers": [
+	    {
+          "type": "encoder",
+          "id": "vol",
+          "text": "Volume",
+          "unit": "dB",
+          "min": 1,
+          "max": 127,
+          "x": 40,
+          "y": 160
+        }
+      ]
+    }
+  ]
+}

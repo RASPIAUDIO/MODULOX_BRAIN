@@ -58,6 +58,7 @@ class TeeBeeFilter
 	  g                   =     1.0f;
 	  sampleRate          = SAMPLE_RATE;
 	  twoPiOverSampleRate = 2.0*PI/sampleRate;
+	  compens             =     1.0f;
 
 	  feedbackHighpass.setMode(OnePoleFilter::HIGHPASS);
 	  feedbackHighpass.setCutoff(100.0f);
@@ -112,7 +113,7 @@ class TeeBeeFilter
     inline void SetResonance(float newResonance, bool updateCoefficients)
 	{
 	  resonanceRaw    =  newResonance/127.0f;
-	//  compens = 1.8f * (resonanceRaw + 0.25f) * one_div((resonanceRaw + 0.25f) * 0.75f + 0.113f); // gain compensation; one_div(x) = 1/x
+	  compens = 1.8f * (resonanceRaw + 0.25f) * one_div((resonanceRaw + 0.25f) * 0.75f + 0.113f); // gain compensation; one_div(x) = 1/x
 	  resonanceSkewed = (1.0f - exp(-3.0f * resonanceRaw)) / (1.0f - exp(-3.0f));
 	  if ( updateCoefficients == true )
 		calculateCoefficientsApprox4();
@@ -248,7 +249,7 @@ class TeeBeeFilter
 	  
 	  ret_val = (20.0f * (c0 * y0 + c1 * y1 + c2 * y2 + c3 * y3 + c4 * y4 )) ;
 	  // bias = 0.0005f * ret_val + 0.9995f * bias ;
-	  return fast_tanh((ret_val - bias) );// * compens ;
+	  return compens * fast_tanh((ret_val - bias) );// * compens ;
 	}
 
     //---------------------------------------------------------------------------------------------

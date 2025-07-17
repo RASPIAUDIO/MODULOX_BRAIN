@@ -1,5 +1,5 @@
-#ifndef mb_h
-#define mb_h
+#ifndef modubrain_h
+#define modubrain_h
 
 #include <TFT_eSPI.h> // Hardware-specific library
 #include <Wire.h>
@@ -13,22 +13,21 @@
 #include <tablesfloat.h>
 #include <lookuptable.h>
 #include <Rotary.h>
-#include "mbdisplay.h"
+#include "braindisplay.h"
 #include <SparkFun_WM8960_Arduino_Library.h> 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include <VL53L0X.h>
 
 void Synth_Process(int16_t *left, int16_t *right);
 void Midi_NoteOn(uint8_t chan, uint8_t note, uint8_t vol);
 void Midi_NoteOff(uint8_t chan, uint8_t note);
-//void HandleShortMsg(uint8_t *data);
+void HandleShortMsg(uint8_t *data);
 void Midi_ControlChange(uint8_t channel, uint8_t data1, uint8_t data2);
 void param_action(int num);
 void param_action_focus(int num);
-void display_window(int num);
 void taskAudio(void *parameter);
 void Synth_Init();
+void display_param();
 void but_mid_pressed();
 void enco_pressed();
 void enco_released();
@@ -66,10 +65,6 @@ void learn_midi();
 #define NORM127MUL  0.007874f
 #define SAMPLE_RATE  44100
 
-#define PERIOD_MS 20  // sensor cadence
-#define MAX_MM 2000   // clip anything beyond 2 m
-#define BAR_COLS 80   // full-width bar at MAX_MM
-
 USBMSC MSC;
 EspClass _flash;
 USBMIDI midi; // MIDI
@@ -101,8 +96,6 @@ bool pressed_3=false;
 bool pressed_4=false;
 bool pressed_5=false;
 
-uint8_t midi_cc_val[128];
-
 int param_displayed = 0;
 int enco_focus=0;
 int time_enco=0;
@@ -111,11 +104,15 @@ int passed2=0;
 
 bool filefound=true;
 
+int param_focus_max;
+
 int num_title;
 
 int count = 0;
 
-
+uint8_t param_midi[128];
+uint8_t param_focus[128];
+uint8_t midi_cc_val[128];
 
 boolean midi_learn=false;
 
@@ -144,44 +141,6 @@ volatile uint64_t midiCpuTime  = 0;
 // Pour la tâche de monitoring
 TaskHandle_t MonitorTaskHandle = NULL;	
 int cpuaudio=0;
-
-static uint8_t pageBuf[4096]; 
-static uint32_t pageBase = 0xFFFFFFFF;
-uint8_t* buf;
-
-int data_from_MIDI=0; // 1 : NoteOn
-                      // 2 : NoteOff
-					  // 3 : MIDI CC
-uint8_t val_from_MIDI=0;
-uint8_t num_from_MIDI=0;
-
-int data_from_enco=0;
-
-VL53L0X tof;
-bool tof_connected=true;
-
-
-
-/*void dumpPartitions()
-{
-  Serial.println(F("\n--- Partition Table ---"));
-  esp_partition_iterator_t it =
-      esp_partition_find(ESP_PARTITION_TYPE_ANY,
-                         ESP_PARTITION_SUBTYPE_ANY,
-                         NULL);
-
-  while (it) {
-    const esp_partition_t* p = esp_partition_get(it);
-    Serial.printf("%-16s @ 0x%06X  size=0x%X (%u Ko)  %s\n",
-                  p->label,
-                  p->address,
-                  p->size,
-                  p->size / 1024,
-                  (p->encrypted ? "enc" : ""));
-    it = esp_partition_next(it);
-  }
-  esp_partition_iterator_release(it);
-}*/
 
 void MonitorTask(void* pvParameters)
 {
@@ -222,7 +181,7 @@ void MonitorTask(void* pvParameters)
 		
 		cpuaudio=(int)usageAudio;
 		//Serial.println(cpuaudio);
-		//Serial.printf("Audio %.1f %%, MIDI %.1f %%, Audio=%u words, MIDI=%u words\n", usageAudio, usageMidi, stackAudio, stackMidi);
+		Serial.printf("Audio %.1f %%, MIDI %.1f %%, Audio=%u words, MIDI=%u words\n", usageAudio, usageMidi, stackAudio, stackMidi);
         
 
         // -- Mémoire libre (heap global, alloué dynamiquement) --
@@ -235,39 +194,53 @@ void MonitorTask(void* pvParameters)
 }
 
 
+void display_menu()
+{
+  Serial.println("display_menu");
+  if(enco_focus>0) disp.menu_top(param_displayed, 0x5ACF); 
+  else disp.menu_top(param_displayed);
+  disp.display_top();
+  Serial.println("background");
+  disp.menu_bottom(param_displayed,param_focus[param_displayed]);
+  disp.display_bottom();
+}
+
 void change_enco(int sens)
 {
-  Serial.println("change_enco");
-  data_from_enco=sens;
-  /*if(enco_focus==-1)
+  //Serial.println("change_enco");
+  if(enco_focus==-1)
   {
-	  disp.encoder_menu(sens);
-	  
-  }*/
+    disp.change_menu_select(sens);
+  }
+  if(enco_focus==1)
+  {
+    disp.line_selected[disp.menu_level]+=sens;
+    display_menu();
+    disp.menu_hierarchy();
+  }
+  if(enco_focus>1)
+  {
+    param_focus[param_displayed]+=sens;
+    if(param_focus[param_displayed]<0) param_focus[param_displayed]=0;
+    if(param_focus[param_displayed]>param_focus_max) param_focus[param_displayed]=param_focus_max;
+    param_action_focus(param_displayed);
+    //display_menu();
+    disp.display_list(param_focus[param_displayed],90,100,100);
+  }
   if(enco_focus==0)
   {
     //Serial.println(param_midi[param_displayed]);
     if(sens<0) 
     {
-       if(param_midi[param_displayed]>=-sens) {
-		   param_midi[param_displayed]+=sens;
-		   param_action(param_displayed);
-		   //disp.encoder(param_midi[param_displayed]);
-		   //display_window(param_displayed);
-	   }
+       if(param_midi[param_displayed]>=-sens) param_midi[param_displayed]+=sens;
     }
     else
     {
-	  Serial.println(param_midi_max[param_displayed]);
-      if((param_midi_max[param_displayed]-param_midi[param_displayed])>=sens) {
-		   param_midi[param_displayed]+=sens;
-		   param_action(param_displayed);
-		   //disp.encoder(param_midi[param_displayed]);
-		   //display_window(param_displayed);
-	  }
+      if((127-param_midi[param_displayed])>=sens) param_midi[param_displayed]+=sens;
     }
-    Serial.println("param " + String(param_displayed) + " changed : " + String(param_midi[param_displayed]));
-    
+    //Serial.println("param " + String(param_displayed) + " changed : " + String(param_midi[param_displayed]));
+    param_action(param_displayed);
+    display_param();
   }
     
   //if((param_displayed != 2 || env_dest!=1)&&display_par) display_param();
@@ -282,39 +255,23 @@ static int32_t onWrite(uint32_t lba, uint32_t offset, uint8_t *buffer, uint32_t 
     return -1;
   }
   
-   Serial.printf("WRITE10  lba=%lu  addr(part)=%lu  abs=0x%06X  len=%u\n",
-                lba, address, fatfs_partition->address + address, bufsize);
-  
-  //_flash.partitionEraseRange(fatfs_partition, address, bufsize);
-  esp_partition_erase_range(fatfs_partition, address, bufsize);
+  Serial.println("Write");
+  Serial.println(lba);
+  Serial.println(offset);
+  Serial.println(bufsize);
+
+  /*esp_err_t err = esp_partition_write(fatfs_partition, address, buffer, bufsize);
+  if (err != ESP_OK) {
+    Serial.printf("Erreur d'écriture dans la partition: %s\n", esp_err_to_name(err));
+    return -1;
+  }*/
+  // Erase block before writing as to not leave any garbage
+  _flash.partitionEraseRange(fatfs_partition, address, bufsize);
 
   // Write data to flash memory in blocks from buffer
   _flash.partitionWrite(fatfs_partition, address, (uint32_t*)buffer, bufsize);
   return bufsize;
-  /*uint32_t addr = lba * 512;                    // offset relatif partition
-    uint32_t base = addr & ~0xFFF;                // base du bloc de 4 k
-
-    if (base != pageBase) {                       // nouvelle page ?
-        if (pageBase != 0xFFFFFFFF) {             // -> flusher l’ancienne
-            esp_partition_erase_range(fatfs_partition, pageBase, 4096);
-            esp_partition_write      (fatfs_partition, pageBase, pageBuf, 4096);
-        }
-        esp_partition_read(fatfs_partition, base, pageBuf, 4096);
-        pageBase = base;
-    }
-    memcpy(pageBuf + (addr & 0xFFF), buf, bufsize);   // insère les 512 o
-    return bufsize;*/
 }
-
-/*void onFlush()   // appelé par MSC.flush_cb() ou SCSI 0x35
-{
-    if (pageBase != 0xFFFFFFFF) {
-        esp_partition_erase_range(fatfs_partition, pageBase, 4096);
-        esp_partition_write      (fatfs_partition, pageBase, pageBuf, 4096);
-        pageBase = 0xFFFFFFFF;
-    }
-}*/
-
 
 static int32_t onRead(uint32_t lba, uint32_t offset, void *buffer, uint32_t bufsize) {
   uint32_t address = (lba * DISK_SECTOR_SIZE) + offset;
@@ -323,12 +280,17 @@ static int32_t onRead(uint32_t lba, uint32_t offset, void *buffer, uint32_t bufs
     Serial.println("Lecture au-delà de la taille de la partition");
     return -1;
   }
-  
-  Serial.printf("READ10  lba=%lu  addr(part)=%lu  abs=0x%06X  len=%u\n",
-                lba, address, fatfs_partition->address + address, bufsize);
-				
-  _flash.partitionRead(fatfs_partition, address, (uint32_t*)buffer, bufsize);
+  Serial.println("Read");
+  Serial.println(lba);
+  Serial.println(offset);
+  Serial.println(bufsize);
 
+  //esp_err_t err = esp_partition_read(fatfs_partition, address, buffer, bufsize);
+  _flash.partitionRead(fatfs_partition, address, (uint32_t*)buffer, bufsize);
+  /*if (err != ESP_OK) {
+    Serial.printf("Erreur de lecture de la partition: %s\n", esp_err_to_name(err));
+    return -1;
+  }*/
   return bufsize;
 }
 
@@ -347,15 +309,6 @@ void unmountFFat() {
 
 static bool onStartStop(uint8_t power_condition, bool start, bool load_eject) {
   Serial.printf("MSC START/STOP: power: %u, start: %u, eject: %u\n", power_condition, start, load_eject);
-  // Windows : start = 0, load_eject = 1  lorsqu'on "Éjecte le lecteur"
-  if (!start && load_eject) {        // PC ferme le volume
-      Serial.println("MSC: host EJECT → remount FFat côté MCU");
-      mountFFat();                   // on peut relire instantanément
-  }
-  if (start && !load_eject) {        // PC vient d’ouvrir le volume
-      Serial.println("MSC: host MOUNT → démonte FFat côté MCU");
-      unmountFFat();
-  }
   return true;
 }
 
@@ -363,8 +316,8 @@ static void usbEventCallback(void *arg, esp_event_base_t event_base, int32_t eve
   if (event_base == ARDUINO_USB_EVENTS) {
     arduino_usb_event_data_t *data = (arduino_usb_event_data_t *)event_data;
     switch (event_id) {
-      case ARDUINO_USB_STARTED_EVENT: Serial.println("USB PLUGGED"); break;
-      case ARDUINO_USB_STOPPED_EVENT: Serial.println("USB UNPLUGGED"); break;
+      case ARDUINO_USB_STARTED_EVENT: Serial.println("USB PLUGGED"); unmountFFat(); break;
+      case ARDUINO_USB_STOPPED_EVENT: Serial.println("USB UNPLUGGED"); mountFFat(); break;
       case ARDUINO_USB_SUSPEND_EVENT: Serial.printf("USB SUSPENDED: remote_wakeup_en: %u\n", data->suspend.remote_wakeup_en); break;
       case ARDUINO_USB_RESUME_EVENT:  Serial.println("USB RESUMED"); break;
 
@@ -438,7 +391,13 @@ void init_synth_param()
   {
     Serial.println(i);
     Serial.println(param_midi[i]);
-    if(param_save[i]) param_action(i);
+    if(i!=64 && i!=65 && i!=63 && i!=67 && i!=68 && i!=0 && i!=25) param_action(i);
+  }
+  for(int i=0; i<128; i++)
+  {
+    Serial.println(i);
+    Serial.println(param_focus[i]);
+    param_action_focus(i);
   }
 }
 
@@ -589,43 +548,12 @@ void Sync_Process()
   }
 }
 
-//int count_midi=0;
-
-/********************************************************************
- * 2)  Helper : convertit un paquet USB-MIDI vers DIN-MIDI (Serial2)
- ********************************************************************/
-static void sendUsbPacketToDin(const midiEventPacket_t& p)
-{
-    /* Nombre d’octets réels (hors header) pour chaque CIN        *
-     * (cf. “USB-MIDI Event Packet” spec)                         */
-    static constexpr uint8_t cinLen[16] = {
-        0, 0,
-        2, 3,        // 0x2 0x3 : System Common
-        3, 1, 2, 3,  // 0x4-0x7 : SysEx (start/continue/end)
-        3, 3, 3, 3,  // 0x8-0xB : NoteOff, NoteOn, PolyAT, CC
-        2, 2,        // 0xC-0xD : Prog Ch, Ch Pressure
-        3, 1         // 0xE-0xF : PitchBend, 1-byte (RT clock, etc.)
-    };
-
-    uint8_t cin   = MIDI_EP_HEADER_CIN_GET(p.header) & 0x0F;
-    uint8_t len   = cinLen[cin];
-    const uint8_t data[3] = { p.byte1, p.byte2, p.byte3 };
-
-    for (uint8_t i = 0; i < len; ++i) {          // envoie uniquement les
-	Serial.println("write");
-        if (data[i] != 0) Serial2.write(data[i]); // zéros de bourrage sont ignorés
-    }
-}
-
 void USB_Midi_Process()
 {
 	midiEventPacket_t midi_packet_in = {0, 0, 0, 0};
-	//count_midi++;
-	//if(count_midi==30) disp.display_input(0);				
 
     if (midi.readPacket(&midi_packet_in)) {
-		Serial.println("midi USB");
-		
+		//Serial.println("midi USB");
 		uint8_t cable_num = MIDI_EP_HEADER_CN_GET(midi_packet_in.header);
 		midi_code_index_number_t code_index_num = MIDI_EP_HEADER_CIN_GET(midi_packet_in.header);
 		
@@ -643,16 +571,12 @@ void USB_Midi_Process()
 			  Serial.println("This a system exclusive (SysEx) event");
 			  break;
 			case MIDI_CIN_NOTE_ON:       
-				//Serial.printf("This a Note-On event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3);			
-				sendUsbPacketToDin(midi_packet_in);
-				Midi_NoteOn(cable_num,midi_packet_in.byte2,midi_packet_in.byte3);
-				data_from_MIDI=1;
+				//Serial.printf("This a Note-On event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3);
+				Midi_NoteOn(cable_num,midi_packet_in.byte2,midi_packet_in.byte3);				
 				break;
-			case MIDI_CIN_NOTE_OFF:    
+			case MIDI_CIN_NOTE_OFF:      
 				//Serial.printf("This a Note-Off event of Note %d with a Velocity of %d\n", midi_packet_in.byte2, midi_packet_in.byte3); 
-				sendUsbPacketToDin(midi_packet_in);
 				Midi_NoteOff(cable_num,midi_packet_in.byte2	);
-				data_from_MIDI=2;
 				break;
 			case MIDI_CIN_POLY_KEYPRESS: Serial.printf("This a Poly Aftertouch event for Note %d and Value %d\n", midi_packet_in.byte2, midi_packet_in.byte3); break;
 			case MIDI_CIN_CONTROL_CHANGE:
@@ -661,9 +585,7 @@ void USB_Midi_Process()
 				//"with a Value of %d\n",
 				//midi_packet_in.byte2, midi_packet_in.byte3
 			  //);
-			  sendUsbPacketToDin(midi_packet_in);
 			  Midi_ControlChange(cable_num, midi_packet_in.byte2, midi_packet_in.byte3);
-			  data_from_MIDI=3;
 			  break;
 			case MIDI_CIN_PROGRAM_CHANGE:   Serial.printf("This a Program Change event with a Value of %d\n", midi_packet_in.byte2); break;
 			case MIDI_CIN_CHANNEL_PRESSURE: Serial.printf("This a Channel Pressure event with a Value of %d\n", midi_packet_in.byte2); break;
@@ -675,64 +597,12 @@ void USB_Midi_Process()
 	}
 }
 
-inline void HandleShortMsg(uint8_t *data)
-{
-    uint8_t ch = data[0] & 0x0F;
-
-    Serial.println(data[0] & 0xF0);
-    Serial.print("channel : ");
-    Serial.println(ch);
-
-    switch (data[0] & 0xF0)
-    {
-    /* note on */
-      
-    case 0x90:
-        
-        if (data[2] > 0)
-        {
-		  
-          Midi_NoteOn(ch, data[1],data[2]);
-		  data_from_MIDI=1;
-		  //disp.display_input(1);
-		  //count_midi=0;
-        }
-        else
-        {
-		  
-          Midi_NoteOff(ch, data[1]);
-		  data_from_MIDI=2;
-		  //disp.display_input(2);
-		  //count_midi=0;
-        }
-        break;
-    /* note off */
-    case 0x80:
-		
-        Midi_NoteOff(ch, data[1]);
-		data_from_MIDI=2;
-		//disp.display_input(2);
-		//count_midi=0;
-        break;
-    case 0xb0:
-	    
-        Midi_ControlChange(ch, data[1], data[2]);
-		data_from_MIDI=3;
-		//disp.display_input(3);
-		//count_midi=0;
-        break;
-    }
-}
-
 void Midi_Process()
 {
 
     static uint32_t inMsgWd = 0;
     static uint8_t inMsg[3];
     static uint8_t inMsgIndex = 0;
-	
-	//count_midi++;
-	//if(count_midi==5000) disp.display_input(0);	
 
     //Serial.println(digitalRead(RXD2));
 
@@ -741,14 +611,13 @@ void Midi_Process()
 	
 		
 
-		if (Serial2.available())
+		while (Serial2.available())
 		{
 			uint8_t incomingByte = Serial2.read();
 			Serial.println("read");
 
 			Serial.printf("%02x", incomingByte);
 			Serial.println("");
-			Serial2.write(incomingByte);
 			// ignore live messages 
 			if ((incomingByte & 0xF0) == 0xF0)
 			{
@@ -777,8 +646,6 @@ void Midi_Process()
 		}
 
 }
-
-
 
 
 
@@ -965,117 +832,76 @@ void load_preset()
 {
   Serial.println("load preset");
   String aff = String(savenum);
-  aff = "save" + aff + ".txt";
+  aff = "/save" + aff + ".txt";
   Serial.println(aff);
-  const esp_partition_t* fatPart =
-        esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
-                                 ESP_PARTITION_SUBTYPE_DATA_FAT, nullptr);
-  FatConfig cfg {
-        .part          = fatPart,
-        .bytesPerSec   = 4096,
-        .secsPerClus   = 1,
-        .firstDataSec  = 34,     // 1 secteur réservé + 1 secteur FAT
-        .rootDirSec    = 2,     // racine = cluster 2
-        .rootDirEnt    = 4096
-    };
-  size_t size;
-  uint32_t clus, off;
-  if (!fat_find_file(cfg, aff.c_str(), clus, size, off)) {
-	  Serial.println("Impossible d'ouvrir le fichier wave !");
-	return ;
+  fs::File file = FFat.open(aff, "r");
+  Serial.println(file.name());
+  if (!file) {
+	  filefound=false;
   }
-  FlashFile file;
-  file.open(cfg.part, off, size);
-  size = file.size();
-  if (size == 0) {
-	Serial.println("Fichier wave vide !");
-	return ;
-  }
-  
-  for(int i=0; i<127; i++)
+  else
   {
-	
-	if(param_save[i]) param_midi[i] = file.read1();
-	else file.read1();
-	Serial.println(param_midi[i]);
+	  filefound=true;
+	  for(int i=1; i<128; i++)
+	  {
+		
+		param_midi[i] = file.read();
+		Serial.println(param_midi[i]);
+	  }
+	  for(int i=1; i<128; i++)
+	  {
+		
+		param_focus[i] = file.read();
+		Serial.println(param_focus[i]);
+	  }
+	  file.close();
+	  Serial.println("file closed");
+	  init_synth_param();
+	  i2s_stop(i2s_num);
+	  delay(200);
+	  i2s_start(i2s_num);
   }
-  for(int i=0; i<127; i++)
-  {
-	
-	if(param_save[i]) midi_cc_val[i] = file.read1();
-	else file.read1();
-	Serial.println(midi_cc_val[i]);
-  }
-  Serial.println("file closed");
-  i2s_stop(i2s_num);
-  init_synth_param();
-  delay(200);
-  i2s_start(i2s_num);
 }
 
 void save_preset()
 {
   String aff = String(savenum);
-  aff = "save" + aff + ".txt";
+  aff = "/save" + aff + ".txt";
   Serial.println(aff);
-  const esp_partition_t* fatPart =
-        esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
-                                 ESP_PARTITION_SUBTYPE_DATA_FAT, nullptr);
-  FatConfig cfg {
-        .part          = fatPart,
-        .bytesPerSec   = 4096,
-        .secsPerClus   = 1,
-        .firstDataSec  = 34,     // 1 secteur réservé + 1 secteur FAT
-        .rootDirSec    = 2,     // racine = cluster 2
-        .rootDirEnt    = 4096
-    };
-  size_t size;
-  uint32_t clus, off;
-  if (!fat_find_file(cfg, aff.c_str(), clus, size, off)) {
-	  Serial.println("Impossible d'ouvrir le fichier wave !");
-	return ;
-  }
-  FlashFile file;
-  file.open(cfg.part, off, size);
-  size = file.size();
-  if (size == 0) {
-	Serial.println("Fichier wave vide !");
-	return ;
-  }
-  file.erase(4096);
-  for(int i=0; i<127; i++)
+  fs::File file = FFat.open(aff, FILE_WRITE);
+  Serial.println(file.name());
+  for(int i=1; i<128; i++)
   {
 	Serial.println(param_midi[i]);
     file.write(param_midi[i]);
   }
-  for(int i=0; i<127; i++)
+  for(int i=1; i<128; i++)
   {
-	Serial.println(midi_cc_val[i]);
-    file.write(midi_cc_val[i]);
+	Serial.println(param_focus[i]);
+    file.write(param_focus[i]);
   }
+  file.close();
   Serial.println("file closed");
 }
 
 void modubrainInit()
 {
+
+  
+  
   fatfs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "ffat");
-  if (!fatfs_partition){ Serial.println("Partition \"ffat\" absente"); for(;;); }
-
-  DISK_SECTOR_COUNT = fatfs_partition->size / DISK_SECTOR_SIZE;
-  Serial.printf("ffat @0x%06X  %u o  (%u secteurs)\n",
-                fatfs_partition->address, fatfs_partition->size, DISK_SECTOR_COUNT);
-  delay(100);
-
   if (fatfs_partition == NULL) {
     Serial.println("Partition FATFS introuvable !");
     return;
   }
-  
+  DISK_SECTOR_COUNT = fatfs_partition->size / DISK_SECTOR_SIZE;
 
-  //FFat.format();
-
-  
-  //dumpPartitions();
+  // Initialiser FFat
+  if (!FFat.begin(true, "/ffat", 5 , "ffat")) { // true pour formater si nécessaire
+    Serial.println("Échec du montage de la partition FATFS.");
+    return;
+  }
+  Serial.println("Partition FATFS initialisée.");
   
   pinMode(BUT1, INPUT_PULLDOWN);
   pinMode(BUT2, INPUT_PULLDOWN);
@@ -1084,10 +910,9 @@ void modubrainInit()
   
   if(digitalRead(BUT1))
   {
-	  
-	  //unmountFFat();                    // au cas où (prudent)
+	  USB.onEvent(usbEventCallback);
 	  MSC.vendorID("ESP32");       //max 8 chars
-	  MSC.productID("FLASH_DISK");    //max 16 chars
+	  MSC.productID("USB_MSC");    //max 16 chars
 	  MSC.productRevision("1.0");  //max 4 chars
 	  MSC.onStartStop(onStartStop);
 	  MSC.onRead(onRead);
@@ -1100,92 +925,19 @@ void modubrainInit()
 	  Serial.println("MSC OK");
 	  delay(100);
 	  
-	  //USB.onEvent(usbEventCallback);
 	  USB.begin();  
 	  Serial.println("USB OK");
   
-	  //delay(1000);
+	  delay(1000);
   }
   else
   {
-	  // Initialiser FFat
-	  /*if (!FFat.begin()) {
-		//FFat.format();
-		//delay(500);
-		//const uint8_t erasef[4] = {0x00,0x00,0x00,0x00};
-		//_flash.partitionWrite(fatfs_partition, 8192, (uint32_t*)erasef, 4);
-		//const uint8_t erasef[4] = {0x01,0x00, 0x10, 0xCA};
-		//_flash.partitionEraseRange(fatfs_partition, 16, 4);
-		//esp_partition_erase_range(fatfs_partition, 0, 512);
-		//delay(100);
-		//_flash.partitionWrite(fatfs_partition, 16, (uint32_t*)erasef, 4);
-		uint8_t bs[4096] = {0};
-		static const uint8_t bootHdr[11] = {0xEB,0x3C,0x90,
-                                    'M','S','D','O','S','5','.','0'};
-		memcpy(bs, bootHdr, 11);
-		bs[11]=0x00;
-		bs[12]=0x10;    // 0x1000
-		bs[13]=0x01;                                 // 1
-		bs[14]=0x01; 
-		bs[15]=0x00;
-		bs[16]=0x01;
-		bs[17]=0x00; 
-		bs[18]=0x10;
-		bs[19]=0xCA;
-		bs[20]=0x09;
-		bs[21]=0xF8;
-		bs[22]=0x01;
-		bs[23]=0x00;
-		bs[24]=0x3F; 
-		bs[25]=0x00;
-		bs[26]=0xFF;
-		bs[36]=0x29;
-		bs[510]=0x55; bs[511]=0xAA;
-		esp_partition_write(fatfs_partition, 0, bs, 4096);
-		
-		memset(bs, 0x00, sizeof(bs));
-        bs[0]=0xF8; bs[1]=0xFF; bs[2]=0xFF; bs[3]=0xFF;
-		esp_partition_write(fatfs_partition, 4096, bs, 4096);
-		
-		memset(bs, 0x00, sizeof(bs));
-		const uint8_t root_dir[96] = {
-		  0x42, 0x20, 0x00, 0x49, 0x00, 0x6E, 0x00, 0x66,
-		  0x00, 0x6F, 0x00, 0x0F, 0x00, 0x72, 0x72, 0x00,
-		  0x6D, 0x00, 0x61, 0x00, 0x74, 0x00, 0x69, 0x00,
-		  0x6F, 0x00, 0x00, 0x00, 0x6E, 0x00, 0x00, 0x00,
-		  0x01, 0x53, 0x00, 0x79, 0x00, 0x73, 0x00, 0x74,
-		  0x00, 0x65, 0x00, 0x0F, 0x00, 0x72, 0x6D, 0x00,
-		  0x20, 0x00, 0x56, 0x00, 0x6F, 0x00, 0x6C, 0x00,
-		  0x75, 0x00, 0x00, 0x00, 0x6D, 0x00, 0x65, 0x00,
-		  0x53, 0x59, 0x53, 0x54, 0x45, 0x4D, 0x7E, 0x31,
-		  0x20, 0x20, 0x20, 0x16, 0x00, 0x44, 0x72, 0x0E,
-		  0x7D, 0x5A, 0x7D, 0x5A, 0x00, 0x00, 0x73, 0x0E,
-		  0x7D, 0x5A, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00
-		};
-		memcpy(bs, root_dir, 96);
-		esp_partition_write(fatfs_partition, 8192, bs, 4096);
-		
-		memset(bs, 0x00, sizeof(bs));
-		for(int i=0; i<32; i++) esp_partition_write(fatfs_partition, 12288+i*4096, bs, 4096);
-		Serial.println("Échec du montage de la partition FATFS.");
-		return;
-	  }*/
-	  Serial.println("Partition FATFS initialisée.");
-	  //const esp_partition_t* ffat = ffatPartition();   // dispo dans core 3.1+
-	  Serial.printf("FFat monte partition @0x%06X, size=0x%X\n",
-              fatfs_partition->address, fatfs_partition->size);
 	  waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
 	  
 	  for(int i=0; i<128; i++)
 	  {
 		midi_cc_val[i]=0;
 	  }
-	  for(int i=0; i<128; i++)
-	  {
-		param_save[i]=true;
-	  }
-	  
-	  
 	  
 	  Serial.println("1 Starting I2C codec comm");
 	  //I2c init for codec
@@ -1256,21 +1008,9 @@ void modubrainInit()
 
 	  init_running=false;
 	  
-	  delay(500);
-	  if (!tof.init()) {
-		Serial.println("VL53L0X not found – check wiring");
-		tof_connected=false;
-	  }
-	  else
-	  {
-		tof.setMeasurementTimingBudget(20000);  // 20 000 µs budget
-		tof.startContinuous(PERIOD_MS);
-		tof_connected=true;
-	  }
-	  
 
 	  xTaskCreatePinnedToCore(taskAudio, "TaskAudio", 20000, NULL, 999, &TaskAudioHandle, 1); // Cœur 0
-	  xTaskCreatePinnedToCore(taskOther, "TaskOther", 15000, NULL, 1, &TaskOtherHandle, 0);   // Cœur 1
+	  xTaskCreatePinnedToCore(taskOther, "TaskOther", 4096, NULL, 1, &TaskOtherHandle, 0);   // Cœur 1
 	  
 
     // Créer la tâche Monitor (sur n'importe quel core, priorité moyenne)
@@ -1286,98 +1026,6 @@ void modubrainInit()
   }
 }
 
-int prev_mm=0;
-uint32_t t_prev=0;
-
-void distance_sensor()
-{
-	if(tof_connected)
-    {
-      uint32_t t=millis();
-      if(t-t_prev>=20)
-      {
-        uint16_t mm = tof.readRangeContinuousMillimeters();
-        if(mm<25) mm=25;
-        if(mm>533) mm=533;
-        mm=127-(mm-25)/4;
-        if(mm!=prev_mm)
-        {
-          data_from_MIDI=3;
-          Midi_ControlChange(0, 129, mm);
-          prev_mm=mm;
-        }
-        t_prev=t;
-      }      
-    }
-    uint32_t t=millis();
-    if(t-t_prev>=20)
-    {
-      uint16_t mm = tof.readRangeContinuousMillimeters();
-      if(mm<25) mm=25;
-      if(mm>533) mm=533;
-      mm=127-(mm-25)/4;
-      if(mm!=prev_mm)
-      {
-        data_from_MIDI=3;
-        Midi_ControlChange(0, 129, mm);
-        prev_mm=mm;
-      }
-      t_prev=t;
-    }
-}
-
-int count_midi=0;
-void core0_process()
-{
-	if(data_from_MIDI==3)
-    {
-      if(midi_learn)
-      {
-        disp.midi_learned(num_from_MIDI);
-        disp.display_wave();
-      }
-      else
-      {
-        if(param_screen[num_from_MIDI]==disp.current_screen && enco_focus>=0) 
-        {
-          disp.encoder(val_from_MIDI,param_numinscreen[num_from_MIDI]);
-          display_window(num_from_MIDI);
-        }
-      }
-    }
-    if(data_from_MIDI>0)
-    {
-      count_midi=0;
-      disp.display_input(data_from_MIDI);
-      data_from_MIDI=0;	
-    }
-    if(data_from_enco!=0 && data_from_enco!=10)
-    {
-      Serial.println("data enco not 10");
-      if(enco_focus==-1)
-      {
-        disp.encoder_menu(data_from_enco);
-      }
-      if(enco_focus==0)
-      {
-        disp.encoder(param_midi[param_displayed]);
-        display_window(param_displayed);
-        Serial.println("param " + String(param_displayed) + " changed : " + String(param_midi[param_displayed]));
-      }
-      data_from_enco=0;
-    }
-    if(data_from_enco==10)
-    {
-      Serial.println("data enco 10");
-      disp.draw_warning("loading...");
-      disp.display_wave();
-      data_from_enco=0;
-    }
-
-    count_midi++;
-	  if(count_midi==30) disp.display_input(0);
-}
-
 void core0_init()
 {
   /*if (!FFat.begin()) {
@@ -1390,9 +1038,9 @@ void core0_init()
   disp.init();
   Serial.println("0 disp");
   
-  //disp.drawBmp("/logo2.bmp", 0, 0);
+  disp.drawBmp("/logo2.bmp", 0, 0);
   
-  //Serial.println("0 bmp");
+  Serial.println("0 bmp");
   //int tBytes = FFat.totalBytes(); 
   //int uBytes = FFat.usedBytes();
   //Serial.println("0 FFat space");
@@ -1403,15 +1051,15 @@ void core0_init()
   Serial.println("0 suite");
   
   disp.clear();
+  display_menu();
+  display_param();
   r.begin(true);
   detect_button();
   
   Serial.println("0 detect button");
-  //disp.initFileList();
-  delay(100);
-  //num_title=0;
-  //num_title = disp.find_title_num();
-  //Serial.println(num_title);
+  num_title=0;
+  num_title = disp.find_title_num();
+  Serial.println(num_title);
 }
 
 void enco_turned()
@@ -1419,7 +1067,7 @@ void enco_turned()
    uint8_t result = r.process();
    if(result) 
    {
-      Serial.println("enco");
+      //Serial.println("enco");
       int passed=millis()-passed2;
       //Serial.println(passed);
       if(enco_focus!=-1)
@@ -1479,11 +1127,31 @@ void button_pressed()
       {
           param_displayed += 1;
 		  Serial.println(param_displayed);
-		  disp.screen_right();        
-      }
+		  if(param_displayed>=num_title) param_displayed=num_title-1;
+		  Serial.println(param_displayed);
+		  display_param();
+          display_menu();
+          
+       }
       if(enco_focus==-1)
       {
-	     disp.encoder_menu(2);
+        int disppar = disp.menu_right();
+          if(disppar<200) 
+          {
+            enco_focus=0;
+            param_displayed=disppar;
+            disp.clear();
+			display_param();
+            display_menu();
+            
+          }
+          else
+          {
+            disp.clear();
+            display_menu();
+            disp.menu_hierarchy();
+          }
+          
        
       }
  
@@ -1494,13 +1162,19 @@ void button_pressed()
       Serial.println("but left");
       if(enco_focus==-1)
       {
-          disp.encoder_menu(3);     
+          disp.menu_level--;
+          disp.clear();
+          display_param();
+          disp.menu_top(param_displayed);
+          disp.display_top();
+          disp.menu_hierarchy();     
       }
       if(enco_focus==0)
       { 
           param_displayed -= 1;
           if(param_displayed<0) param_displayed=0;
-		  disp.screen_left();
+		  display_param();
+          display_menu();
           
       }
     }
@@ -1508,7 +1182,30 @@ void button_pressed()
     if(testbut==1) 
     {
       Serial.println("but mid");
-	  but_mid_pressed();
+      if(enco_focus!=0)
+      {
+		but_mid_pressed();
+        enco_focus=0;
+		display_param();
+        display_menu();
+        
+      }
+      else
+      {
+        //if(enco_focus==0)
+        //{
+          param_focus_max=disp.list_bottom(param_displayed, param_focus[param_displayed]);
+          if(param_focus_max>0) enco_focus=2;
+		  if(param_focus_max==-1) enco_focus=3;
+		  if(param_focus_max==-2) {but_mid_pressed(); disp.display_bottom();}
+		  if(param_focus_max==-3) {but_mid_pressed();}
+        //}
+        //else if(enco_focus==2)
+        //{
+        //  enco_focus=0;
+        //  display_menu();
+        //}
+      }
     }
     
     if(testbut==3) 
@@ -1518,23 +1215,16 @@ void button_pressed()
         //menu_level=0;
         enco_focus=-1;
         disp.clear();
-        disp.display_menu();
-		disp.display();
+		display_param();
+        display_menu();
         
-        //disp.menu_hierarchy();      
+        disp.menu_hierarchy();      
       }
       else
       {
         enco_focus=0;
-		disp.current_screen = disp.selected_menu;
-		disp.load_screen(disp.current_screen);
-		disp.control_focus=0; 
-		load_window(disp.current_screen, true);
-		disp.display();
-		disp.display_controllers();
-		disp.display_wave();
-        //disp.clear();
-        //display_menu();
+        disp.clear();
+        display_menu();
       }
     }
     if(testbut==5) 
@@ -1558,8 +1248,7 @@ void learn_midi()
 	{
 		Serial.println("learn");
 		disp.midi_learn();
-		disp.display_wave();
-		//disp.display_window();
+		disp.display_window();
 		midi_learn=true;
 		/*i2s_stop(i2s_num);
 		delay(200);
@@ -1569,11 +1258,8 @@ void learn_midi()
 	{
 		Serial.println("stop learn");
 		midi_learn=false;
-		load_window(disp.current_screen, false);
-		disp.display_wave();
-		midi_learn=false;
-		//display_menu();
-		//display_param();	
+		display_menu();
+		display_param();	
 		/*i2s_stop(i2s_num);
 		delay(200);
 		i2s_start(i2s_num);*/

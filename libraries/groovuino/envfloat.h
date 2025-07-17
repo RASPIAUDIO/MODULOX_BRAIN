@@ -13,11 +13,6 @@ public:
   float envD;
   float envS;
   float envR;
-  
-  //float valA;
-  float valD;
-  //float valS;
-  float valR;
 
   float accu;
 
@@ -34,14 +29,10 @@ public:
   void init()
   {
 	dest=0;
-    /*envA = 0.0001;
+    envA = 0.0001;
     envD = 0.0001;
     envS = 1.0;
-    envR = 0.0001;*/
-	setA(10);
-	setD(10);
-	setS(100);
-	setA(20);
+    envR = 0.0001;
     accu = 0;
     phaseA = false;
     phaseD = false;
@@ -54,6 +45,7 @@ public:
   void start()
   {
 	Serial.println("env start");
+	Serial.println(accu);
     phaseA = true;
     phaseD = false;
     phaseS = false;
@@ -65,7 +57,7 @@ public:
   
   void stop()
   {
-	Serial.println("env stop");
+	//Serial.println("env stop");
     phaseA = false;
     phaseD = false;
     phaseS = false;
@@ -75,31 +67,24 @@ public:
   
   void setA(float val)
   {
-	  Serial.println("setA");
-	  Serial.println(val);
     envA = 0.1/(val*35+1);
-	Serial.println(envA);
-//	valA=val;
   }
   
   void setD(float val)
   {
     envD = 0.1*(1.0-envS)/(val*35+1);
-	valD=val;
   }
   
   void setS(float val)
   {
     envS = val/127.0;
-	envD = 0.1*(1.0-envS)/(valD*35+1);
-	envR = envS*0.1/(valR*35+1);
-//	valS=val;
+	envD = 0.1*(1.0-envS)/(val*35+1);
+	envR = envS*0.1/(val*35+1);
   }
   
   void setR(float val)
   {
     envR = envS*0.1/(val*35+1);
-	valR=val;
   }  
   
   float amount()

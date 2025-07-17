@@ -1,6 +1,7 @@
 #ifndef samplerfloat_h
 #define samplerfloat_h
 
+#include <FS.h>
 #include "FFat.h"
 
 #define MAX_SAMPLE_NUM 16
@@ -161,6 +162,18 @@ public:
 	int index_glob=0;
 	int name_num[MAX_SAMPLE_NUM];
 	
+	const esp_partition_t* fatPart =
+        esp_partition_find_first(ESP_PARTITION_TYPE_DATA,
+                                 ESP_PARTITION_SUBTYPE_DATA_FAT, nullptr);
+	FatConfig cfg {
+        .part          = fatPart,
+        .bytesPerSec   = 4096,
+        .secsPerClus   = 1,
+        .firstDataSec  = 34,     // 1 secteur réservé + 1 secteur FAT
+        .rootDirSec    = 2,     // racine = cluster 2
+        .rootDirEnt    = 4096
+    };
+	
 	void init()
 	{
 		Serial.printf("Free PSRAM before allocation: %d\n", ESP.getFreePsram());
@@ -230,12 +243,23 @@ public:
 	  stopaudio=true;
 	  Serial.println("load_file");
 	  Serial.println(fname);
-	  File file2 = FFat.open(fname);
 	  name_num[sampnu]=samplist;
-	  if(!file2){
-		Serial.println("Failed to open file for reading");
+
+	  size_t size;
+	  uint32_t clus, off;
+	  if (!fat_find_file(cfg, fname.c_str(), clus, size, off)) {
+		  Serial.println("Impossible d'ouvrir le fichier wave !");
 		return false;
 	  }
+	  FlashFile file2;
+	  file2.open(cfg.part, off, size);
+	  size = file2.size();
+	  if (size == 0) {
+		Serial.println("Fichier wave vide !");
+		return false;
+	  }
+	  
+	  
 
 	  sample_start_index[sampnu]=NUM_SAMPLES-1;
 	  sample_end_index[sampnu]=0;
@@ -260,96 +284,145 @@ public:
 	  
 	  int indtemp=0;
 	  
+	  bool wave_read=false;
+	  char val;
+	  char valwave[768];
+	  bool endoffile=false;
+	  
 	  while(file2.available()){
-		char val=file2.read();
-		previous_data[3]=previous_data[2];
-		previous_data[2]=previous_data[1];
-		previous_data[1]=previous_data[0];
-		previous_data[0]=val;
-		
-		if ((i==0 && val!=0x52)||(i==1 && val!=0x49)||(i==2 && val!=0x46)||(i==3 && val!=0x46)) {
-		  Serial.println("no RIFF wave file");
-		  file2.close();
-		}
-		
-		if (previous_data[0]==0x20 && previous_data[1]==0x74 && previous_data[2]==0x6d && previous_data[3]==0x66) fmt_begin = i+1;
-
-		if (i==fmt_begin)    cksize+=val;
-		if (i==fmt_begin+1)  cksize+=val*256;
-		if (i==fmt_begin+2)  cksize+=val*65536;
-		if (i==fmt_begin+3)  cksize+=val*16777216;
-	 
-		if (i==fmt_begin+4)  wFormatTag+=val;
-		if (i==fmt_begin+5)  wFormatTag+=val*256;
-	 
-		if (i==fmt_begin+6)  chan_num+=val;
-		if (i==fmt_begin+7)  chan_num+=val*256;
-	 
-		if (i==fmt_begin+8)  smp_rate+=val;
-		if (i==fmt_begin+9)  smp_rate+=val*256;
-		if (i==fmt_begin+10) smp_rate+=val*65536;
-		if (i==fmt_begin+11) smp_rate+=val*16777216;
-	 
-		if (i==fmt_begin+12) bps+=val;
-		if (i==fmt_begin+13) bps+=val*256;  
-		if (i==fmt_begin+14) bps+=val*65536;  
-		if (i==fmt_begin+15) bps+=val*16777216;  
-	 
-		if (i==fmt_begin+16) blcksize+=val;
-		if (i==fmt_begin+17) blcksize+=val*256;
-	 
-		if (i==fmt_begin+18) wBitsPerSample+=val;
-		if (i==fmt_begin+19) wBitsPerSample+=val*256;	
-		
-		if (i==fmt_begin+19)
+		//char val=file2.read1();
+		//read(void* dst, size_t n)
+		//char val;
+		if(!wave_read) 
 		{
-		  if (wFormatTag!=1) {
-			Serial.println("not PCM file");
-		  }
-		  Serial.print("wFormatTag : ");
-		  Serial.println(wFormatTag);
-		  Serial.print("chan_num : ");
-		  Serial.println(chan_num);
-		  Serial.print("smp_rate : ");
-		  Serial.println(smp_rate);
-		  Serial.print("bps : ");
-		  Serial.println(bps);
-		  octets=wBitsPerSample>>3;
-		  Serial.print("octets : ");
-		  Serial.println(octets);
-		  Serial.print("blcksize : ");
-		  Serial.println(blcksize);
-		  Serial.print("wBitsPerSample : ");
-		  Serial.println(wBitsPerSample);
-		}
-		
-		if (previous_data[0]==0x61 && previous_data[1]==0x74 && previous_data[2]==0x61 && previous_data[3]==0x64 && i<ind_data) {
-		  ind_data = i+1;
-		  Serial.print("ind_data : ");
-		  Serial.println(ind_data);
-		}
-		//if(i%50==0) file2.flush();
-		if(i==ind_data) wav_size+=val;
-		if(i==ind_data+1) wav_size+=val*256;
-		if(i==ind_data+2) wav_size+=val*65536;
-		if(i==ind_data+3) 
-		{
-			wav_size+=val*16777216;
-			Serial.print("wave size : ");
-			Serial.println(wav_size);
-			if(findMin(sample_start_index, MAX_SAMPLE_NUM)>wav_size) sample_start_index[sampnu]=0;
-			else 
-			{
-				sample_start_index[sampnu]=findMax(sample_end_index, MAX_SAMPLE_NUM);
+			val=file2.read1();
+			previous_data[3]=previous_data[2];
+			previous_data[2]=previous_data[1];
+			previous_data[1]=previous_data[0];
+			previous_data[0]=val;
+			
+			if ((i==0 && val!=0x52)||(i==1 && val!=0x49)||(i==2 && val!=0x46)||(i==3 && val!=0x46)) {
+			  Serial.println("no RIFF wave file");
 			}
-			index_glob=sample_start_index[sampnu];
-			Serial.println(index_glob);
-			if((wav_size+index_glob)>4000000) return false; 
+			
+			if (previous_data[0]==0x20 && previous_data[1]==0x74 && previous_data[2]==0x6d && previous_data[3]==0x66) fmt_begin = i+1;
+
+			if (i==fmt_begin)    cksize+=val;
+			if (i==fmt_begin+1)  cksize+=val*256;
+			if (i==fmt_begin+2)  cksize+=val*65536;
+			if (i==fmt_begin+3)  cksize+=val*16777216;
+		 
+			if (i==fmt_begin+4)  wFormatTag+=val;
+			if (i==fmt_begin+5)  wFormatTag+=val*256;
+		 
+			if (i==fmt_begin+6)  chan_num+=val;
+			if (i==fmt_begin+7)  chan_num+=val*256;
+		 
+			if (i==fmt_begin+8)  smp_rate+=val;
+			if (i==fmt_begin+9)  smp_rate+=val*256;
+			if (i==fmt_begin+10) smp_rate+=val*65536;
+			if (i==fmt_begin+11) smp_rate+=val*16777216;
+		 
+			if (i==fmt_begin+12) bps+=val;
+			if (i==fmt_begin+13) bps+=val*256;  
+			if (i==fmt_begin+14) bps+=val*65536;  
+			if (i==fmt_begin+15) bps+=val*16777216;  
+		 
+			if (i==fmt_begin+16) blcksize+=val;
+			if (i==fmt_begin+17) blcksize+=val*256;
+		 
+			if (i==fmt_begin+18) wBitsPerSample+=val;
+			if (i==fmt_begin+19) wBitsPerSample+=val*256;	
+			
+			if (i==fmt_begin+19)
+			{
+			  if (wFormatTag!=1) {
+				Serial.println("not PCM file");
+			  }
+			  Serial.print("wFormatTag : ");
+			  Serial.println(wFormatTag);
+			  Serial.print("chan_num : ");
+			  Serial.println(chan_num);
+			  Serial.print("smp_rate : ");
+			  Serial.println(smp_rate);
+			  Serial.print("bps : ");
+			  Serial.println(bps);
+			  octets=wBitsPerSample>>3;
+			  Serial.print("octets : ");
+			  Serial.println(octets);
+			  Serial.print("blcksize : ");
+			  Serial.println(blcksize);
+			  Serial.print("wBitsPerSample : ");
+			  Serial.println(wBitsPerSample);
+			}
+			
+			if (previous_data[0]==0x61 && previous_data[1]==0x74 && previous_data[2]==0x61 && previous_data[3]==0x64 && i<ind_data) {
+			  ind_data = i+1;
+			  Serial.print("ind_data : ");
+			  Serial.println(ind_data);
+			}
+			//if(i%50==0) file2.flush();
+			if(i==ind_data) wav_size+=val;
+			if(i==ind_data+1) wav_size+=val*256;
+			if(i==ind_data+2) wav_size+=val*65536;
+			if(i==ind_data+3) 
+			{
+				wav_size+=val*16777216;
+				Serial.print("wave size : ");
+				Serial.println(wav_size);
+				Serial.println(i);
+				if(findMin(sample_start_index, MAX_SAMPLE_NUM)>wav_size) sample_start_index[sampnu]=0;
+				else 
+				{
+					sample_start_index[sampnu]=findMax(sample_end_index, MAX_SAMPLE_NUM);
+				}
+				index_glob=sample_start_index[sampnu];
+				Serial.println(index_glob);
+				if((wav_size+index_glob)>4000000) return false; 
+				wave_read=true;
+			}
+			i++;
+		}
+		else 
+		{
+			file2.read(valwave, 768);
+			if(!endoffile)
+			{
+				for(int j=0; j<768; j++)
+				{
+					wav_size--;
+					if(wav_size<=0) {j=769; endoffile=true;}
+					val=valwave[j];
+					//if(i>=286000) Serial.println(i);
+					if(octets==2)
+					{
+					  if(chan_num==1 && j%2==0) tempval=val&0xFF;
+					  //if(chan_num==1 && (i-ind_data-4)%2==1) {tempram[indtemp]=(((val<<8)&0xFF00)|tempval);indtemp++;}
+					  if(chan_num==1 && j%2==1) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
+					  if(chan_num==2 && j%4==0) tempval=val&0xFF;
+					  if(chan_num==2 && j%4==1) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
+					}
+					if(octets==3)
+					{
+					  if(chan_num==1 && j%3==1) tempval=val&0xFF;
+					  if(chan_num==1 && j%3==2) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
+					  if(chan_num==2 && j%6==1) tempval=val&0xFF;
+					  if(chan_num==2 && j%6==2) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
+					}
+					if(octets==4)
+					{
+					  if(chan_num==1 && j%4==2) tempval=val&0xFF;
+					  if(chan_num==1 && j%4==3) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
+					  if(chan_num==2 && j%8==2) tempval=val&0xFF;
+					  if(chan_num==2 && j%8==3) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
+					}
+				}
+			}
 		}
 		
 		
-		//if(i>=286000) Serial.println(i);
-		if(i>=ind_data+4 && i<=(wav_size+ind_data+4) && octets==2)
+		
+		/*if(i>=ind_data+4 && i<=(wav_size+ind_data+4) && octets==2)
 		{
 		  if(chan_num==1 && (i-ind_data-4)%2==0) tempval=val&0xFF;
 		  //if(chan_num==1 && (i-ind_data-4)%2==1) {tempram[indtemp]=(((val<<8)&0xFF00)|tempval);indtemp++;}
@@ -370,21 +443,15 @@ public:
 		  if(chan_num==1 && (i-ind_data-4)%4==3) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
 		  if(chan_num==2 && (i-ind_data-4)%8==2) tempval=val&0xFF;
 		  if(chan_num==2 && (i-ind_data-4)%8==3) {sample[n+index_glob]=(((val<<8)&0xFF00)|tempval); n++;}
-		}
-		indtemp++;
+		}*/
+		/*indtemp++;
 		if(indtemp>=512)
 		{
 			Serial.println("bloc");
 			Serial.println(tempram[0]);
-			/*for(int ramcop=0; ramcop++; ramcop<512)
-			{
-				sample[n+index_glob]=tempram[ramcop];
-				n++;
-			}*/
 			indtemp=0;
 			delay(1);
-		}
-		i++;
+		}*/
 		
 	  }
 	  stopaudio=false;
@@ -394,10 +461,9 @@ public:
 	  Serial.println(smp_rate);
 	  Serial.println(bps);
 	  Serial.println(ind_data);
-	  sample_length[sampnu]=n;
-	  sample_end_index[sampnu]=index_glob+n;
-	  index_glob+=n;
-	  file2.close();
+	  sample_length[sampnu]=n-1;
+	  sample_end_index[sampnu]=index_glob+n-1;
+	  index_glob+=n-1;
 	  return true;
 	}
 	
@@ -441,7 +507,7 @@ public:
 		}*/
 		
 	  //return (float)ret*0.0000305176;
-	  return (float)ret*0.000025;
+	  return (float)ret*0.00002;
 	}
 	
 	void sample_stop(int smpnum)

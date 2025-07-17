@@ -1,9 +1,9 @@
-#ifndef envfloat_h
-#define envfloat_h
+#ifndef envfloatlow_h
+#define envfloatlow_h
 
 #include <arduino.h>
 
-class Env
+class EnvLow
 {
   
 public:
@@ -13,11 +13,6 @@ public:
   float envD;
   float envS;
   float envR;
-  
-  //float valA;
-  float valD;
-  //float valS;
-  float valR;
 
   float accu;
 
@@ -34,14 +29,10 @@ public:
   void init()
   {
 	dest=0;
-    /*envA = 0.0001;
-    envD = 0.0001;
-    envS = 1.0;
-    envR = 0.0001;*/
-	setA(10);
-	setD(10);
-	setS(100);
-	setA(20);
+    envA = 0.000025;
+    envD = 0.000025;
+    envS = 0.25;
+    envR = 0.000025;
     accu = 0;
     phaseA = false;
     phaseD = false;
@@ -53,7 +44,7 @@ public:
   
   void start()
   {
-	Serial.println("env start");
+	//Serial.println("env start");
     phaseA = true;
     phaseD = false;
     phaseS = false;
@@ -65,7 +56,7 @@ public:
   
   void stop()
   {
-	Serial.println("env stop");
+	//Serial.println("env stop");
     phaseA = false;
     phaseD = false;
     phaseS = false;
@@ -75,31 +66,24 @@ public:
   
   void setA(float val)
   {
-	  Serial.println("setA");
-	  Serial.println(val);
-    envA = 0.1/(val*35+1);
-	Serial.println(envA);
-//	valA=val;
+    envA = 0.025/(val*35+1);
   }
   
   void setD(float val)
   {
-    envD = 0.1*(1.0-envS)/(val*35+1);
-	valD=val;
+    envD = 0.1*(0.25-envS)/(val*35+1);
   }
   
   void setS(float val)
   {
-    envS = val/127.0;
-	envD = 0.1*(1.0-envS)/(valD*35+1);
-	envR = envS*0.1/(valR*35+1);
-//	valS=val;
+    envS = val/512.0;
+	envD = 0.1*(0.25-envS)/(val*35+1);
+	envR = envS*0.1/(val*35+1);
   }
   
   void setR(float val)
   {
     envR = envS*0.1/(val*35+1);
-	valR=val;
   }  
   
   float amount()
@@ -107,7 +91,7 @@ public:
 // ATTACK
     if(phaseA)
     {
-      if(accu >= 1.0)
+      if(accu >= 0.25)
       {
         phaseA = false;
         phaseD = true;
