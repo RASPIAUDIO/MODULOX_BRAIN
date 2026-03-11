@@ -23,6 +23,7 @@ float convert_pitch[]=
 -1,
 -1,
 -1,
+-1,
 0.04960448175,
 0.05255414342,
 0.05567939394,
@@ -138,7 +139,6 @@ float convert_pitch[]=
 -1,
 -1,
 -1,
--1,
 -1};
 
 class Sampler
@@ -204,6 +204,22 @@ public:
 			param_end_sample[n]=0;
 		}
 		sample_playing[0]=1;
+	}
+	
+	void init_load()
+	{
+		index_glob=0;
+		for (int n = 0; n < MAX_SAMPLE_NUM; n++)
+		{
+			sample_start_index[n]=NUM_SAMPLES-1;
+			sample_end_index[n]=0;
+			sample_index[n]=0;
+			sample_playing[n]=0;
+			sample_index_inc[n]=1.0;
+			sampenv[n]=0;
+			param_start_sample[n]=0;
+			param_end_sample[n]=0;
+		}
 	}
 	
 	void tune(int tu, int num)

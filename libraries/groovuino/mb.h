@@ -24,7 +24,7 @@ void Midi_NoteOn(uint8_t chan, uint8_t note, uint8_t vol);
 void Midi_NoteOff(uint8_t chan, uint8_t note);
 //void HandleShortMsg(uint8_t *data);
 void Midi_ControlChange(uint8_t channel, uint8_t data1, uint8_t data2);
-void param_action(int num);
+void param_action(int num, bool stop_engines=true);
 void param_action_focus(int num);
 void display_window(int num);
 void taskAudio(void *parameter);
@@ -438,7 +438,7 @@ void init_synth_param()
   {
     Serial.println(i);
     Serial.println(param_midi[i]);
-    if(param_save[i]) param_action(i);
+    if(param_save[i]) param_action(i,false);
   }
 }
 
@@ -744,10 +744,10 @@ void Midi_Process()
 		if (Serial2.available())
 		{
 			uint8_t incomingByte = Serial2.read();
-			Serial.println("read");
+			//Serial.println("read");
 
-			Serial.printf("%02x", incomingByte);
-			Serial.println("");
+			//Serial.printf("%02x", incomingByte);
+			//Serial.println("");
 			Serial2.write(incomingByte);
 			// ignore live messages 
 			if ((incomingByte & 0xF0) == 0xF0)

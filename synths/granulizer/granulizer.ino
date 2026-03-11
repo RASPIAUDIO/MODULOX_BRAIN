@@ -8,7 +8,7 @@
 #include "rosic_TeeBeeFilter.h"
 #include "rosic_OnePoleFilter.h"
 #include "rosic_BiquadFilter.h"
-#include <VL53L0X.h>
+
 
 #define DELAY_SAMPLES 100000
 #include "delaystereo.h"
@@ -37,12 +37,7 @@ int lastind=0;
 
 Env env2;
 
-#define PERIOD_MS 20  // sensor cadence
-#define MAX_MM 2000   // clip anything beyond 2 m
-#define BAR_COLS 80   // full-width bar at MAX_MM
 
-VL53L0X tof;
-bool tof_connected=true;
 
 void setup() {
   Serial.begin(115200);
@@ -51,17 +46,7 @@ void setup() {
 
   modubrainInit();
 
-  delay(500);
-  if (!tof.init()) {
-    Serial.println("VL53L0X not found – check wiring");
-    tof_connected=false;
-  }
-  else
-  {
-    tof.setMeasurementTimingBudget(20000);  // 20 000 µs budget
-    tof.startContinuous(PERIOD_MS);
-    tof_connected=true;
-  }
+  
   
   delay(500);
 
@@ -215,47 +200,14 @@ void taskAudio(void *parameter) {
   }
 }
 
-int prev_mm=0;
-uint32_t t_prev=0;
+
 
 void loop() {
   // put your main code here, to run repeatedly:
     Midi_Process();
     USB_Midi_Process();
     enco_turned();
-    if(tof_connected)
-    {
-      uint32_t t=millis();
-      if(t-t_prev>=20)
-      {
-        uint16_t mm = tof.readRangeContinuousMillimeters();
-        if(mm<25) mm=25;
-        if(mm>533) mm=533;
-        mm=127-(mm-25)/4;
-        if(mm!=prev_mm)
-        {
-          data_from_MIDI=3;
-          Midi_ControlChange(0, 129, mm);
-          prev_mm=mm;
-        }
-        t_prev=t;
-      }      
-    }
-    uint32_t t=millis();
-    if(t-t_prev>=20)
-    {
-      uint16_t mm = tof.readRangeContinuousMillimeters();
-      if(mm<25) mm=25;
-      if(mm>533) mm=533;
-      mm=127-(mm-25)/4;
-      if(mm!=prev_mm)
-      {
-        data_from_MIDI=3;
-        Midi_ControlChange(0, 129, mm);
-        prev_mm=mm;
-      }
-      t_prev=t;
-    }
+    distance_sensor();
     
     
     //Serial.println(127-(mm-25)/4);

@@ -228,7 +228,7 @@ void load_window(int screen_n, bool init_s)
   }
 }
 
-void param_action(int num)
+void param_action(int num, bool stop_engines)
 {
   Serial.print("param_action : ");
   Serial.println(num);
@@ -427,11 +427,8 @@ inline void Midi_ControlChange(uint8_t ch, uint8_t note, uint8_t val)
   Serial.println("Midi_CC");
   if(midi_learn)
     {
-      //midi_learn=false;
       midi_cc_val[param_displayed]=note;
       num_from_MIDI=note;
-      //disp.midi_learned(note);
-      //disp.display_wave();
     }
     else
     {
@@ -439,14 +436,6 @@ inline void Midi_ControlChange(uint8_t ch, uint8_t note, uint8_t val)
       {
         if(note==midi_cc_val[i])  
         {    
-          
-          /*uint32_t CC_time = millis()-previous_time;
-          
-          if(CC_time>200) {
-            if(param_screen[i]==disp.current_screen) disp.encoder(val,param_numinscreen[i]);
-            display_window(i);
-            previous_time=millis();
-          }*/
           change_CC(i, val);
           param_action(i);
           num_from_MIDI=i;
