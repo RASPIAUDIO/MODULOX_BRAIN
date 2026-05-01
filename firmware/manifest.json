@@ -11,7 +11,7 @@
         "data_image_bytes":  10354688,
         "data_source_files":  4,
         "data_source_bytes":  202294,
-        "sha256":  "3c8a25f57854df121c1754247977facb0755ea0f17b185a437a89b8ac25c0fb4"
+        "sha256":  "5acbe16280dccad1d9af2390ae2e1e93691e260f1c0ac2bafb608028edf41245"
     },
     {
         "synth":  "granulizer",
@@ -25,7 +25,7 @@
         "data_image_bytes":  10354688,
         "data_source_files":  0,
         "data_source_bytes":  0,
-        "sha256":  "4c46b3675ae1bb12d56790eb812ce11a9dff5480cb743ac9463e3478d257072c"
+        "sha256":  "499690c6d5b53fa63e6c6c66ad9062f718edc998c99f18e9f1c8e1f38cd811e6"
     },
     {
         "synth":  "organbrain",
@@ -39,7 +39,7 @@
         "data_image_bytes":  10354688,
         "data_source_files":  15,
         "data_source_bytes":  222124,
-        "sha256":  "da8642034e09f83e1e083a22dabe201d7f786d9c2ff992729708a79af68b2d5e"
+        "sha256":  "ece2e5d9d4f96b708b79559b1371af518ac51f160cdc7def87dd2de9f2b2910a"
     },
     {
         "synth":  "sampbrain",
@@ -53,7 +53,7 @@
         "data_image_bytes":  10354688,
         "data_source_files":  28,
         "data_source_bytes":  961693,
-        "sha256":  "f5c44f873b193c360a886f2a8609c5e5cd8f300e8fca2832b4435c7f5b20399e"
+        "sha256":  "46d536675d404199828373f5798ba29a0c5b8448f35c47e6cfdd6f7ed0130132"
     },
     {
         "synth":  "VAsynth",
@@ -67,6 +67,6 @@
         "data_image_bytes":  10354688,
         "data_source_files":  51,
         "data_source_bytes":  298928,
-        "sha256":  "86f5dba2fa270e1e65277710f1bafadf28a706026cd660a9d841004af70fd884"
+        "sha256":  "3369082843b479567fea4a8f8a1c26f74165ed736172947e99354855cd305b0d"
     }
 ]
