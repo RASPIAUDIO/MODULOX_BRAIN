@@ -4,7 +4,12 @@
 #include <TFT_eSPI.h> // Hardware-specific library
 #include <Wire.h>
 #include "driver/i2s.h"
-#include <Adafruit_TinyUSB.h>
+#if defined(ARDUINO_ARCH_ESP32)
+  #include <USB.h>
+  #include <USBMIDI.h>
+#else
+  #include <Adafruit_TinyUSB.h>
+#endif
 #include <MIDI.h>
 #include <tablesfloat.h>
 #include <lookuptable.h>
@@ -104,10 +109,104 @@ int countz=0;
 
 const i2s_port_t i2s_num = I2S_NUM_0; // i2s port number
 
+#if defined(ARDUINO_ARCH_ESP32)
+class Esp32UsbMidiStream
+{
+public:
+  void begin(uint32_t baud = 31250)
+  {
+    (void)baud;
+    _midi.begin();
+    USB.begin();
+  }
+
+  size_t write(uint8_t value)
+  {
+    return _midi.write(value);
+  }
+
+  int available()
+  {
+    fillRxBuffer();
+    return _rxLen - _rxPos;
+  }
+
+  int read()
+  {
+    if (!available()) return -1;
+
+    int value = _rx[_rxPos++];
+    if (_rxPos >= _rxLen)
+    {
+      _rxPos = 0;
+      _rxLen = 0;
+    }
+    return value;
+  }
+
+private:
+  uint8_t packetDataLength(uint8_t cin)
+  {
+    switch (cin)
+    {
+      case MIDI_CIN_SYSCOM_2BYTE:
+      case MIDI_CIN_PROGRAM_CHANGE:
+      case MIDI_CIN_CHANNEL_PRESSURE:
+      case MIDI_CIN_SYSEX_END_2BYTE:
+        return 2;
+
+      case MIDI_CIN_SYSCOM_3BYTE:
+      case MIDI_CIN_SYSEX_START:
+      case MIDI_CIN_SYSEX_END_3BYTE:
+      case MIDI_CIN_NOTE_OFF:
+      case MIDI_CIN_NOTE_ON:
+      case MIDI_CIN_POLY_KEYPRESS:
+      case MIDI_CIN_CONTROL_CHANGE:
+      case MIDI_CIN_PITCH_BEND_CHANGE:
+        return 3;
+
+      case MIDI_CIN_1BYTE_DATA:
+      case MIDI_CIN_SYSEX_END_1BYTE:
+        return 1;
+
+      default:
+        return 0;
+    }
+  }
+
+  void fillRxBuffer()
+  {
+    if (_rxPos < _rxLen) return;
+
+    _rxPos = 0;
+    _rxLen = 0;
+
+    midiEventPacket_t packet = {0, 0, 0, 0};
+    if (!_midi.readPacket(&packet)) return;
+
+    _rxLen = packetDataLength(MIDI_EP_HEADER_CIN_GET(packet.header));
+    if (_rxLen > 0) _rx[0] = packet.byte1;
+    if (_rxLen > 1) _rx[1] = packet.byte2;
+    if (_rxLen > 2) _rx[2] = packet.byte3;
+  }
+
+  USBMIDI _midi;
+  uint8_t _rx[3] = {0, 0, 0};
+  uint8_t _rxPos = 0;
+  uint8_t _rxLen = 0;
+};
+
+Esp32UsbMidiStream usb_midi;
+#else
 Adafruit_USBD_MIDI usb_midi;
+#endif
 // Create a new instance of the Arduino MIDI Library,
 // and attach usb_midi as the transport.
+#if defined(ARDUINO_ARCH_ESP32)
+MIDI_CREATE_INSTANCE(Esp32UsbMidiStream, usb_midi, MIDI);
+#else
 MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
+#endif
 
 bool init_running = true;
 bool midi_changed=false;
@@ -374,6 +473,8 @@ void Midi_Setup()
 	Serial.println("MIDI setup");
     Serial2.begin(31250, SERIAL_8N1, RXD2, TXD2);
 	Serial.println("Serial2 OK");
+	MIDI.begin(MIDI_CHANNEL_OMNI);
+	Serial.println("USB MIDI OK");
     pinMode(SYNCRX,INPUT_PULLDOWN);
 	Serial.println("Sync OK");
 }
@@ -945,7 +1046,11 @@ void modubrainInit()
   
   // wait until device mounted
   int i=0;
+#if defined(ARDUINO_ARCH_ESP32)
+  while( !USB && i<30  ) {delay(100);Serial.println("0 try");i++;}
+#else
   while( !TinyUSBDevice.mounted() && i<30  ) {delay(100);Serial.println("0 try");i++;}
+#endif
   Serial.println("1 mounted");
 
   init_running=false;

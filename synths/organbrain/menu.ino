@@ -24,8 +24,7 @@ void display_param()
   if(param_displayed == 1) disp.draw_string_center(wave_list[param_midi[param_displayed]%4]);
   if(param_displayed >= 2 && param_displayed <= 10)
   {
-    //for(int i=0; i<9; i++) disp.drawBmpParam("/tirette1.bmp",10+i*28, param_midi[i+2]-100);
-    for(int i=0; i<9; i++) disp.display_buffer(10+i*28, param_midi[i+2]-100);
+    for(int i=0; i<9; i++) disp.drawBmpParam("/tirette1.bmp",10+i*28, param_midi[i+2]-100);
   }
     
   //if(param_displayed >= 2 && param_displayed <= 10) disp.draw_number_string_center(param_midi[param_displayed]*100/127, " %");

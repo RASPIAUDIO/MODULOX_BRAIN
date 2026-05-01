@@ -7,6 +7,7 @@
 #include "rosic_OnePoleFilter.h"
 #include "rosic_BiquadFilter.h"
 #include <disto2.h>
+#define DELAY_SAMPLES 100000
 #include <delay.h>
 #include "braindisplay.h"
 

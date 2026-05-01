@@ -23,3 +23,8 @@ void enco_pressed()
 {
 
 }
+
+void but_record()
+{
+
+}

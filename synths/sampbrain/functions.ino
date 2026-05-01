@@ -175,7 +175,7 @@ void load_window(int screen_n, bool init_s)
   }
 }
 
-void param_action(int num)
+void param_action(int num, bool stop_engines)
 {
   Serial.print("param_action : ");
   Serial.println(num);
@@ -184,12 +184,14 @@ void param_action(int num)
     int SampNum=num/7;
     int ParamNum=num%7;
     if(ParamNum==0) {
-      data_from_enco=10;
-      stopaudio=true;
-      delay(200);
-      vTaskSuspend(TaskAudioHandle);
-      vTaskSuspend(TaskOtherHandle);  
-      delay(10);
+      if (stop_engines) {
+        data_from_enco=10;
+        stopaudio=true;
+        delay(200);
+        vTaskSuspend(TaskAudioHandle);
+        vTaskSuspend(TaskOtherHandle);
+        delay(10);
+      }
       //Serial.println("data enco put to 10");
       
       //disp.draw_warning("loading...");
@@ -198,10 +200,12 @@ void param_action(int num)
       //String sfile = "sample" + String(param_midi[num]) + ".wav"; 
       smp.load_file(disp.fileList[0][param_midi[num]],SampNum,param_midi[num]);
       smp.sample_launch_raw(SampNum, 64);
-      data_from_enco=1;
-      vTaskResume(TaskAudioHandle);
-      vTaskResume(TaskOtherHandle);
-      stopaudio=false;
+      if (stop_engines) {
+        data_from_enco=1;
+        vTaskResume(TaskAudioHandle);
+        vTaskResume(TaskOtherHandle);
+        stopaudio=false;
+      }
     }
     if(ParamNum==1) smp.param_start_sample[SampNum]=param_midi[num];
     if(ParamNum==2) smp.param_end_sample[SampNum]=param_midi[num];

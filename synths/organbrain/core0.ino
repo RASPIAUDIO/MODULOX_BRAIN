@@ -6,7 +6,6 @@ Serial.println("core 0");
 Serial.println(digitalRead(0));
 
   core0_init();
-  disp.init_buffer(22, 142);
 
   savenum=1;
   param_midi[0]=1;

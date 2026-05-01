@@ -16,6 +16,7 @@
 
 // Include processor specific header
 #include "soc/spi_reg.h"
+#include "soc/gpio_struct.h"
 #include "driver/spi_master.h"
 
 #if !defined(CONFIG_IDF_TARGET_ESP32S3) && !defined(CONFIG_IDF_TARGET_ESP32S2) && !defined(CONFIG_IDF_TARGET_ESP32)
