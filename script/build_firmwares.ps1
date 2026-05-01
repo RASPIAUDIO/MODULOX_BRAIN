@@ -3,6 +3,8 @@ Build complete Modulox firmware images flashable at address 0x0.
 
 The generated images include bootloader, partition table, boot_app0, app,
 and the FFat data partition used by the sketches.
+
+Pass -NoData to generate smaller images without the FFat data partition.
 #>
 [CmdletBinding()]
 param(
@@ -11,6 +13,12 @@ param(
     [string] $Mkfatfs = "",
     [string] $OutputDir = "",
     [string] $BuildDir = "",
+    [string] $FlashSize = "16M",
+    [string] $PartitionScheme = "app3M_fat9M_16MB",
+    [string] $USBMode = "default",
+    [string] $CDCOnBoot = "cdc",
+    [string] $UploadMode = "cdc",
+    [switch] $NoData,
     [switch] $NoClean
 )
 
@@ -18,10 +26,17 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $Esp32CoreVersion = "3.0.5"
-$Fqbn = "esp32:esp32:esp32s3:FlashMode=qio,FlashSize=16M,PSRAM=opi,USBMode=default,UploadMode=cdc,PartitionScheme=app3M_fat9M_16MB"
-$DataOffset = "0x610000"
-$DataSize = 0x9E0000
-$FlashSize = "16MB"
+$Fqbn = "esp32:esp32:esp32s3:FlashMode=qio,FlashSize=$FlashSize,PSRAM=opi,USBMode=$USBMode,CDCOnBoot=$CDCOnBoot,UploadMode=$UploadMode,PartitionScheme=$PartitionScheme"
+$FillFlashSizeByOption = @{
+    "4M" = "4MB"
+    "8M" = "8MB"
+    "16M" = "16MB"
+    "32M" = "32MB"
+}
+if (-not $FillFlashSizeByOption.ContainsKey($FlashSize)) {
+    throw "Unsupported FlashSize '$FlashSize'. Expected one of: $($FillFlashSizeByOption.Keys -join ', ')"
+}
+$FlashSizeBytesLabel = $FillFlashSizeByOption[$FlashSize]
 
 function Resolve-InRepo {
     param([string] $Path)
@@ -111,8 +126,83 @@ function Get-RelativeRepoPath {
     return $fullPath.Substring($RepoRoot.Length + 1).Replace("\", "/")
 }
 
-$OutputDir = if ($OutputDir) { Resolve-InRepo $OutputDir } else { Resolve-InRepo (Join-Path $RepoRoot "firmware") }
-$BuildDir = if ($BuildDir) { Resolve-InRepo $BuildDir } else { Resolve-InRepo (Join-Path $RepoRoot ".build\firmware-16MB") }
+function Convert-PartitionNumber {
+    param([string] $Value)
+
+    $trimmed = $Value.Trim()
+    if ($trimmed.StartsWith("0x", [System.StringComparison]::OrdinalIgnoreCase)) {
+        return [Convert]::ToInt64($trimmed.Substring(2), 16)
+    }
+    return [Convert]::ToInt64($trimmed, 10)
+}
+
+function Get-PartitionCsvName {
+    param(
+        [string] $CorePath,
+        [string] $PartitionScheme
+    )
+
+    $boardsPath = Join-Path $CorePath "boards.txt"
+    $pattern = "^esp32s3\.menu\.PartitionScheme\.$([regex]::Escape($PartitionScheme))\.build\.partitions=(.+)$"
+    $match = Select-String -Path $boardsPath -Pattern $pattern | Select-Object -First 1
+    if ($match) {
+        return $match.Matches[0].Groups[1].Value.Trim()
+    }
+    return $PartitionScheme
+}
+
+function Get-FatPartitionInfo {
+    param(
+        [string] $CorePath,
+        [string] $PartitionScheme
+    )
+
+    $csvName = Get-PartitionCsvName -CorePath $CorePath -PartitionScheme $PartitionScheme
+    $csvPath = Join-Path $CorePath "tools\partitions\$csvName.csv"
+    if (-not (Test-Path -LiteralPath $csvPath)) {
+        throw "Partition CSV not found for '$PartitionScheme': $csvPath"
+    }
+
+    foreach ($line in Get-Content -LiteralPath $csvPath) {
+        $clean = ($line -replace "#.*$", "").Trim()
+        if (-not $clean) {
+            continue
+        }
+
+        $parts = @($clean.Split(",") | ForEach-Object { $_.Trim() })
+        if ($parts.Count -lt 5) {
+            continue
+        }
+
+        $name = $parts[0]
+        $type = $parts[1]
+        $subType = $parts[2]
+        if ($type -eq "data" -and ($subType -eq "fat" -or $name -eq "ffat")) {
+            $offset = Convert-PartitionNumber $parts[3]
+            $size = Convert-PartitionNumber $parts[4]
+            return [PSCustomObject]@{
+                CsvName = $csvName
+                CsvPath = $csvPath
+                Name = $name
+                Offset = $offset
+                OffsetHex = ("0x{0:X}" -f $offset)
+                Size = $size
+                SizeHex = ("0x{0:X}" -f $size)
+            }
+        }
+    }
+
+    return $null
+}
+
+$DefaultOutputDir = if ($NoData) {
+    if ($FlashSize -eq "16M" -and $PartitionScheme -eq "app3M_fat9M_16MB") { "firmware-no-data" } else { "firmware-$FlashSizeBytesLabel-no-data" }
+} else {
+    if ($FlashSize -eq "16M" -and $PartitionScheme -eq "app3M_fat9M_16MB") { "firmware" } else { "firmware-$FlashSizeBytesLabel" }
+}
+$DefaultBuildDir = if ($NoData) { ".build\firmware-$FlashSizeBytesLabel-no-data" } else { ".build\firmware-$FlashSizeBytesLabel" }
+$OutputDir = if ($OutputDir) { Resolve-InRepo $OutputDir } else { Resolve-InRepo (Join-Path $RepoRoot $DefaultOutputDir) }
+$BuildDir = if ($BuildDir) { Resolve-InRepo $BuildDir } else { Resolve-InRepo (Join-Path $RepoRoot $DefaultBuildDir) }
 $LibrariesDir = Resolve-InRepo (Join-Path $RepoRoot "libraries")
 
 $ArduinoCli = Resolve-CommandPath `
@@ -120,13 +210,15 @@ $ArduinoCli = Resolve-CommandPath `
     -CommandName "arduino-cli" `
     -Candidates @((Join-Path $RepoRoot ".tools\arduino-cli.exe"))
 
-$Mkfatfs = Resolve-CommandPath `
-    -ExplicitPath $Mkfatfs `
-    -CommandName "mkfatfs" `
-    -Candidates @(
-        (Join-Path $RepoRoot ".tools\mkfatfs.exe"),
-        (Join-Path $env:USERPROFILE ".platformio\packages\tool-mkfatfs\mkfatfs.exe")
-    )
+if (-not $NoData) {
+    $Mkfatfs = Resolve-CommandPath `
+        -ExplicitPath $Mkfatfs `
+        -CommandName "mkfatfs" `
+        -Candidates @(
+            (Join-Path $RepoRoot ".tools\mkfatfs.exe"),
+            (Join-Path $env:USERPROFILE ".platformio\packages\tool-mkfatfs\mkfatfs.exe")
+        )
+}
 
 $ArduinoDataDir = Get-ArduinoDataDir -ArduinoCliPath $ArduinoCli
 $CorePath = Join-Path $ArduinoDataDir "packages\esp32\hardware\esp32\$Esp32CoreVersion"
@@ -146,6 +238,13 @@ if (-not (Test-Path -LiteralPath $BootApp0)) {
     throw "boot_app0.bin not found at $BootApp0"
 }
 
+$FatPartition = Get-FatPartitionInfo -CorePath $CorePath -PartitionScheme $PartitionScheme
+if (-not $NoData -and -not $FatPartition) {
+    throw "Partition scheme '$PartitionScheme' does not contain a FAT/FFat data partition. Use -NoData or select a FFat partition scheme."
+}
+$DataOffset = if ($FatPartition) { $FatPartition.OffsetHex } else { $null }
+$DataSize = if ($FatPartition) { [int]$FatPartition.Size } else { 0 }
+
 if ((Test-Path -LiteralPath $BuildDir) -and -not $NoClean) {
     Remove-Item -LiteralPath $BuildDir -Recurse -Force
 }
@@ -153,7 +252,9 @@ Ensure-Directory $BuildDir
 Ensure-Directory $OutputDir
 
 $EmptyDataDir = Join-Path $BuildDir "empty-data"
-Ensure-Directory $EmptyDataDir
+if (-not $NoData) {
+    Ensure-Directory $EmptyDataDir
+}
 
 $manifest = @()
 
@@ -166,7 +267,7 @@ foreach ($synthName in $Synth) {
     Write-Host "==> Building $synthName"
 
     $DataDir = Join-Path $SketchDir "data"
-    if (-not (Test-Path -LiteralPath $DataDir)) {
+    if (-not $NoData -and -not (Test-Path -LiteralPath $DataDir)) {
         $DataDir = $EmptyDataDir
     }
 
@@ -178,14 +279,17 @@ foreach ($synthName in $Synth) {
     Ensure-Directory $SynthOutputDir
 
     $DataBin = Join-Path $SynthBuildDir "$synthName-data.ffat.bin"
-    & $Mkfatfs -t fatfs -c $DataDir -s $DataSize $DataBin
-    if ($LASTEXITCODE -ne 0) {
-        throw "mkfatfs failed for $synthName"
-    }
+    $DataImageBytes = 0
+    if (-not $NoData) {
+        & $Mkfatfs -t fatfs -c $DataDir -s $DataSize $DataBin
+        if ($LASTEXITCODE -ne 0) {
+            throw "mkfatfs failed for $synthName"
+        }
 
-    $DataImageBytes = (Get-Item -LiteralPath $DataBin).Length
-    if ($DataImageBytes -ne $DataSize) {
-        throw "$synthName data image size is $DataImageBytes, expected $DataSize"
+        $DataImageBytes = (Get-Item -LiteralPath $DataBin).Length
+        if ($DataImageBytes -ne $DataSize) {
+            throw "$synthName data image size is $DataImageBytes, expected $DataSize"
+        }
     }
 
     & $ArduinoCli compile `
@@ -206,29 +310,45 @@ foreach ($synthName in $Synth) {
         $_.Name -notmatch "-data\.ffat\.bin$"
     }
 
-    $FirmwareBin = Join-Path $SynthOutputDir "$synthName-firmware-0x0.bin"
+    $FirmwareFileName = if ($NoData) { "$synthName-firmware-0x0-no-data.bin" } else { "$synthName-firmware-0x0.bin" }
+    $FirmwareBin = Join-Path $SynthOutputDir $FirmwareFileName
     if (Test-Path -LiteralPath $FirmwareBin) {
         Remove-Item -LiteralPath $FirmwareBin -Force
     }
 
-    & $Esptool --chip esp32s3 merge_bin `
-        -o $FirmwareBin `
-        --fill-flash-size $FlashSize `
-        --flash_mode keep `
-        --flash_freq keep `
-        --flash_size keep `
-        0x0 $BootloaderBin `
-        0x8000 $PartitionsBin `
-        0xe000 $BootApp0 `
-        0x10000 $AppBin `
-        $DataOffset $DataBin
+    $MergeArgs = @(
+        "--chip", "esp32s3",
+        "merge_bin",
+        "-o", $FirmwareBin
+    )
+    if (-not $NoData) {
+        $MergeArgs += @("--fill-flash-size", $FlashSizeBytesLabel)
+    }
+    $MergeArgs += @(
+        "--flash_mode", "keep",
+        "--flash_freq", "keep",
+        "--flash_size", "keep",
+        "0x0", $BootloaderBin,
+        "0x8000", $PartitionsBin,
+        "0xe000", $BootApp0,
+        "0x10000", $AppBin
+    )
+    if (-not $NoData) {
+        $MergeArgs += @($DataOffset, $DataBin)
+    }
+
+    & $Esptool @MergeArgs
     if ($LASTEXITCODE -ne 0) {
         throw "esptool merge_bin failed for $synthName"
     }
 
-    $DataIsEmpty = ([System.IO.Path]::GetFullPath($DataDir) -eq [System.IO.Path]::GetFullPath($EmptyDataDir))
-    $DataSourceFiles = if ($DataIsEmpty) { 0 } else { @(Get-ChildItem -Path $DataDir -File -Recurse).Count }
-    $DataSourceBytes = if ($DataIsEmpty) { 0 } else { (Get-ChildItem -Path $DataDir -File -Recurse | Measure-Object Length -Sum).Sum }
+    $DataSourceFiles = 0
+    $DataSourceBytes = 0
+    if (-not $NoData) {
+        $DataIsEmpty = ([System.IO.Path]::GetFullPath($DataDir) -eq [System.IO.Path]::GetFullPath($EmptyDataDir))
+        $DataSourceFiles = if ($DataIsEmpty) { 0 } else { @(Get-ChildItem -Path $DataDir -File -Recurse).Count }
+        $DataSourceBytes = if ($DataIsEmpty) { 0 } else { (Get-ChildItem -Path $DataDir -File -Recurse | Measure-Object Length -Sum).Sum }
+    }
     $FirmwareItem = Get-Item -LiteralPath $FirmwareBin
     $Sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $FirmwareBin).Hash.ToLowerInvariant()
 
@@ -236,10 +356,16 @@ foreach ($synthName in $Synth) {
         synth = $synthName
         firmware = Get-RelativeRepoPath $FirmwareBin
         flash_address = "0x0"
-        flash_size = $FlashSize
-        partition_scheme = "app3M_fat9M_16MB"
+        flash_size = $FlashSizeBytesLabel
+        arduino_flash_size = $FlashSize
+        partition_scheme = $PartitionScheme
+        usb_mode = $USBMode
+        cdc_on_boot = $CDCOnBoot
+        upload_mode = $UploadMode
         firmware_bytes = $FirmwareItem.Length
+        data_included = -not $NoData
         data_partition = "ffat"
+        data_partition_csv = if ($FatPartition) { $FatPartition.CsvName } else { $null }
         data_offset = $DataOffset
         data_image_bytes = $DataImageBytes
         data_source_files = $DataSourceFiles
@@ -253,4 +379,4 @@ $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $ManifestPath -En
 
 Write-Host ""
 Write-Host "Firmware images generated in $(Get-RelativeRepoPath $OutputDir)"
-$manifest | Format-Table synth, firmware_bytes, data_offset, data_source_files, data_source_bytes, sha256 -AutoSize
+$manifest | Format-Table synth, firmware_bytes, data_included, data_offset, data_source_files, data_source_bytes, sha256 -AutoSize

@@ -1059,16 +1059,14 @@ void save_preset()
 void modubrainInit()
 {
   fatfs_partition = esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "ffat");
-  if (!fatfs_partition){ Serial.println("Partition \"ffat\" absente"); for(;;); }
-
-  DISK_SECTOR_COUNT = fatfs_partition->size / DISK_SECTOR_SIZE;
-  Serial.printf("ffat @0x%06X  %u o  (%u secteurs)\n",
-                fatfs_partition->address, fatfs_partition->size, DISK_SECTOR_COUNT);
-  delay(100);
-
-  if (fatfs_partition == NULL) {
-    Serial.println("Partition FATFS introuvable !");
-    return;
+  if (fatfs_partition) {
+    DISK_SECTOR_COUNT = fatfs_partition->size / DISK_SECTOR_SIZE;
+    Serial.printf("ffat @0x%06X  %u o  (%u secteurs)\n",
+                  fatfs_partition->address, fatfs_partition->size, DISK_SECTOR_COUNT);
+    delay(100);
+  } else {
+    DISK_SECTOR_COUNT = 0;
+    Serial.println("Partition \"ffat\" absente, demarrage sans data");
   }
   
 
@@ -1082,7 +1080,7 @@ void modubrainInit()
   pinMode(BUT3, INPUT_PULLDOWN);
   pinMode(BUTENCO, INPUT_PULLDOWN);
   
-  if(digitalRead(BUT1))
+  if(digitalRead(BUT1) && fatfs_partition)
   {
 	  
 	  //unmountFFat();                    // au cas où (prudent)
@@ -1173,7 +1171,8 @@ void modubrainInit()
 	  Serial.println("Partition FATFS initialisée.");
 	  //const esp_partition_t* ffat = ffatPartition();   // dispo dans core 3.1+
 	  Serial.printf("FFat monte partition @0x%06X, size=0x%X\n",
-              fatfs_partition->address, fatfs_partition->size);
+              fatfs_partition ? fatfs_partition->address : 0,
+              fatfs_partition ? fatfs_partition->size : 0);
 	  waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
 	  
 	  for(int i=0; i<128; i++)

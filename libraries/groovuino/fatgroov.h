@@ -59,6 +59,10 @@ bool fat_find_file(const FatConfig& cfg,
                    uint32_t&       fileOffset /* bytes in flash */)
 {
     TRACE("\n[fat_find_file] Recherche \"%s\" ...\n", filename);
+    if (!cfg.part) {
+        TRACE("  ! partition FAT absente\n");
+        return false;
+    }
 
     uint8_t  buf[32];
     uint32_t offset = cfg.rootDirSec * cfg.bytesPerSec;

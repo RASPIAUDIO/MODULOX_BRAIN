@@ -1,0 +1,20 @@
+{
+    "synth":  "granulizer",
+    "firmware":  "firmware-4MB/granulizer/granulizer-firmware-0x0.bin",
+    "flash_address":  "0x0",
+    "flash_size":  "4MB",
+    "arduino_flash_size":  "4M",
+    "partition_scheme":  "defaultffat",
+    "usb_mode":  "default",
+    "cdc_on_boot":  "cdc",
+    "upload_mode":  "cdc",
+    "firmware_bytes":  4194304,
+    "data_included":  true,
+    "data_partition":  "ffat",
+    "data_partition_csv":  "default_ffat",
+    "data_offset":  "0x290000",
+    "data_image_bytes":  1441792,
+    "data_source_files":  0,
+    "data_source_bytes":  0,
+    "sha256":  "7918643de3ab4ca11f10be369db5554ccd170da2b62f275942edde9b68400b8c"
+}
