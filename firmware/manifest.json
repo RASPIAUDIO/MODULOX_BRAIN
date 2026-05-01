@@ -1,0 +1,72 @@
+[
+    {
+        "synth":  "FMbrain",
+        "firmware":  "firmware/FMbrain/FMbrain-firmware-0x0.bin",
+        "flash_address":  "0x0",
+        "flash_size":  "16MB",
+        "partition_scheme":  "app3M_fat9M_16MB",
+        "firmware_bytes":  16777216,
+        "data_partition":  "ffat",
+        "data_offset":  "0x610000",
+        "data_image_bytes":  10354688,
+        "data_source_files":  4,
+        "data_source_bytes":  202294,
+        "sha256":  "3c8a25f57854df121c1754247977facb0755ea0f17b185a437a89b8ac25c0fb4"
+    },
+    {
+        "synth":  "granulizer",
+        "firmware":  "firmware/granulizer/granulizer-firmware-0x0.bin",
+        "flash_address":  "0x0",
+        "flash_size":  "16MB",
+        "partition_scheme":  "app3M_fat9M_16MB",
+        "firmware_bytes":  16777216,
+        "data_partition":  "ffat",
+        "data_offset":  "0x610000",
+        "data_image_bytes":  10354688,
+        "data_source_files":  0,
+        "data_source_bytes":  0,
+        "sha256":  "4c46b3675ae1bb12d56790eb812ce11a9dff5480cb743ac9463e3478d257072c"
+    },
+    {
+        "synth":  "organbrain",
+        "firmware":  "firmware/organbrain/organbrain-firmware-0x0.bin",
+        "flash_address":  "0x0",
+        "flash_size":  "16MB",
+        "partition_scheme":  "app3M_fat9M_16MB",
+        "firmware_bytes":  16777216,
+        "data_partition":  "ffat",
+        "data_offset":  "0x610000",
+        "data_image_bytes":  10354688,
+        "data_source_files":  15,
+        "data_source_bytes":  222124,
+        "sha256":  "da8642034e09f83e1e083a22dabe201d7f786d9c2ff992729708a79af68b2d5e"
+    },
+    {
+        "synth":  "sampbrain",
+        "firmware":  "firmware/sampbrain/sampbrain-firmware-0x0.bin",
+        "flash_address":  "0x0",
+        "flash_size":  "16MB",
+        "partition_scheme":  "app3M_fat9M_16MB",
+        "firmware_bytes":  16777216,
+        "data_partition":  "ffat",
+        "data_offset":  "0x610000",
+        "data_image_bytes":  10354688,
+        "data_source_files":  28,
+        "data_source_bytes":  961693,
+        "sha256":  "f5c44f873b193c360a886f2a8609c5e5cd8f300e8fca2832b4435c7f5b20399e"
+    },
+    {
+        "synth":  "VAsynth",
+        "firmware":  "firmware/VAsynth/VAsynth-firmware-0x0.bin",
+        "flash_address":  "0x0",
+        "flash_size":  "16MB",
+        "partition_scheme":  "app3M_fat9M_16MB",
+        "firmware_bytes":  16777216,
+        "data_partition":  "ffat",
+        "data_offset":  "0x610000",
+        "data_image_bytes":  10354688,
+        "data_source_files":  51,
+        "data_source_bytes":  298928,
+        "sha256":  "86f5dba2fa270e1e65277710f1bafadf28a706026cd660a9d841004af70fd884"
+    }
+]
