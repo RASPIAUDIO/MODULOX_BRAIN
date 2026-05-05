@@ -27,6 +27,60 @@ struct FatConfig {
     uint16_t rootDirEnt;           // nb d’entrées dans la racine (512 par défaut)
 };
 
+static uint16_t fat_u16(const uint8_t* p)
+{
+    return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
+}
+
+static uint32_t fat_u32(const uint8_t* p)
+{
+    return (uint32_t)p[0] |
+           ((uint32_t)p[1] << 8) |
+           ((uint32_t)p[2] << 16) |
+           ((uint32_t)p[3] << 24);
+}
+
+static bool fat_read_bpb(FatConfig& cfg)
+{
+    if (!cfg.part) return false;
+
+    uint8_t bs[512];
+    if (esp_partition_read(cfg.part, 0, bs, sizeof(bs)) != ESP_OK) return false;
+    if (bs[510] != 0x55 || bs[511] != 0xAA) return false;
+
+    const uint16_t bytesPerSec = fat_u16(bs + 11);
+    const uint8_t secsPerClus = bs[13];
+    const uint16_t reservedSecs = fat_u16(bs + 14);
+    const uint8_t fatCount = bs[16];
+    const uint16_t rootDirEnt = fat_u16(bs + 17);
+    const uint16_t fatSecs16 = fat_u16(bs + 22);
+    const uint32_t fatSecs32 = fat_u32(bs + 36);
+    const uint32_t fatSecs = fatSecs16 ? fatSecs16 : fatSecs32;
+
+    if (!bytesPerSec || !secsPerClus || !reservedSecs || !fatCount || !rootDirEnt || !fatSecs) {
+        return false;
+    }
+
+    const uint32_t rootDirSecs = ((uint32_t)rootDirEnt * 32u + bytesPerSec - 1u) / bytesPerSec;
+
+    cfg.bytesPerSec = bytesPerSec;
+    cfg.secsPerClus = secsPerClus;
+    cfg.rootDirSec = reservedSecs + (uint32_t)fatCount * fatSecs;
+    cfg.rootDirEnt = rootDirEnt;
+    cfg.firstDataSec = cfg.rootDirSec + rootDirSecs;
+
+    TRACE("[fat_read_bpb] bps=%u spc=%u rootSec=%u rootEnt=%u dataSec=%u\n",
+          cfg.bytesPerSec, cfg.secsPerClus, cfg.rootDirSec, cfg.rootDirEnt, cfg.firstDataSec);
+    return true;
+}
+
+static FatConfig fat_effective_config(const FatConfig& cfg)
+{
+    FatConfig effective = cfg;
+    fat_read_bpb(effective);
+    return effective;
+}
+
 /* ---------- Outil : compare <fname> à une entrée 8.3 ------------ */
 static bool match83(const char entry[11], const char* fname)
 {
@@ -58,18 +112,19 @@ bool fat_find_file(const FatConfig& cfg,
                    size_t&       fileSize,
                    uint32_t&       fileOffset /* bytes in flash */)
 {
+    FatConfig effective = fat_effective_config(cfg);
     TRACE("\n[fat_find_file] Recherche \"%s\" ...\n", filename);
-    if (!cfg.part) {
+    if (!effective.part) {
         TRACE("  ! partition FAT absente\n");
         return false;
     }
 
     uint8_t  buf[32];
-    uint32_t offset = cfg.rootDirSec * cfg.bytesPerSec;
+    uint32_t offset = effective.rootDirSec * effective.bytesPerSec;
 
-    for (uint32_t i = 0; i < cfg.rootDirEnt; ++i, offset += 32) {
+    for (uint32_t i = 0; i < effective.rootDirEnt; ++i, offset += 32) {
 
-        if (esp_partition_read(cfg.part, offset, buf, 32) != ESP_OK) {
+        if (esp_partition_read(effective.part, offset, buf, 32) != ESP_OK) {
             TRACE("  ! lecture flash échouée à 0x%06X\n", offset);
             return false;
         }
@@ -94,9 +149,9 @@ bool fat_find_file(const FatConfig& cfg,
             fileSize        = buf[28] | (buf[29] << 8) |
                               (buf[30] << 16) | (buf[31] << 24);
 
-            uint32_t firstSector = cfg.firstDataSec +
-                                   (firstCluster - 2) * cfg.secsPerClus;
-            fileOffset = firstSector * cfg.bytesPerSec;
+            uint32_t firstSector = effective.firstDataSec +
+                                   (firstCluster - 2) * effective.secsPerClus;
+            fileOffset = firstSector * effective.bytesPerSec;
 
             TRACE("  → trouvé !\n");
             TRACE("    firstCluster : %u\n", firstCluster);
@@ -218,7 +273,7 @@ private:
 class RootDir {
 public:
     explicit RootDir(const FatConfig& cfg)
-      : _cfg(cfg), _offset(cfg.rootDirSec * cfg.bytesPerSec), _index(0) {}
+      : _cfg(fat_effective_config(cfg)), _offset(_cfg.rootDirSec * _cfg.bytesPerSec), _index(0) {}
 
     /* Revenir au début du répertoire --------------------------------- */
     void rewind()
@@ -297,7 +352,7 @@ private:
         return false;
     }
 
-    const FatConfig& _cfg;
+    FatConfig _cfg;
     uint32_t _offset;
     uint32_t _index;
 };

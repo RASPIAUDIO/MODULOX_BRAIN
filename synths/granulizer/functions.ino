@@ -466,5 +466,32 @@ void Synth_Init()
 
 inline void Synth_Process(int16_t *left, int16_t *right)
 {
+  const uint32_t benchStart = ESP.getCycleCount();
 
+  if(env2.dest>0)
+  {
+    float env2amount=env2.amount();
+    if(env2amount<envamount_prev-0.01 || env2amount>envamount_prev+0.01 )
+    {
+      test_matrix(env2.dest, env2amount);
+      envamount_prev=env2amount;
+    }
+  }
+  float lfoamount=lfo.output();
+  if(lfoamount<0) lfoamount=0;
+  if(lfoamount>=1.0) lfoamount=1.0;
+  if(lfoamount>lfoamount_prev+0.01 || lfoamount<lfoamount_prev-0.01)
+  {
+    test_matrix(lfo.dest, lfoamount);
+    lfoamount_prev=lfoamount;
+  }
+
+  int16_t dry = granulizer.process();
+  dry=32767.0*filter.Process((float)dry/32767.0);
+  int16_t dl, dr;
+  delay_output(dry, dry, &dl, &dr);
+  *left = dry*(1.0-delay_mix) + dl*delay_mix;
+  *right = dry*(1.0-delay_mix) + dr*delay_mix;
+
+  synthBenchRecord(ESP.getCycleCount() - benchStart);
 }

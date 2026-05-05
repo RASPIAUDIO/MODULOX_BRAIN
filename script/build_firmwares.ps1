@@ -13,7 +13,10 @@ param(
     [string] $Mkfatfs = "",
     [string] $OutputDir = "",
     [string] $BuildDir = "",
+    [string] $Board = "esp32s3",
+    [string] $FlashMode = "qio",
     [string] $FlashSize = "16M",
+    [string] $CPUFreq = "240",
     [string] $PartitionScheme = "app3M_fat9M_16MB",
     [string] $USBMode = "default",
     [string] $CDCOnBoot = "cdc",
@@ -26,7 +29,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $Esp32CoreVersion = "3.0.5"
-$Fqbn = "esp32:esp32:esp32s3:FlashMode=qio,FlashSize=$FlashSize,PSRAM=opi,USBMode=$USBMode,CDCOnBoot=$CDCOnBoot,UploadMode=$UploadMode,PartitionScheme=$PartitionScheme"
+$Fqbn = "esp32:esp32:$($Board):FlashMode=$FlashMode,FlashSize=$FlashSize,PSRAM=opi,USBMode=$USBMode,CDCOnBoot=$CDCOnBoot,UploadMode=$UploadMode,CPUFreq=$CPUFreq,PartitionScheme=$PartitionScheme"
 $FillFlashSizeByOption = @{
     "4M" = "4MB"
     "8M" = "8MB"
@@ -238,6 +241,12 @@ if (-not (Test-Path -LiteralPath $BootApp0)) {
     throw "boot_app0.bin not found at $BootApp0"
 }
 
+$PartitionCsvName = Get-PartitionCsvName -CorePath $CorePath -PartitionScheme $PartitionScheme
+$PartitionCsvPath = Join-Path $CorePath "tools\partitions\$PartitionCsvName.csv"
+if (-not (Test-Path -LiteralPath $PartitionCsvPath)) {
+    throw "Partition CSV not found for '$PartitionScheme': $PartitionCsvPath"
+}
+
 $FatPartition = Get-FatPartitionInfo -CorePath $CorePath -PartitionScheme $PartitionScheme
 if (-not $NoData -and -not $FatPartition) {
     throw "Partition scheme '$PartitionScheme' does not contain a FAT/FFat data partition. Use -NoData or select a FFat partition scheme."
@@ -277,6 +286,10 @@ foreach ($synthName in $Synth) {
     Ensure-Directory $SynthBuildDir
     Ensure-Directory $ExportDir
     Ensure-Directory $SynthOutputDir
+
+    $SketchPartitionCsv = Join-Path $SketchDir "partitions.csv"
+    $CompilePartitionCsv = if (Test-Path -LiteralPath $SketchPartitionCsv) { $SketchPartitionCsv } else { $PartitionCsvPath }
+    Copy-Item -LiteralPath $CompilePartitionCsv -Destination (Join-Path $SynthBuildDir "partitions.csv") -Force
 
     $DataBin = Join-Path $SynthBuildDir "$synthName-data.ffat.bin"
     $DataImageBytes = 0
@@ -356,9 +369,13 @@ foreach ($synthName in $Synth) {
         synth = $synthName
         firmware = Get-RelativeRepoPath $FirmwareBin
         flash_address = "0x0"
+        board = $Board
         flash_size = $FlashSizeBytesLabel
+        flash_mode = $FlashMode
+        cpu_freq = $CPUFreq
         arduino_flash_size = $FlashSize
         partition_scheme = $PartitionScheme
+        partition_csv = $PartitionCsvName
         usb_mode = $USBMode
         cdc_on_boot = $CDCOnBoot
         upload_mode = $UploadMode

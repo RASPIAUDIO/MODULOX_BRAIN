@@ -17,8 +17,10 @@ void taskOther(void *parameter) {
     uint32_t start = micros();
     Sync_Process();
     button_pressed();
-    
+
     core0_process();
+    flashBenchRunAfterBootIfDue();
+    synthBenchReportIfDue();
 
     uint32_t end = micros();
     midiCpuTime += (end - start);
