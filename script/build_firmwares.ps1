@@ -11,6 +11,8 @@ param(
     [string[]] $Synth = @("FMbrain", "granulizer", "organbrain", "sampbrain", "VAsynth"),
     [string] $ArduinoCli = "",
     [string] $Mkfatfs = "",
+    [string] $WlFatfsGen = "",
+    [string] $Python = "",
     [string] $OutputDir = "",
     [string] $BuildDir = "",
     [string] $Board = "esp32s3",
@@ -21,6 +23,8 @@ param(
     [string] $USBMode = "default",
     [string] $CDCOnBoot = "cdc",
     [string] $UploadMode = "cdc",
+    [ValidateSet("auto", "raw", "wear-leveling")]
+    [string] $DataImageMode = "auto",
     [switch] $NoData,
     [switch] $NoClean
 )
@@ -84,6 +88,61 @@ function Resolve-CommandPath {
     }
 
     throw "$CommandName not found. Pass its path explicitly or add it to PATH."
+}
+
+function Get-WlFatfsGenCandidates {
+    $candidates = @()
+    if ($env:IDF_PATH) {
+        $candidates += (Join-Path $env:IDF_PATH "components\fatfs\wl_fatfsgen.py")
+    }
+
+    $frameworksDir = "C:\Espressif\frameworks"
+    if (Test-Path -LiteralPath $frameworksDir) {
+        $candidates += Get-ChildItem -Path $frameworksDir -Directory -Filter "esp-idf*" -ErrorAction SilentlyContinue |
+            Sort-Object Name -Descending |
+            ForEach-Object { Join-Path $_.FullName "components\fatfs\wl_fatfsgen.py" }
+    }
+
+    return @($candidates | Where-Object { $_ } | Select-Object -Unique)
+}
+
+function Get-PythonCandidates {
+    $candidates = @()
+    $pythonEnvDir = "C:\Espressif\python_env"
+    if (Test-Path -LiteralPath $pythonEnvDir) {
+        $candidates += Get-ChildItem -Path $pythonEnvDir -Directory -Filter "*_py*_env" -ErrorAction SilentlyContinue |
+            Sort-Object LastWriteTime -Descending |
+            ForEach-Object { Join-Path $_.FullName "Scripts\python.exe" }
+    }
+
+    return @($candidates | Where-Object { $_ } | Select-Object -Unique)
+}
+
+function Get-SynthDataImageMode {
+    param(
+        [string] $SketchDir,
+        [string] $RequestedMode
+    )
+
+    if ($RequestedMode -ne "auto") {
+        return $RequestedMode
+    }
+
+    $sourceFiles = @(Get-ChildItem -Path $SketchDir -File | Where-Object { $_.Extension -in @(".ino", ".h", ".hpp", ".c", ".cpp") })
+    if ($sourceFiles.Count -eq 0) {
+        return "raw"
+    }
+
+    $mountingBrainHeaders = Select-String `
+        -Path ($sourceFiles | Select-Object -ExpandProperty FullName) `
+        -Pattern '#include\s*[<"](?:modubrain|mbrain)\.h[>"]' `
+        -ErrorAction SilentlyContinue
+
+    if ($mountingBrainHeaders) {
+        return "wear-leveling"
+    }
+
+    return "raw"
 }
 
 function Get-ArduinoDataDir {
@@ -213,15 +272,9 @@ $ArduinoCli = Resolve-CommandPath `
     -CommandName "arduino-cli" `
     -Candidates @((Join-Path $RepoRoot ".tools\arduino-cli.exe"))
 
-if (-not $NoData) {
-    $Mkfatfs = Resolve-CommandPath `
-        -ExplicitPath $Mkfatfs `
-        -CommandName "mkfatfs" `
-        -Candidates @(
-            (Join-Path $RepoRoot ".tools\mkfatfs.exe"),
-            (Join-Path $env:USERPROFILE ".platformio\packages\tool-mkfatfs\mkfatfs.exe")
-        )
-}
+$MkfatfsPath = $null
+$WlFatfsGenPath = $null
+$PythonPath = $null
 
 $ArduinoDataDir = Get-ArduinoDataDir -ArduinoCliPath $ArduinoCli
 $CorePath = Join-Path $ArduinoDataDir "packages\esp32\hardware\esp32\$Esp32CoreVersion"
@@ -293,10 +346,46 @@ foreach ($synthName in $Synth) {
 
     $DataBin = Join-Path $SynthBuildDir "$synthName-data.ffat.bin"
     $DataImageBytes = 0
+    $ResolvedDataImageMode = if ($NoData) { "none" } else { Get-SynthDataImageMode -SketchDir $SketchDir -RequestedMode $DataImageMode }
     if (-not $NoData) {
-        & $Mkfatfs -t fatfs -c $DataDir -s $DataSize $DataBin
-        if ($LASTEXITCODE -ne 0) {
-            throw "mkfatfs failed for $synthName"
+        if ($ResolvedDataImageMode -eq "wear-leveling") {
+            if (-not $WlFatfsGenPath) {
+                $WlFatfsGenPath = Resolve-CommandPath `
+                    -ExplicitPath $WlFatfsGen `
+                    -CommandName "wl_fatfsgen.py" `
+                    -Candidates (Get-WlFatfsGenCandidates)
+            }
+            if (-not $PythonPath) {
+                $PythonPath = Resolve-CommandPath `
+                    -ExplicitPath $Python `
+                    -CommandName "python" `
+                    -Candidates (Get-PythonCandidates)
+            }
+
+            & $PythonPath $WlFatfsGenPath `
+                --partition_size $DataSize `
+                --sector_size 4096 `
+                --long_name_support `
+                --output_file $DataBin `
+                $DataDir
+            if ($LASTEXITCODE -ne 0) {
+                throw "wl_fatfsgen failed for $synthName"
+            }
+        } else {
+            if (-not $MkfatfsPath) {
+                $MkfatfsPath = Resolve-CommandPath `
+                    -ExplicitPath $Mkfatfs `
+                    -CommandName "mkfatfs" `
+                    -Candidates @(
+                        (Join-Path $RepoRoot ".tools\mkfatfs.exe"),
+                        (Join-Path $env:USERPROFILE ".platformio\packages\tool-mkfatfs\mkfatfs.exe")
+                    )
+            }
+
+            & $MkfatfsPath -t fatfs -c $DataDir -s $DataSize $DataBin
+            if ($LASTEXITCODE -ne 0) {
+                throw "mkfatfs failed for $synthName"
+            }
         }
 
         $DataImageBytes = (Get-Item -LiteralPath $DataBin).Length
@@ -381,6 +470,7 @@ foreach ($synthName in $Synth) {
         upload_mode = $UploadMode
         firmware_bytes = $FirmwareItem.Length
         data_included = -not $NoData
+        data_image_mode = $ResolvedDataImageMode
         data_partition = "ffat"
         data_partition_csv = if ($FatPartition) { $FatPartition.CsvName } else { $null }
         data_offset = $DataOffset
@@ -392,7 +482,7 @@ foreach ($synthName in $Synth) {
 }
 
 $ManifestPath = Join-Path $OutputDir "manifest.json"
-$manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $ManifestPath -Encoding ASCII
+ConvertTo-Json -InputObject @($manifest) -Depth 4 | Set-Content -LiteralPath $ManifestPath -Encoding ASCII
 
 Write-Host ""
 Write-Host "Firmware images generated in $(Get-RelativeRepoPath $OutputDir)"

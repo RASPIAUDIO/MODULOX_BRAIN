@@ -979,7 +979,18 @@ void modubrainProcess()
 
 void modubrainInit()
 {
-  xTaskCreatePinnedToCore(Core0Task, "CoreTask0", 40000, NULL, 999, &Core0TaskHnd, 0);
+  BaseType_t core0TaskStatus = xTaskCreatePinnedToCore(
+    Core0Task,
+    "CoreTask0",
+    40000,
+    NULL,
+    1,
+    &Core0TaskHnd,
+    0
+  );
+  if (core0TaskStatus != pdPASS) {
+    Serial.println("CoreTask0 create failed");
+  }
 
   waveformTab = (int16_t *) ps_malloc(WAVEFORM_NUMBER * WAVEFORM_SIZE * sizeof(int16_t));
 
