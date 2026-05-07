@@ -2,7 +2,7 @@ void param_action(int num)
 {
   Serial.print("param_action : ");
   Serial.println(num);
-  if(num==0) {
+  if(num==0 && exclude_load) {
     savenum=param_midi[num]; 
     audio_start=false; 
     delay(200);

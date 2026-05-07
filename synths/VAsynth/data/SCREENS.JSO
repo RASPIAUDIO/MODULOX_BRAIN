@@ -1,0 +1,315 @@
+{
+  "screens": [
+    {
+      "group": "Osc 1",
+      "name": "osc1_wave",
+      "title": "Osc 1 Wave",
+      "background": "bg_waveform",
+      "window": "wave",
+      "controllers": [
+        {"type": "list", "id": "osc1_waveform", "text": "Wave", "unit": "", "min": 0, "max": 44, "x": 20, "y": 160, "ext": "WAV"},
+        {"type": "encoder", "id": "osc1_pwm", "text": "PWM", "unit": "%", "min": 0, "max": 100, "x": 180, "y": 160}
+      ]
+    },
+    {
+      "group": "Osc 1",
+      "name": "osc1_tune",
+      "title": "Osc 1 Tune",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "encoder", "id": "osc1_pitch", "text": "Pitch", "unit": "", "min": -64, "max": 63, "x": 20, "y": 160},
+        {"type": "encoder", "id": "osc1_fine", "text": "Fine", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "osc1_vol", "text": "Vol", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Osc 2",
+      "name": "osc2_wave",
+      "title": "Osc 2 Wave",
+      "background": "bg_waveform",
+      "window": "wave",
+      "controllers": [
+        {"type": "list", "id": "osc2_waveform", "text": "Wave", "unit": "", "min": 0, "max": 44, "x": 20, "y": 160, "ext": "WAV"},
+        {"type": "encoder", "id": "osc2_pwm", "text": "PWM", "unit": "%", "min": 0, "max": 100, "x": 180, "y": 160}
+      ]
+    },
+    {
+      "group": "Osc 2",
+      "name": "osc2_tune",
+      "title": "Osc 2 Tune",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "encoder", "id": "osc2_pitch", "text": "Pitch", "unit": "", "min": -64, "max": 63, "x": 20, "y": 160},
+        {"type": "encoder", "id": "osc2_fine", "text": "Fine", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "osc2_vol", "text": "Vol", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Osc 3",
+      "name": "osc3_wave",
+      "title": "Osc 3 Wave",
+      "background": "bg_waveform",
+      "window": "wave",
+      "controllers": [
+        {"type": "list", "id": "osc3_waveform", "text": "Wave", "unit": "", "min": 0, "max": 44, "x": 20, "y": 160, "ext": "WAV"},
+        {"type": "encoder", "id": "osc3_pwm", "text": "PWM", "unit": "%", "min": 0, "max": 100, "x": 180, "y": 160}
+      ]
+    },
+    {
+      "group": "Osc 3",
+      "name": "osc3_tune",
+      "title": "Osc 3 Tune",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "encoder", "id": "osc3_pitch", "text": "Pitch", "unit": "", "min": -64, "max": 63, "x": 20, "y": 160},
+        {"type": "encoder", "id": "osc3_fine", "text": "Fine", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "osc3_vol", "text": "Vol", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Env",
+      "name": "env_vol",
+      "title": "Volume Env",
+      "background": "bg_waveform",
+      "window": "adsr",
+      "controllers": [
+        {"type": "encoder", "id": "env_vol_a", "text": "Attack", "unit": "", "min": 0, "max": 127, "x": 10, "y": 160},
+        {"type": "encoder", "id": "env_vol_d", "text": "Decay", "unit": "", "min": 0, "max": 127, "x": 80, "y": 160},
+        {"type": "encoder", "id": "env_vol_s", "text": "Sustain", "unit": "", "min": 0, "max": 127, "x": 150, "y": 160},
+        {"type": "encoder", "id": "env_vol_r", "text": "Release", "unit": "", "min": 0, "max": 127, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Env",
+      "name": "env1_dest",
+      "title": "Env 1 Dest",
+      "background": "bg_waveform",
+      "window": "adsr",
+      "controllers": [
+        {"type": "list", "id": "env1_dest", "text": "Dest", "unit": "", "min": 0, "max": 15, "x": 80, "y": 160, "items": ["None", "Pitch", "Vol", "PWM1", "PWM2", "PWM3", "VolOsc1", "VolOsc2", "VolOsc3", "Pitch1", "Pitch2", "Pitch3", "Cutoff", "Reso", "UniDetune", "UniVol"]}
+      ]
+    },
+    {
+      "group": "Env",
+      "name": "env1_adsr",
+      "title": "Env 1 ADSR",
+      "background": "bg_waveform",
+      "window": "adsr",
+      "controllers": [
+        {"type": "encoder", "id": "env1_a", "text": "Attack", "unit": "", "min": 0, "max": 127, "x": 10, "y": 160},
+        {"type": "encoder", "id": "env1_d", "text": "Decay", "unit": "", "min": 0, "max": 127, "x": 80, "y": 160},
+        {"type": "encoder", "id": "env1_s", "text": "Sustain", "unit": "", "min": 0, "max": 127, "x": 150, "y": 160},
+        {"type": "encoder", "id": "env1_r", "text": "Release", "unit": "", "min": 0, "max": 127, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Env",
+      "name": "env2_dest",
+      "title": "Env 2 Dest",
+      "background": "bg_waveform",
+      "window": "adsr",
+      "controllers": [
+        {"type": "list", "id": "env2_dest", "text": "Dest", "unit": "", "min": 0, "max": 15, "x": 80, "y": 160, "items": ["None", "Pitch", "Vol", "PWM1", "PWM2", "PWM3", "VolOsc1", "VolOsc2", "VolOsc3", "Pitch1", "Pitch2", "Pitch3", "Cutoff", "Reso", "UniDetune", "UniVol"]}
+      ]
+    },
+    {
+      "group": "Env",
+      "name": "env2_adsr",
+      "title": "Env 2 ADSR",
+      "background": "bg_waveform",
+      "window": "adsr",
+      "controllers": [
+        {"type": "encoder", "id": "env2_a", "text": "Attack", "unit": "", "min": 0, "max": 127, "x": 10, "y": 160},
+        {"type": "encoder", "id": "env2_d", "text": "Decay", "unit": "", "min": 0, "max": 127, "x": 80, "y": 160},
+        {"type": "encoder", "id": "env2_s", "text": "Sustain", "unit": "", "min": 0, "max": 127, "x": 150, "y": 160},
+        {"type": "encoder", "id": "env2_r", "text": "Release", "unit": "", "min": 0, "max": 127, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "LFO 1",
+      "name": "lfo1_shape",
+      "title": "LFO 1 Shape",
+      "background": "bg_waveform",
+      "window": "lfo",
+      "controllers": [
+        {"type": "list", "id": "lfo1_dest", "text": "Dest", "unit": "", "min": 0, "max": 15, "x": 20, "y": 160, "items": ["None", "Pitch", "Vol", "PWM1", "PWM2", "PWM3", "VolOsc1", "VolOsc2", "VolOsc3", "Pitch1", "Pitch2", "Pitch3", "Cutoff", "Reso", "UniDetune", "UniVol"]},
+        {"type": "list", "id": "lfo1_wave", "text": "Wave", "unit": "", "min": 0, "max": 2, "x": 170, "y": 160, "items": ["Sine", "Saw", "Square"]}
+      ]
+    },
+    {
+      "group": "LFO 1",
+      "name": "lfo1_param",
+      "title": "LFO 1 Param",
+      "background": "bg_waveform",
+      "window": "lfo",
+      "controllers": [
+        {"type": "encoder", "id": "lfo1_speed", "text": "Speed", "unit": "", "min": 0, "max": 127, "x": 20, "y": 160},
+        {"type": "encoder", "id": "lfo1_amount", "text": "Amount", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "lfo1_cutoff", "text": "Cutoff", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "LFO 2",
+      "name": "lfo2_shape",
+      "title": "LFO 2 Shape",
+      "background": "bg_waveform",
+      "window": "lfo",
+      "controllers": [
+        {"type": "list", "id": "lfo2_dest", "text": "Dest", "unit": "", "min": 0, "max": 15, "x": 20, "y": 160, "items": ["None", "Pitch", "Vol", "PWM1", "PWM2", "PWM3", "VolOsc1", "VolOsc2", "VolOsc3", "Pitch1", "Pitch2", "Pitch3", "Cutoff", "Reso", "UniDetune", "UniVol"]},
+        {"type": "list", "id": "lfo2_wave", "text": "Wave", "unit": "", "min": 0, "max": 2, "x": 170, "y": 160, "items": ["Sine", "Saw", "Square"]}
+      ]
+    },
+    {
+      "group": "LFO 2",
+      "name": "lfo2_param",
+      "title": "LFO 2 Param",
+      "background": "bg_waveform",
+      "window": "lfo",
+      "controllers": [
+        {"type": "encoder", "id": "lfo2_speed", "text": "Speed", "unit": "", "min": 0, "max": 127, "x": 20, "y": 160},
+        {"type": "encoder", "id": "lfo2_amount", "text": "Amount", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "lfo2_cutoff", "text": "Cutoff", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "LFO 3",
+      "name": "lfo3_shape",
+      "title": "LFO 3 Shape",
+      "background": "bg_waveform",
+      "window": "lfo",
+      "controllers": [
+        {"type": "list", "id": "lfo3_dest", "text": "Dest", "unit": "", "min": 0, "max": 15, "x": 20, "y": 160, "items": ["None", "Pitch", "Vol", "PWM1", "PWM2", "PWM3", "VolOsc1", "VolOsc2", "VolOsc3", "Pitch1", "Pitch2", "Pitch3", "Cutoff", "Reso", "UniDetune", "UniVol"]},
+        {"type": "list", "id": "lfo3_wave", "text": "Wave", "unit": "", "min": 0, "max": 2, "x": 170, "y": 160, "items": ["Sine", "Saw", "Square"]}
+      ]
+    },
+    {
+      "group": "LFO 3",
+      "name": "lfo3_param",
+      "title": "LFO 3 Param",
+      "background": "bg_waveform",
+      "window": "lfo",
+      "controllers": [
+        {"type": "encoder", "id": "lfo3_speed", "text": "Speed", "unit": "", "min": 0, "max": 127, "x": 20, "y": 160},
+        {"type": "encoder", "id": "lfo3_amount", "text": "Amount", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "lfo3_cutoff", "text": "Cutoff", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Filter",
+      "name": "filter",
+      "title": "Filter",
+      "background": "bg_waveform",
+      "window": "filter",
+      "controllers": [
+        {"type": "list", "id": "filter_mode", "text": "Mode", "unit": "", "min": 0, "max": 14, "x": 20, "y": 160, "items": ["None", "LP 40", "LP 30", "LP 20", "LP 10", "HP 40", "HP 30", "HP 20", "HP 10", "BP 20/20", "BP 30/10", "BP 10/30", "BP 20/10", "BP 10/20", "BP 10/10"]},
+        {"type": "encoder", "id": "filter_freq", "text": "Freq", "unit": "", "min": 0, "max": 127, "x": 130, "y": 160},
+        {"type": "encoder", "id": "filter_res", "text": "Res", "unit": "", "min": 0, "max": 127, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Delay",
+      "name": "delay",
+      "title": "Delay",
+      "background": "bg_waveform",
+      "window": "delay",
+      "controllers": [
+        {"type": "encoder", "id": "delay_time", "text": "Time", "unit": "ms", "min": 0, "max": 1000, "x": 20, "y": 160},
+        {"type": "encoder", "id": "delay_feedback", "text": "Feedback", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "delay_mix", "text": "Dry/Wet", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Sound",
+      "name": "voice",
+      "title": "Voice",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "list", "id": "polyphony", "text": "Poly", "unit": "", "min": 0, "max": 7, "x": 60, "y": 160, "items": ["1", "2", "3", "4", "5", "6", "7", "8"]},
+        {"type": "encoder", "id": "glide", "text": "Glide", "unit": "", "min": 0, "max": 127, "x": 180, "y": 160}
+      ]
+    },
+    {
+      "group": "Arp",
+      "name": "arp_main",
+      "title": "Arp Main",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "switch", "id": "arp_on", "text": "On", "unit": "", "min": 0, "max": 1, "x": 20, "y": 160},
+        {"type": "list", "id": "arp_mode", "text": "Mode", "unit": "", "min": 0, "max": 4, "x": 120, "y": 160, "items": ["Up", "Down", "UpDown", "Random", "Order"]},
+        {"type": "encoder", "id": "arp_bpm", "text": "BPM", "unit": "", "min": 50, "max": 177, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Arp",
+      "name": "arp_step",
+      "title": "Arp Step",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "list", "id": "arp_rate", "text": "Rate", "unit": "", "min": 0, "max": 15, "x": 20, "y": 160, "items": ["1", "2", "3", "4", "6", "8", "12", "16", "24", "32", "48", "64", "1T", "2T", "4T", "8T"]},
+        {"type": "encoder", "id": "arp_gate", "text": "Gate", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "list", "id": "arp_step", "text": "Step", "unit": "", "min": 0, "max": 4, "x": 220, "y": 160, "items": ["-2", "-1", "0", "+1", "+2"]}
+      ]
+    },
+    {
+      "group": "Unison",
+      "name": "unison",
+      "title": "Unison",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "list", "id": "unison_num", "text": "Voices", "unit": "", "min": 0, "max": 7, "x": 20, "y": 160, "items": ["1", "2", "3", "4", "5", "6", "7", "8"]},
+        {"type": "encoder", "id": "unison_detune", "text": "Detune", "unit": "%", "min": 0, "max": 100, "x": 120, "y": 160},
+        {"type": "encoder", "id": "unison_vol", "text": "Vol", "unit": "%", "min": 0, "max": 100, "x": 220, "y": 160}
+      ]
+    },
+    {
+      "group": "Disto",
+      "name": "disto",
+      "title": "Distortion",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "switch", "id": "disto_on", "text": "On", "unit": "", "min": 0, "max": 1, "x": 60, "y": 160},
+        {"type": "encoder", "id": "disto_gain", "text": "Gain", "unit": "", "min": 0, "max": 127, "x": 180, "y": 160}
+      ]
+    },
+    {
+      "group": "Setup",
+      "name": "midi",
+      "title": "Sync/MIDI",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "list", "id": "sync_source", "text": "Sync", "unit": "", "min": 0, "max": 2, "x": 40, "y": 160, "items": ["Internal", "Sync In", "MIDI"]},
+        {"type": "list", "id": "midi_global", "text": "MIDI Ch", "unit": "", "min": 0, "max": 16, "x": 170, "y": 160, "items": ["Omni", "Ch 1", "Ch 2", "Ch 3", "Ch 4", "Ch 5", "Ch 6", "Ch 7", "Ch 8", "Ch 9", "Ch 10", "Ch 11", "Ch 12", "Ch 13", "Ch 14", "Ch 15", "Ch 16"]}
+      ]
+    },
+    {
+      "group": "Setup",
+      "name": "load_save",
+      "title": "Load/Save",
+      "background": "bg_waveform",
+      "window": "lsave",
+      "controllers": [
+        {"type": "list", "id": "load_list", "text": "Load", "unit": "", "min": 0, "max": 16, "x": 20, "y": 160, "ext": "TXT"},
+        {"type": "list", "id": "save_list", "text": "Save", "unit": "", "min": 0, "max": 16, "x": 170, "y": 160, "items": ["save0", "save1", "save2", "save3", "save4", "save5", "save6", "save7", "save8", "save9", "save10", "save11", "save12", "save13", "save14", "save15", "save16"]}
+      ]
+    },
+    {
+      "group": "Setup",
+      "name": "output",
+      "title": "Output",
+      "background": "bg_waveform",
+      "window": "",
+      "controllers": [
+        {"type": "encoder", "id": "headphone_volume", "text": "HP Vol", "unit": "dB", "min": -74, "max": 6, "x": 100, "y": 160}
+      ]
+    }
+  ]
+}
