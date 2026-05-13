@@ -1,0 +1,105 @@
+{
+    "version":  1,
+    "format":  "modulox-loader-sd-v1",
+    "target":  "ESP32-S3-WROOM-2-N32R16V",
+    "partition_scheme":  "app5M_fat24M_32MB",
+    "partition_csv":  "large_fat_32MB",
+    "flash_size":  "32MB",
+    "machines":  [
+                     {
+                         "id":  "FMbrain",
+                         "name":  "FMbrain",
+                         "version":  "0.1.8",
+                         "version_code":  9,
+                         "app":  {
+                                     "path":  "/MODULOX/FMbrain/app.bin",
+                                     "size":  605328,
+                                     "sha256":  "8575f2ce29c7fa2731be689b4c38ed28afd2a29cd2e4730a93c95d026460c8d6"
+                                 },
+                         "data":  {
+                                      "path":  "/MODULOX/FMbrain/data.ffat.bin",
+                                      "size":  23986176,
+                                      "sha256":  "be0f3b93d5091bb0c425196c32f015cb2a466eb93f9d191039af13e969266595",
+                                      "partition":  "ffat",
+                                      "offset":  "0x910000",
+                                      "image_mode":  "wear-leveling"
+                                  }
+                     },
+                     {
+                         "id":  "granulizer",
+                         "name":  "granulizer",
+                         "version":  "0.1.8",
+                         "version_code":  9,
+                         "app":  {
+                                     "path":  "/MODULOX/granulizer/app.bin",
+                                     "size":  745024,
+                                     "sha256":  "7b36dd4c77e1924c04ec9d8b11737ec666956420b1e09261b1a155e7b129f7b1"
+                                 },
+                         "data":  {
+                                      "path":  "/MODULOX/granulizer/data.ffat.bin",
+                                      "size":  667648,
+                                      "sha256":  "6dcf3d7c444169005053fc1fb4266d17af3379a0dd27c6653947f094a7350f70",
+                                      "partition":  "ffat",
+                                      "offset":  "0x910000",
+                                      "image_mode":  "raw"
+                                  }
+                     },
+                     {
+                         "id":  "organbrain",
+                         "name":  "organbrain",
+                         "version":  "0.1.8",
+                         "version_code":  9,
+                         "app":  {
+                                     "path":  "/MODULOX/organbrain/app.bin",
+                                     "size":  617248,
+                                     "sha256":  "31f11f4ced7727a3b66048eba4fabc0497d46201d76f3cc393fd674bde62cc65"
+                                 },
+                         "data":  {
+                                      "path":  "/MODULOX/organbrain/data.ffat.bin",
+                                      "size":  23986176,
+                                      "sha256":  "78610be2ff668c7da746d2e8175860e3b6d771da944060d46680ef79302ce995",
+                                      "partition":  "ffat",
+                                      "offset":  "0x910000",
+                                      "image_mode":  "wear-leveling"
+                                  }
+                     },
+                     {
+                         "id":  "sampbrain",
+                         "name":  "sampbrain",
+                         "version":  "0.1.8",
+                         "version_code":  9,
+                         "app":  {
+                                     "path":  "/MODULOX/sampbrain/app.bin",
+                                     "size":  742416,
+                                     "sha256":  "e98edf5628fda0764699ca577799ea7d676257c7539cf120e89a6c50e1d38ccc"
+                                 },
+                         "data":  {
+                                      "path":  "/MODULOX/sampbrain/data.ffat.bin",
+                                      "size":  1081344,
+                                      "sha256":  "f6e45d019102fb280a4f1666bdd502692561bbc5b9c207bc356fa22e79f461cb",
+                                      "partition":  "ffat",
+                                      "offset":  "0x910000",
+                                      "image_mode":  "raw"
+                                  }
+                     },
+                     {
+                         "id":  "VAsynth",
+                         "name":  "VAsynth",
+                         "version":  "0.1.8",
+                         "version_code":  9,
+                         "app":  {
+                                     "path":  "/MODULOX/VAsynth/app.bin",
+                                     "size":  751488,
+                                     "sha256":  "4ce798a474af4db66db02a16a0dada4a0b5338b0159fc885229c5b93255e2776"
+                                 },
+                         "data":  {
+                                      "path":  "/MODULOX/VAsynth/data.ffat.bin",
+                                      "size":  458752,
+                                      "sha256":  "5f90774f0029dd95224ed4c8d5d6239a9d5425c2711cf5aebb25e4e88a3288c0",
+                                      "partition":  "ffat",
+                                      "offset":  "0x910000",
+                                      "image_mode":  "raw"
+                                  }
+                     }
+                 ]
+}

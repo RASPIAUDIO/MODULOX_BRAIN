@@ -33,6 +33,7 @@ bool audio_start=true;
 
 void setup() {
   Serial.begin(115200);
+  startReturnToLoaderTask();
   delay(1000);
   exclude_load=24;
   modubrainInit();

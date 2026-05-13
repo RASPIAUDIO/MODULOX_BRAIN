@@ -36,6 +36,7 @@ void modubrainProcess2()
 
 void setup() {
   Serial.begin(115200);
+  startReturnToLoaderTask();
   delay(1000);
   Sine_Init();
   FmSynth_Init();

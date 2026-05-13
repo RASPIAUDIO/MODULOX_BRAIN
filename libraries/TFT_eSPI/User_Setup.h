@@ -202,7 +202,7 @@
 // For ESP32 Dev board (only tested with ILI9341 display)
 // The hardware SPI can be mapped to any pins
 
-//#define TFT_MISO 45
+#define TFT_MISO 2
 #define TFT_MOSI 15
 #define TFT_SCLK 14
 #define TFT_CS   40  // Chip select control pin
@@ -353,7 +353,7 @@
 // The ESP32 has 2 free SPI ports i.e. VSPI and HSPI, the VSPI is the default.
 // If the VSPI port is in use and pins are not accessible (e.g. TTGO T-Beam)
 // then uncomment the following line:
-#define USE_HSPI_PORT
+// #define USE_HSPI_PORT
 
 // Comment out the following #define if "SPI Transactions" do not need to be
 // supported. When commented out the code size will be smaller and sketches will

@@ -20,6 +20,7 @@ param(
     [string] $FlashSize = "16M",
     [string] $CPUFreq = "240",
     [string] $PartitionScheme = "app3M_fat9M_16MB",
+    [string] $DebugLevel = "none",
     [string] $USBMode = "default",
     [string] $CDCOnBoot = "cdc",
     [string] $UploadMode = "cdc",
@@ -33,7 +34,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $Esp32CoreVersion = "3.0.5"
-$Fqbn = "esp32:esp32:$($Board):FlashMode=$FlashMode,FlashSize=$FlashSize,PSRAM=opi,USBMode=$USBMode,CDCOnBoot=$CDCOnBoot,UploadMode=$UploadMode,CPUFreq=$CPUFreq,PartitionScheme=$PartitionScheme"
+$Fqbn = "esp32:esp32:$($Board):FlashMode=$FlashMode,FlashSize=$FlashSize,PSRAM=opi,USBMode=$USBMode,CDCOnBoot=$CDCOnBoot,UploadMode=$UploadMode,CPUFreq=$CPUFreq,PartitionScheme=$PartitionScheme,DebugLevel=$DebugLevel"
 $FillFlashSizeByOption = @{
     "4M" = "4MB"
     "8M" = "8MB"

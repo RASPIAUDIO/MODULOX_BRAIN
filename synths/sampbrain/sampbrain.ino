@@ -52,6 +52,7 @@ int lastind=0;
 
 void setup() {
   Serial.begin(115200);
+  startReturnToLoaderTask();
   delay(2000);
   Serial.setDebugOutput(true);
 
