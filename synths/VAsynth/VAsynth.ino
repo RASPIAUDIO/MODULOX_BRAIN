@@ -1,5 +1,6 @@
 #include "mb.h"
 #include "mbdisplay.h"
+#include <loader_guard.h>
 #include <envfloat.h>
 #include <oscfloat2.h>
 #include <TFT_eSPI.h>
@@ -65,7 +66,7 @@ bool arpon=false;
 
 void setup() {
   Serial.begin(115200);
-  startReturnToLoaderTask();
+  startLoaderGuard();
   delay(2000);
   Serial.setDebugOutput(true);
 

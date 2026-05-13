@@ -2,6 +2,7 @@
 #include <ArduinoJson.h>
 #include <FS.h>
 #include <HTTPClient.h>
+#include <Preferences.h>
 #include <Rotary.h>
 #include <SD.h>
 #include <SD_MMC.h>
@@ -40,6 +41,13 @@ static const int SD_MMC_TRANSFER_FREQS[] = {20000, 10000, 4000};
 static const bool VERIFY_SD_FILE_SHA = false;
 static const bool VERIFY_APP_FLASH_AFTER_WRITE = false;
 static const bool VERIFY_DATA_FLASH_AFTER_WRITE = false;
+static const char *LOADER_PREFS_NAMESPACE = "modulox";
+static const char *LOADER_PREFS_LAST_MACHINE = "last_machine";
+static const char *LOADER_PREFS_AUTO_BOOT = "auto_boot";
+static const char *LOADER_PREFS_STAY_ONCE = "stay_once";
+static const uint32_t AUTO_BOOT_WINDOW_MS = 2000;
+static const gpio_num_t AUTO_BOOT_BUTTON = BUT3;
+static const gpio_num_t AUTO_BOOT_FALLBACK_BUTTON = BUTENCO;
 
 // Sectigo Public Server Authentication CA DV R36, issuer of apps.raspiaudio.com.
 static const char APPS_RASPIAUDIO_CA[] PROGMEM = R"EOF(
@@ -107,6 +115,12 @@ struct WifiConfig {
   String password;
 };
 
+struct LoaderBootState {
+  String lastMachine;
+  bool autoBootEnabled = false;
+  bool stayLoaderOnce = false;
+};
+
 TFT_eSPI tft;
 Rotary encoder(6, 7);
 uint8_t ioBuffer[IO_BUFFER_SIZE];
@@ -132,6 +146,10 @@ String sdBackendName = "none";
 
 bool edgePressed(gpio_num_t pin);
 bool installMachine(const MachineEntry &machine);
+bool bootPartitionByLabel(const char *label);
+LoaderBootState readLoaderBootState();
+void saveAutoBootMachine(const String &machineId);
+bool handleLoaderAutoBoot(const LoaderBootState &state, esp_reset_reason_t reason);
 
 void logLine(const String &line) {
   Serial.println(line);
@@ -893,6 +911,7 @@ bool installMachine(const MachineEntry &machine) {
   if (!writeAppToOtaSlot(machine, app1)) return abortSdOperation();
   if (!writeDataPartition(machine)) return abortSdOperation();
 
+  saveAutoBootMachine(machine.id);
   drawMessage("Set boot app1", "Reset now...");
   esp_err_t err = esp_ota_set_boot_partition(app1);
   if (err != ESP_OK) {
@@ -967,6 +986,10 @@ void handleSerialCommand(String command) {
     bootPartitionByLabel("app0");
   } else if (lower == "boot app1" || lower == "boot synth") {
     bootPartitionByLabel("app1");
+  } else if (lower == "autoboot on") {
+    setAutoBootEnabled(true);
+  } else if (lower == "autoboot off" || lower == "autoboot clear") {
+    setAutoBootEnabled(false);
   } else if (lower == "install") {
     if (!sdReady) {
       logLine("install failed: SD not ready");
@@ -976,7 +999,7 @@ void handleSerialCommand(String command) {
       installMachine(machines[0]);
     }
   } else {
-    logLine("commands: status | boot app0 | boot app1 | install");
+    logLine("commands: status | boot app0 | boot app1 | autoboot on | autoboot off | install");
   }
 }
 
@@ -1261,9 +1284,9 @@ bool writeManifestFromCatalog(JsonDocument &catalogDoc) {
 
 bool confirmDownload(int updateCount) {
   drawHeader("WiFi updates");
-  drawMessage("Download " + String(updateCount) + " update(s)", "Encoder OK, BUT2 cancel");
+  drawMessage("Download " + String(updateCount) + " update(s)", "Encoder/BUT3 OK, BUT2 cancel");
   while (true) {
-    if (edgePressed(BUTENCO) || edgePressed(BUTLEFT)) return true;
+    if (edgePressed(BUTENCO) || edgePressed(BUT3)) return true;
     if (edgePressed(BUT2)) {
       drawMessage("Download cancelled");
       delay(900);
@@ -1446,6 +1469,158 @@ void setupButtons() {
             digitalRead(BUTLEFT));
 }
 
+const char *resetReasonName(esp_reset_reason_t reason) {
+  switch (reason) {
+    case ESP_RST_POWERON: return "power-on";
+    case ESP_RST_EXT: return "external";
+    case ESP_RST_SW: return "software";
+    case ESP_RST_PANIC: return "panic";
+    case ESP_RST_INT_WDT: return "interrupt watchdog";
+    case ESP_RST_TASK_WDT: return "task watchdog";
+    case ESP_RST_WDT: return "watchdog";
+    case ESP_RST_DEEPSLEEP: return "deep sleep";
+    case ESP_RST_BROWNOUT: return "brownout";
+    case ESP_RST_SDIO: return "sdio";
+    default: return "unknown";
+  }
+}
+
+bool isFaultReset(esp_reset_reason_t reason) {
+  return reason == ESP_RST_PANIC ||
+         reason == ESP_RST_INT_WDT ||
+         reason == ESP_RST_TASK_WDT ||
+         reason == ESP_RST_WDT;
+}
+
+LoaderBootState readLoaderBootState() {
+  LoaderBootState state;
+  Preferences prefs;
+  if (!prefs.begin(LOADER_PREFS_NAMESPACE, false)) {
+    logLine("NVS open failed for loader state");
+    return state;
+  }
+
+  state.lastMachine = prefs.getString(LOADER_PREFS_LAST_MACHINE, "");
+  state.autoBootEnabled = prefs.getBool(LOADER_PREFS_AUTO_BOOT, false);
+  state.stayLoaderOnce = prefs.getBool(LOADER_PREFS_STAY_ONCE, false);
+  if (state.stayLoaderOnce) {
+    prefs.putBool(LOADER_PREFS_STAY_ONCE, false);
+  }
+  prefs.end();
+
+  logPrintf("Loader state: last=%s auto=%d stay_once=%d\n",
+            state.lastMachine.length() ? state.lastMachine.c_str() : "(none)",
+            state.autoBootEnabled ? 1 : 0,
+            state.stayLoaderOnce ? 1 : 0);
+  return state;
+}
+
+void saveAutoBootMachine(const String &machineId) {
+  Preferences prefs;
+  if (!prefs.begin(LOADER_PREFS_NAMESPACE, false)) {
+    logLine("NVS open failed while saving auto-boot");
+    return;
+  }
+
+  prefs.putString(LOADER_PREFS_LAST_MACHINE, machineId);
+  prefs.putBool(LOADER_PREFS_AUTO_BOOT, true);
+  prefs.putBool(LOADER_PREFS_STAY_ONCE, false);
+  prefs.end();
+  logLine("Auto-boot saved for " + machineId);
+}
+
+void setAutoBootEnabled(bool enabled) {
+  Preferences prefs;
+  if (!prefs.begin(LOADER_PREFS_NAMESPACE, false)) {
+    logLine("NVS open failed while changing auto-boot");
+    return;
+  }
+  prefs.putBool(LOADER_PREFS_AUTO_BOOT, enabled);
+  if (!enabled) prefs.putBool(LOADER_PREFS_STAY_ONCE, false);
+  prefs.end();
+  logLine(String("Auto-boot ") + (enabled ? "enabled" : "disabled"));
+}
+
+bool autoBootInterruptPressed() {
+  return digitalRead(AUTO_BOOT_BUTTON) == HIGH || digitalRead(AUTO_BOOT_FALLBACK_BUTTON) == HIGH;
+}
+
+void drawAutoBootCountdown(const String &machine, uint32_t remainingMs) {
+  if (!displayReady) return;
+
+  tft.fillRect(0, 55, tft.width(), tft.height() - 55, TFT_BLACK);
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.drawString("Booting " + (machine.length() ? machine : String("app1")), 8, 68, 2);
+  tft.drawString("Hold bottom-right", 8, 92, 2);
+  tft.drawString("to stay in loader", 8, 116, 2);
+  tft.setTextColor(TFT_CYAN, TFT_BLACK);
+  tft.drawString(String((remainingMs + 999) / 1000) + "s", 8, 148, 4);
+}
+
+bool waitForAutoBootInterrupt(const String &machine) {
+  drawHeader("Auto boot");
+  logLine("Auto-boot window: hold bottom-right or encoder to stay in loader");
+
+  const uint32_t startMs = millis();
+  uint32_t lastDrawMs = 0;
+  while (millis() - startMs < AUTO_BOOT_WINDOW_MS) {
+    pollSerialCommands(Serial, serialCommandLine);
+    pollSerialCommands(Serial0, serial0CommandLine);
+
+    if (autoBootInterruptPressed()) {
+      logLine("Auto-boot interrupted by button");
+      drawMessage("Loader held", "Button pressed");
+      delay(700);
+      return true;
+    }
+
+    const uint32_t elapsed = millis() - startMs;
+    if (lastDrawMs == 0 || millis() - lastDrawMs > 180) {
+      lastDrawMs = millis();
+      drawAutoBootCountdown(machine, AUTO_BOOT_WINDOW_MS - elapsed);
+    }
+    delay(10);
+  }
+
+  return false;
+}
+
+bool handleLoaderAutoBoot(const LoaderBootState &state, esp_reset_reason_t reason) {
+  logPrintf("Reset reason: %s (%d)\n", resetReasonName(reason), (int)reason);
+
+  if (state.stayLoaderOnce) {
+    drawMessage("Loader requested", "Manual return");
+    delay(900);
+    return false;
+  }
+
+  if (isFaultReset(reason)) {
+    drawMessage("Fault reset", resetReasonName(reason));
+    delay(1200);
+    return false;
+  }
+
+  if (!state.autoBootEnabled) {
+    return false;
+  }
+
+  if (waitForAutoBootInterrupt(state.lastMachine)) {
+    return false;
+  }
+
+  drawMessage("Boot app1", state.lastMachine);
+  Serial.flush();
+  Serial0.flush();
+  delay(120);
+  if (!bootPartitionByLabel("app1")) {
+    drawMessage("Boot app1 failed");
+    delay(1200);
+    return false;
+  }
+  return true;
+}
+
 void handleMainMenuPress() {
   if (!sdReady) {
     drawMessage("SD not ready");
@@ -1481,6 +1656,8 @@ void setup() {
   Serial.setDebugOutput(true);
   Serial0.setDebugOutput(true);
   setupButtons();
+  LoaderBootState bootState = readLoaderBootState();
+  esp_reset_reason_t resetReason = esp_reset_reason();
 
   pinMode(SD_CS, OUTPUT);
   digitalWrite(SD_CS, HIGH);
@@ -1512,7 +1689,9 @@ void setup() {
   tft.setRotation(LOADER_TFT_ROTATION);
   tft.fillScreen(TFT_BLACK);
   drawHeader("Boot");
-  drawMainMenu();
+  if (!handleLoaderAutoBoot(bootState, resetReason)) {
+    drawMainMenu();
+  }
 }
 
 void loop() {
@@ -1534,7 +1713,7 @@ void loop() {
       drawMainMenu();
     }
 
-    bool selectPressed = edgePressed(BUTENCO) || edgePressed(BUTLEFT);
+    bool selectPressed = edgePressed(BUTENCO) || edgePressed(BUT3);
     if (selectPressed) {
       logPrintf("menu select index=%d item=%s\n", selectedMenu, MENU_ITEMS[selectedMenu]);
       handleMainMenuPress();
@@ -1555,7 +1734,7 @@ void loop() {
 
     if (edgePressed(BUT2)) {
       drawMainMenu();
-    } else if (edgePressed(BUTENCO) || edgePressed(BUTLEFT)) {
+    } else if (edgePressed(BUTENCO) || edgePressed(BUT3)) {
       if (!installMachine(machines[selectedMachine])) {
         loading = false;
         delay(2500);

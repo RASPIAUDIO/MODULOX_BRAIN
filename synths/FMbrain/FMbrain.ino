@@ -1,6 +1,7 @@
 #define HAMMOND
 
 #include <modubrain.h>
+#include <loader_guard.h>
 #include "braindisplay.h"
 
 #define REV_MUL(a)  (a)
@@ -36,7 +37,7 @@ void modubrainProcess2()
 
 void setup() {
   Serial.begin(115200);
-  startReturnToLoaderTask();
+  startLoaderGuard();
   delay(1000);
   Sine_Init();
   FmSynth_Init();

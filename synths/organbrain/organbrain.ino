@@ -1,6 +1,7 @@
 #define HAMMOND
 
 #include <modubrain.h>
+#include <loader_guard.h>
 #include <oschammond.h>
 #include <lfofloat.h>
 #include "rosic_TeeBeeFilter.h"
@@ -33,7 +34,7 @@ bool audio_start=true;
 
 void setup() {
   Serial.begin(115200);
-  startReturnToLoaderTask();
+  startLoaderGuard();
   delay(1000);
   exclude_load=24;
   modubrainInit();

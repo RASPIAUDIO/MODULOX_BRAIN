@@ -1,6 +1,7 @@
 #include "mb.h"
 #include "mbdisplay.h"
 #include "granulizer.h"
+#include <loader_guard.h>
 #include <TFT_eSPI.h>
 #include <lfofloat.h>
 #include <envfloat.h>
@@ -39,7 +40,6 @@ int16_t maxaudio=0;
 int lastind=0;
 
 Env env2;
-TaskHandle_t ReturnLoaderTaskHandle = NULL;
 
 struct SynthProcessBench {
   volatile uint32_t samples;
@@ -193,83 +193,11 @@ void flashBenchRunAfterBootIfDue() {
   runFlashReadBench();
 }
 
-bool selectLoaderForNextBoot() {
-  const esp_partition_t *loaderPartition = esp_partition_find_first(
-    ESP_PARTITION_TYPE_APP,
-    ESP_PARTITION_SUBTYPE_APP_OTA_0,
-    "app0"
-  );
-  if (!loaderPartition) {
-    Serial.println("[loader] app0 partition not found");
-    return false;
-  }
-
-  const esp_err_t err = esp_ota_set_boot_partition(loaderPartition);
-  if (err != ESP_OK) {
-    Serial.printf("[loader] esp_ota_set_boot_partition failed: 0x%x\n", (unsigned)err);
-    return false;
-  }
-
-  Serial.println("[loader] app0 selected");
-  return true;
-}
-
-void returnToLoaderTask(void *parameter) {
-  (void)parameter;
-
-  pinMode(BUTLEFT, INPUT_PULLUP);
-  vTaskDelay(pdMS_TO_TICKS(700));
-
-  const bool menuIdle = digitalRead(BUTLEFT);
-  uint32_t menuStartMs = 0;
-  bool armed = false;
-
-  Serial.printf("[loader] task idle menu=%d\n", menuIdle ? 1 : 0);
-
-  while (true) {
-    const bool menuPressed = digitalRead(BUTLEFT) != menuIdle;
-
-    if (menuPressed) {
-      if (menuStartMs == 0) {
-        menuStartMs = millis();
-        Serial.println("[loader] menu hold detected");
-      } else if (!armed && millis() - menuStartMs >= 4000) {
-        Serial.println("[loader] menu hold confirmed, release to restart");
-        armed = selectLoaderForNextBoot();
-      }
-    } else {
-      if (armed) {
-        Serial.println("[loader] returning to app0");
-        delay(250);
-        ESP.restart();
-      }
-      menuStartMs = 0;
-    }
-
-    vTaskDelay(pdMS_TO_TICKS(20));
-  }
-}
-
-void startReturnToLoaderTask() {
-  if (ReturnLoaderTaskHandle) return;
-  xTaskCreatePinnedToCore(
-    returnToLoaderTask,
-    "ReturnLoader",
-    4096,
-    NULL,
-    10,
-    &ReturnLoaderTaskHandle,
-    0
-  );
-}
-
-
-
 void setup() {
   Serial.begin(115200);
   delay(2000);
   Serial.setDebugOutput(true);
-  startReturnToLoaderTask();
+  startLoaderGuard();
 
   modubrainInit();
 

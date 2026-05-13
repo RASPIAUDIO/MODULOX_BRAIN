@@ -2,6 +2,7 @@ bool stopaudio = false;
 
 #include "mb.h"
 #include "mbdisplay.h"
+#include <loader_guard.h>
 #include <TFT_eSPI.h>
 #include <samplerfloat.h>
 #include <disto2.h>
@@ -52,7 +53,7 @@ int lastind=0;
 
 void setup() {
   Serial.begin(115200);
-  startReturnToLoaderTask();
+  startLoaderGuard();
   delay(2000);
   Serial.setDebugOutput(true);
 
