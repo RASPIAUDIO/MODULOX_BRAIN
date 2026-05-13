@@ -33,10 +33,10 @@ static const char *MANIFEST_PATH = "/MODULOX/manifest.json";
 static const char *WIFI_CONFIG_PATH = "/MODULOX/wifi.json";
 static const char *CATALOG_URL = "https://apps.raspiaudio.com/modulox/catalog.json";
 static const char *TARGET_ID = "ESP32-S3-WROOM-2-N32R16V";
-static const size_t IO_BUFFER_SIZE = 8192;
+static const size_t IO_BUFFER_SIZE = 32768;
 static const int MAX_MACHINES = 8;
 static const uint8_t LOADER_TFT_ROTATION = 3;
-static const int SD_MMC_TRANSFER_FREQ = 4000;
+static const int SD_MMC_TRANSFER_FREQS[] = {20000, 10000, 4000};
 static const bool VERIFY_SD_FILE_SHA = false;
 static const bool VERIFY_APP_FLASH_AFTER_WRITE = false;
 static const bool VERIFY_DATA_FLASH_AFTER_WRITE = false;
@@ -1383,19 +1383,23 @@ bool beginSd() {
     return false;
   }
 
-  for (int attempt = 1; attempt <= 3; attempt++) {
-    if (SD_MMC.begin("/sdmmc", true, false, SD_MMC_TRANSFER_FREQ, 5)) {
-      sdFs = &SD_MMC;
-      sdBackendName = "SD_MMC";
-      uint64_t cardSizeMb = SD_MMC.cardSize() / (1024ULL * 1024ULL);
-      sdStatusLine = "SD OK SDMMC " + String((unsigned long)cardSizeMb) + "MB";
-      logPrintf("SD_MMC size: %llu MB\n", cardSizeMb);
-      return true;
-    }
+  for (int freqIndex = 0; freqIndex < (int)(sizeof(SD_MMC_TRANSFER_FREQS) / sizeof(SD_MMC_TRANSFER_FREQS[0])); freqIndex++) {
+    const int frequency = SD_MMC_TRANSFER_FREQS[freqIndex];
+    for (int attempt = 1; attempt <= 2; attempt++) {
+      logPrintf("SD_MMC begin %dMHz attempt %d\n", frequency / 1000, attempt);
+      if (SD_MMC.begin("/sdmmc", true, false, frequency, 5)) {
+        sdFs = &SD_MMC;
+        sdBackendName = "SD_MMC";
+        uint64_t cardSizeMb = SD_MMC.cardSize() / (1024ULL * 1024ULL);
+        sdStatusLine = "SD OK SDMMC " + String(frequency / 1000) + "MHz " + String((unsigned long)cardSizeMb) + "MB";
+        logPrintf("SD_MMC size: %llu MB freq=%dMHz\n", cardSizeMb, frequency / 1000);
+        return true;
+      }
 
-    logPrintf("SD_MMC begin failed attempt %d\n", attempt);
-    SD_MMC.end();
-    delay(250);
+      logPrintf("SD_MMC begin failed %dMHz attempt %d\n", frequency / 1000, attempt);
+      SD_MMC.end();
+      delay(250);
+    }
   }
 
   sdStatusLine = "SD mount failed";
