@@ -1,0 +1,81 @@
+name: Publier Modulox
+run-name: Publier Modulox 2.0
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: modulox-configurateur-production
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Préparer et vérifier les fichiers
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Récupérer le workflow de publication
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          path: publisher
+      - name: Récupérer Modulox-Brain-2.0
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: refs/heads/Modulox-Brain-2.0
+          persist-credentials: false
+          path: source
+      - name: Préparer le paquet Web
+        run: |
+          set -euo pipefail
+          revision=$(git -C source rev-parse HEAD)
+          python3 publisher/.github/modulox/deploy.py package source/editor/dist "$RUNNER_TEMP/modulox.zip" "$revision"
+      - name: Transmettre le paquet au déploiement
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: modulox-site
+          path: ${{ runner.temp }}/modulox.zip
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+
+  deploy:
+    name: Publier sur raspiaudio.com
+    if: github.ref == 'refs/heads/main'
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: modulox-production
+      url: https://raspiaudio.com/modulox/configurateur/
+    steps:
+      - name: Récupérer le workflow de publication
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Récupérer le paquet vérifié
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: modulox-site
+          path: ${{ runner.temp }}
+      - name: Mettre le paquet en ligne
+        env:
+          MODULOX_DEPLOY_KEY: ${{ secrets.MODULOX_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$MODULOX_DEPLOY_KEY"
+          umask 077
+          key=$(mktemp)
+          trap 'rm -f "$key"' EXIT
+          printf '%s\n' "$MODULOX_DEPLOY_KEY" > "$key"
+          ssh -T -i "$key" -o BatchMode=yes -o IdentitiesOnly=yes \
+            -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$GITHUB_WORKSPACE/.github/modulox/known_hosts" \
+            modulox-deploy@raspiaudio.com publish < "$RUNNER_TEMP/modulox.zip"
+      - name: Vérifier la version et les firmwares servis en HTTPS
+        run: |
+          python3 .github/modulox/deploy.py verify "$RUNNER_TEMP/modulox.zip" https://raspiaudio.com/modulox/configurateur/
