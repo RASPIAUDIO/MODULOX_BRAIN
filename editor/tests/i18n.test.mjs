@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { loadLanguage, tr } from "../dist/i18n.mjs";
+import { loadLanguage, preferredLanguage, tr } from "../dist/i18n.mjs";
 import { factoryConsentValid } from "../dist/factory-install.mjs";
 
 const codes = ["en", "es", "zh", "de", "it", "pt", "ja", "ko"];
+assert.equal(preferredLanguage(null, null, ["ja-JP", "en-US"]), "ja");
+assert.equal(preferredLanguage(null, null, ["nl-NL", "zh-CN", "en-US"]), "zh");
+assert.equal(preferredLanguage(null, "es", ["ja-JP"]), "es");
+assert.equal(preferredLanguage("pt-BR", "es", ["ja-JP"]), "pt");
+assert.equal(preferredLanguage("xx", "it", ["ja-JP"]), "it");
+assert.equal(preferredLanguage(null, null, ["nl-NL"]), "fr");
 let keys;
 for (const code of codes) {
   await loadLanguage(code, async url => {

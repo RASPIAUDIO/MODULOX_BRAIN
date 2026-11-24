@@ -7,9 +7,10 @@ dans Chrome ou Edge, brancher le Modulox en USB et cliquer sur **Connecter en
 USB**. Le navigateur demande de choisir le port. Les patches, les samples et
 les mises à jour transitent directement entre le navigateur et le Modulox.
 
-Les drapeaux en haut permettent de choisir la langue, y compris pour les
-messages USB et le dialogue d’installation usine. Le choix est conservé dans
-le navigateur. Les traductions et les drapeaux sont inclus dans le ZIP hors ligne.
+Le drapeau en haut ouvre le menu des langues. Le configurateur utilise par
+défaut la langue du navigateur si elle est disponible, ou le français. Une
+langue choisie dans le menu est conservée dans le navigateur. Le ZIP hors ligne
+inclut aussi les traductions et les drapeaux.
 
 Pour publier l’éditeur, lancer `node editor/build-web.mjs` depuis la racine,
 puis servir le contenu de `editor/dist/` en HTTPS. Ce script prépare l’index
