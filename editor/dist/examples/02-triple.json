@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "name": "Triple Osc",
+  "modules": [
+    {"id": "osc", "type": "Osc", "parameters": {"Wave": 0, "Octave": 0}},
+    {"id": "osc2", "type": "Osc", "parameters": {"Wave": 2, "Octave": 1}},
+    {"id": "osc3", "type": "Osc", "parameters": {"Wave": 1, "Octave": -1, "Level": 65}},
+    {"id": "mix", "type": "Mix"},
+    {"id": "filter", "type": "Filter"},
+    {"id": "env", "type": "ADSR"}
+  ],
+  "connections": [
+    ["osc", "mix"], ["osc2", "mix"], ["osc3", "mix"],
+    ["mix", "filter"], ["filter", "env"], ["env", "out"]
+  ]
+}

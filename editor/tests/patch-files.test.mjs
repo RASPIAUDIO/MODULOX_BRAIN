@@ -11,7 +11,7 @@ for (const kind of ["waves", "samples"]) for (const item of manifest[kind]) {
   const pcm = new Uint8Array(await readFile(new URL(`assets/${item.id}.pcm`, root)));
   libraries[kind].set(item.id, { id: item.id, name: item.name, pcm });
 }
-const files = (await readdir(root)).filter(f => f.endsWith(".json"));
+const files = (await readdir(root)).filter(f => f !== "index.json" && f.endsWith(".json"));
 let granularText, waveformText;
 // Every factory patch can become a self-contained personal file, then be
 // reopened on a machine with no libraries and no server connection.

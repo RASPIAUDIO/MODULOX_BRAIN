@@ -8,13 +8,13 @@ export async function loadPresetAssets(patch, { waves, samples, saveWaves, saveS
   const sampleIds = [...new Set(patch.modules.filter(n => ["Sampler", "Granulizer"].includes(n.type))
     .map(n => n.sample))].filter(id => !samples.has(id));
   if (!waveIds.length && !sampleIds.length) return;
-  const response = await request("/presets/assets/index.json");
+  const response = await request("./presets/assets/index.json");
   if (!response.ok) throw new Error("Bibliothèque des presets indisponible.");
   const manifest = await response.json();
   const read = async (id, kind) => {
     const entry = manifest[kind]?.find(item => item.id === id);
     if (!/^[a-f0-9]{14}$/.test(id) || !entry) throw new Error("Ressource absente du serveur : " + id);
-    const response = await request("/presets/assets/" + id + ".pcm");
+    const response = await request("./presets/assets/" + id + ".pcm");
     if (!response.ok) throw new Error("Ressource indisponible : " + entry.name);
     const pcm = new Uint8Array(await response.arrayBuffer());
     if (kind === "waves" ? pcm.length !== waveBytes : pcm.length < 4 || pcm.length % 2 || pcm.length > maxSampleBytes)

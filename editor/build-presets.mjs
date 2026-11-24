@@ -288,7 +288,7 @@ for (let i = 0; i < bank.length; i++) {
   item.file = `${String(i + 2).padStart(2, "0")}-${item.patch.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.json`;
   await writeFile(new URL(item.file, root), JSON.stringify(item.patch, null, 2) + "\n");
 }
-const files = (await readdir(root)).filter(f => /^[a-z0-9-]+\.json$/.test(f));
+const files = (await readdir(root)).filter(f => f !== "index.json" && /^[a-z0-9-]+\.json$/.test(f));
 if (files.length !== 40) throw new Error("Expected exactly 40 bank files, got " + files.length);
 const first = { file: "01-va-iron-bass.json", patch: { name: "VA Iron Bass" }, category: "Basses", description: "Premier patch valide : basse agressive, deux pulses et triangle grave, filtre et distorsion." };
 const doc = ["# Banque de 40 presets Modulox", "", "Ouvrir **Presets d’usine**, choisir un nom, puis **Envoyer au Modulox**. Pour une copie personnelle sur disque : **Enregistrer dans mon dossier**.",
@@ -302,4 +302,5 @@ doc.push("", "## Ressources et regeneration", "", "Quatre cycles AKWF de Kristof
   "Les identifiants sont les sept premiers octets du SHA-256 du PCM. Le chargeur verifie tailles et empreintes avant de sauvegarder les ressources.",
   "Regeneration : `node editor/build-presets.mjs` depuis la racine. Le premier preset valide n'est pas reecrit.", "");
 await writeFile(new URL("PRESETS.md", import.meta.url), doc.join("\n"));
+await import("./build-web.mjs");
 console.log(`Created ${bank.length} presets + original, ${manifest.waves.length} waves, ${manifest.samples.length} textures in ${fileURLToPath(root)}`);

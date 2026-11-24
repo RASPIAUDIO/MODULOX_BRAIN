@@ -8,10 +8,10 @@ import { recoveryPlan } from "../dist/firmware-recovery.mjs";
 const assets = new URL("../dist/", import.meta.url);
 const all = [];
 for (const board of Object.values(boardProfiles)) {
-  const folder = boardAssetPath("firmware", board).slice(1);
+  const folder = boardAssetPath("firmware", board);
   const release = JSON.parse(await readFile(new URL(folder + "latest.json", assets)));
   const image = new Uint8Array(await readFile(new URL(folder + release.file, assets)));
-  const factoryFolder = boardAssetPath("factory", board).slice(1);
+  const factoryFolder = boardAssetPath("factory", board);
   const factory = JSON.parse(await readFile(new URL(factoryFolder + "latest.json", assets)));
   const full = new Uint8Array(await readFile(new URL(factoryFolder + factory.file, assets)));
   const device = { model: board.model, layout: board.layout, protocol: 1, slotBytes: board.slotBytes, usbUpdate: true };

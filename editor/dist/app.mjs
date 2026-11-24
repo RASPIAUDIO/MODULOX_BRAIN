@@ -2242,7 +2242,7 @@ waveLibraryReady.then(() => {
 });
 if (!navigator.serial) showError("Ouvre cette adresse dans Chrome ou Edge pour utiliser l’USB.");
 Promise.all(["01-basic.json", "02-triple.json"].map(async (file) => {
-  const response = await fetch("/examples/" + file);
+  const response = await fetch("./examples/" + file);
   if (!response.ok) throw new Error("Exemple indisponible.");
   return { file, patch: await response.json() };
 })).then((items) => {

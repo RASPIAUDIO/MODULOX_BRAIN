@@ -6,7 +6,7 @@ export function boardForModel(model) {
   if (!board) throw new Error("Modèle de Modulox inconnu : aucune image compatible ne sera sélectionnée.");
   return board;
 }
-export const boardAssetPath = (kind, board) => `/${kind}/` + (board.id === defaultBoard.id ? "" : board.id + "/");
+export const boardAssetPath = (kind, board) => `./${kind}/` + (board.id === defaultBoard.id ? "" : board.id + "/");
 
 // Read-only identification in ROM mode. Capacities are eFuse package fields,
 // not the firmware currently installed or the USB product name.

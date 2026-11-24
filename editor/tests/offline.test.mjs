@@ -21,7 +21,7 @@ function run(args) {
 }
 function request(path, options = {}) {
   return new Promise((resolve, reject) => {
-    const req = httpRequest({ host: "127.0.0.1", port, path, agent: false, method: options.method ?? "GET", headers: options.headers ?? {}, timeout: 5000 }, response => {
+    const req = httpRequest({ host: "127.0.0.1", port, path: path.startsWith("./") ? path.slice(1) : path, agent: false, method: options.method ?? "GET", headers: options.headers ?? {}, timeout: 5000 }, response => {
       const parts = []; response.on("data", part => parts.push(part));
       response.on("end", () => { const bytes = Buffer.concat(parts); resolve({ status: response.statusCode, headers: response.headers, ok: response.statusCode === 200,
         json: async () => JSON.parse(bytes), arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), bytes }); });

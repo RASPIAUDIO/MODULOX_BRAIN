@@ -1,5 +1,25 @@
 # Éditeur de patches Modulox
 
+## Configurateur Web
+
+Ouvrir [le configurateur Modulox](https://raspiaudio.com/modulox/configurateur/)
+dans Chrome ou Edge, brancher le Modulox en USB et cliquer sur **Connecter en
+USB**. Le navigateur demande de choisir le port. Les patches, les samples et
+les mises à jour transitent directement entre le navigateur et le Modulox.
+
+Pour publier l’éditeur, lancer `node editor/build-web.mjs` depuis la racine,
+puis servir le contenu de `editor/dist/` en HTTPS. Ce script prépare l’index
+des presets et les deux exemples avec les fichiers déjà présents dans le
+dépôt. Le serveur doit servir les modules `.mjs` comme JavaScript et rediriger
+l’adresse du dossier vers sa version avec une barre oblique finale.
+
+Pour reprendre un patch personnel du lanceur Windows, exporter le fichier
+`.modulox.json` depuis l’éditeur local, puis l’ouvrir dans le configurateur
+Web. La sélection du dossier et les brouillons du navigateur sont propres
+à chaque adresse.
+
+## Lanceur Windows hors ligne
+
 Le panneau Firmware propose aussi **Installation firmware usine…** pour
 programmer une carte neuve ou réinitialiser complètement un Modulox en BOOT.
 Cette action remplace ses 16 Mio, après identification et confirmation explicite.

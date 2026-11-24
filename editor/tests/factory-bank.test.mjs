@@ -9,11 +9,12 @@ let active = 0, peak = 0;
 const request = async path => {
   ++active; peak = Math.max(peak, active);
   try {
-    const bytes = path === "/presets/index.json" ? JSON.stringify(files) : await readFile(new URL(path.replace("/presets/", ""), root));
+    const bytes = await readFile(new URL(path, new URL("../", root)));
     return { ok: true, json: async () => JSON.parse(bytes) };
   } finally { --active; }
 };
 const items = await loadFactoryBank(request);
+assert.deepEqual(items.map(item => item.file), files);
 assert.equal(items.length, 40); assert.ok(peak <= 4);
 assert.ok(items.every(item => item.patch.settings.Volume === 85));
 await assert.rejects(loadFactoryBank(async () => ({ ok: true, json: async () => ["../bad.json"] })), /invalide/);

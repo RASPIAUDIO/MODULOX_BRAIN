@@ -3,7 +3,7 @@ import { loadPresetAssets } from "./preset-assets.mjs";
 import { uploadPatch } from "./protocol.mjs?v=18";
 
 export async function loadFactoryBank(request = fetch) {
-  const response = await request("/presets/index.json", { cache: "no-store" });
+  const response = await request("./presets/index.json", { cache: "no-store" });
   if (!response.ok) throw new Error("Presets d’usine indisponibles.");
   const files = await response.json();
   if (!Array.isArray(files) || !files.length || files.length > 64 || new Set(files).size !== files.length ||
@@ -13,7 +13,7 @@ export async function loadFactoryBank(request = fetch) {
   // Bound parallel requests for the lightweight local Python server.
   for (let offset = 0; offset < files.length; offset += 4) {
     items.push(...await Promise.all(files.slice(offset, offset + 4).map(async file => {
-      const response = await request("/presets/" + file, { cache: "no-store" });
+      const response = await request("./presets/" + file, { cache: "no-store" });
       if (!response.ok) throw new Error("Preset indisponible : " + file);
       const patch = normalizePatch(await response.json());
       const error = validatePatch(patch, offlineCatalog);

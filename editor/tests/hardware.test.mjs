@@ -4,8 +4,8 @@ import { boardProfiles, boardForModel, boardAssetPath, identifyBoard } from "../
 const source = JSON.parse(await readFile(new URL("../../firmware/boards/profiles.json", import.meta.url)));
 for (const [id, board] of Object.entries(source)) assert.deepEqual(boardProfiles[id], { ...board, id });
 const [oldBoard, newBoard] = Object.values(boardProfiles);
-assert.equal(boardAssetPath("factory", oldBoard), "/factory/");
-assert.equal(boardAssetPath("factory", newBoard), "/factory/s3-32m16m/");
+assert.equal(boardAssetPath("factory", oldBoard), "./factory/");
+assert.equal(boardAssetPath("factory", newBoard), "./factory/s3-32m16m/");
 assert.throws(() => boardForModel("unknown"));
 function loader({ flash = "32MB", cap = 3, vendor = 2, octal = true, chip = "ESP32-S3" } = {}) {
   const registers = new Map([[0x60007054, ((cap & 3) << 3) | (vendor << 7)],

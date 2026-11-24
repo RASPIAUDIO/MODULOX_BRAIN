@@ -5,12 +5,12 @@ import { loadPresetAssets } from "../dist/preset-assets.mjs";
 import { waveId } from "../dist/waves.mjs";
 
 const root = new URL("../dist/presets/", import.meta.url);
-const files = (await readdir(root)).filter(f => /^[a-z0-9-]+\.json$/.test(f)).sort();
+const files = (await readdir(root)).filter(f => f !== "index.json" && /^[a-z0-9-]+\.json$/.test(f)).sort();
 assert.equal(files.length, 40);
 const patches = await Promise.all(files.map(async f => JSON.parse(await readFile(new URL(f, root), "utf8"))));
 const names = new Set(), waves = new Map(), samples = new Map();
 const request = async path => {
-  try { const bytes = await readFile(new URL(path.replace("/presets/", ""), root));
+  try { const bytes = await readFile(new URL(path, new URL("../", root)));
     return { ok: true, json: async () => JSON.parse(bytes), arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) };
   } catch { return { ok: false }; }
 };
