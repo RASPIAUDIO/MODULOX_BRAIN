@@ -11,6 +11,7 @@
 #include <bit>
 #include <cstdio>
 #include <cstring>
+#include <utility>
 
 #include "driver/gpio.h"
 #include "esp_err.h"
@@ -22,8 +23,12 @@ namespace {
 
 constexpr gpio_num_t encoder_a = GPIO_NUM_6;
 constexpr gpio_num_t encoder_b = GPIO_NUM_7;
-constexpr std::array buttons{GPIO_NUM_12, GPIO_NUM_1, GPIO_NUM_38, GPIO_NUM_0, GPIO_NUM_39};
-enum Button { left, center, right, menu, encoder_press };
+constexpr gpio_num_t menu_pin = GPIO_NUM_0;
+using enum PanelInput;
+constexpr std::array buttons{
+    std::pair{GPIO_NUM_12, left}, std::pair{GPIO_NUM_1, center}, std::pair{GPIO_NUM_38, right},
+    std::pair{menu_pin, menu}, std::pair{GPIO_NUM_39, encoder_press},
+};
 enum class Page { parameters, modules, categories, patches, samples };
 enum class SaveStatus { none, saved, changed, error };
 constexpr int settings_module = -1;
@@ -123,6 +128,7 @@ QueueHandle_t control_changes;
 Selection initial_selection;
 const std::atomic<unsigned>* audio_load_tenths;
 QueueHandle_t selection_updates;
+QueueHandle_t remote_controls;
 
 void draw_load(unsigned load)
 {
@@ -334,17 +340,150 @@ void move_selection(Selection& selection, int direction)
     }
 }
 
+void apply_button(Selection& selection, PanelInput input)
+{
+    const bool was_learning = selection.learning;
+    selection.learning = false;
+    selection.save_status = SaveStatus::none;
+    if (input != center) {
+        selection.confirm_sample_delete = false;
+        selection.sample_delete_status = SampleDeleteStatus::none;
+    }
+    switch (input) {
+        case left:
+            move_selection(selection, -1);
+            break;
+        case right:
+            move_selection(selection, 1);
+            break;
+        case center:
+            if (selection.page == Page::categories) {
+                const auto counts = patches->category_counts();
+                selection.menu_category = std::clamp(selection.menu_category, 0, int(category_menu_count(counts)) - 1);
+                selection.category = category_menu_at(counts, selection.menu_category);
+                selection.menu_patch = 0;
+                selection.patch_error = false;
+                selection.page = Page::patches;
+            } else if (selection.page == Page::patches) {
+                const int count = patches->category_counts()[static_cast<unsigned>(selection.category)];
+                selection.menu_patch = std::clamp(selection.menu_patch, 0, std::max(0, count - 1));
+                const int index = patches->category_patch(selection.category, selection.menu_patch);
+                if (index >= 0) {
+                    const ModuleMask mask = load_patch(index);
+                    if (mask) {
+                        selection.active_patch = index;
+                        selection.module_mask = editable_modules(mask);
+                        selection.module = selection.module_mask ? 0 : settings_module;
+                        selection.parameter = 0;
+                        selection.page = Page::parameters;
+                        selection.dirty = false;
+                        xQueueReset(control_changes);
+                        set_headphone_volume(patches->settings().parameters[master_volume].get());
+                    } else {
+                        selection.patch_error = true;
+                    }
+                }
+            } else if (selection.page == Page::samples) {
+                if (selection.parameter == 1) sample_library.play();
+                if (selection.parameter == 2) sample_library.record();
+                if (selection.parameter == 3) {
+                    if (selection.confirm_sample_delete) {
+                        selection.sample_delete_status = sample_library.remove(selection.delete_sample_revision);
+                        selection.confirm_sample_delete = false;
+                    } else {
+                        const auto status = sample_library.status();
+                        if (status.index) {
+                            selection.delete_sample_revision = status.revision;
+                            selection.confirm_sample_delete = true;
+                            selection.sample_delete_status = SampleDeleteStatus::none;
+                        }
+                    }
+                }
+            } else if (selection.page == Page::modules) {
+                if (selection.menu_module == std::popcount(selection.module_mask) + 1) {
+                    selection.parameter = 0;
+                    selection.page = Page::samples;
+                    break;
+                }
+                selection.module = selection.menu_module == std::popcount(selection.module_mask)
+                    ? settings_module : selection.menu_module;
+                selection.parameter = 0;
+                selection.page = Page::parameters;
+            } else if (saving_patch(selection)) {
+                save_active_patch(selection);
+            } else if (on_sample_action(selection)) {
+                if (selection.parameter == 1) sample_controls.play(selected_slot(selection) - sampler);
+            } else {
+                selection.learning = !was_learning;
+            }
+            break;
+        case menu:
+            selection.menu_module = selection.page == Page::samples
+                ? std::popcount(selection.module_mask) + 1 : selection.module == settings_module
+                    ? std::popcount(selection.module_mask) : selection.module;
+            selection.page = selection.page == Page::modules
+                ? Page::parameters : Page::modules;
+            break;
+        case encoder_press:
+            if (selection.page == Page::patches) {
+                selection.page = Page::categories;
+            } else if (selection.page == Page::categories) {
+                selection.page = Page::parameters;
+            } else {
+                selection.page = Page::categories;
+                selection.menu_category = 0;
+            }
+            selection.patch_error = false;
+            break;
+        case clockwise:
+        case counterclockwise:
+            return;
+    }
+    publish(selection);
+}
+
+void apply_encoder(Selection& selection, int step)
+{
+    if (step != 0 && (selection.page != Page::parameters || !saving_patch(selection))) {
+        selection.learning = false;
+        selection.save_status = SaveStatus::none;
+        if (selection.page == Page::samples) {
+            if (selection.parameter == 0) {
+                selection.sample_delete_status = SampleDeleteStatus::none;
+                sample_library.step(step);
+            }
+        } else if (selection.page != Page::parameters) {
+            move_selection(selection, step);
+        } else if (on_sample_action(selection)) {
+            if (selection.parameter == 0 && sample_controls.step(selected_slot(selection) - sampler, step)) {
+                ++selection.sample_revision;
+                selection.dirty = true;
+            }
+        } else {
+            const auto module = selected_module(selection);
+            const auto& parameter = module.parameters[parameter_index(selection)];
+            const int value = parameter.get();
+            const int increment = parameter.step_divisor == 0
+                ? parameter.step : std::max(parameter.step, value / parameter.step_divisor);
+            set_parameter(selection, value + step * increment);
+        }
+        publish(selection);
+    }
+}
+
 void input_task(void*)
 {
     gpio_config_t config{};
     config.mode = GPIO_MODE_INPUT;
     config.pull_up_en = GPIO_PULLUP_ENABLE;
-    config.pin_bit_mask = (1ULL << encoder_a) | (1ULL << encoder_b) | (1ULL << buttons[menu]);
+    config.pin_bit_mask = (1ULL << encoder_a) | (1ULL << encoder_b) | (1ULL << menu_pin);
     ESP_ERROR_CHECK(gpio_config(&config));
     config.pull_up_en = GPIO_PULLUP_DISABLE;
     config.pull_down_en = GPIO_PULLDOWN_ENABLE;
-    config.pin_bit_mask = (1ULL << buttons[left]) | (1ULL << buttons[center]) |
-                          (1ULL << buttons[right]) | (1ULL << buttons[encoder_press]);
+    config.pin_bit_mask = 0;
+    for (const auto& [pin, input] : buttons) {
+        if (input != menu) config.pin_bit_mask |= 1ULL << pin;
+    }
     ESP_ERROR_CHECK(gpio_config(&config));
 
     std::array<ButtonState, buttons.size()> button_state{};
@@ -354,130 +493,20 @@ void input_task(void*)
     for (;;) {
         const TickType_t now = xTaskGetTickCount();
         for (unsigned i = 0; i < buttons.size(); ++i) {
-            if (!button_state[i].poll(buttons[i], now)) {
+            const auto [pin, input] = buttons[i];
+            if (!button_state[i].poll(pin, now)) {
                 continue;
             }
-            const bool was_learning = selection.learning;
-            selection.learning = false;
-            selection.save_status = SaveStatus::none;
-            if (i != center) {
-                selection.confirm_sample_delete = false;
-                selection.sample_delete_status = SampleDeleteStatus::none;
-            }
-            switch (i) {
-                case left:
-                    move_selection(selection, -1);
-                    break;
-                case right:
-                    move_selection(selection, 1);
-                    break;
-                case center:
-                    if (selection.page == Page::categories) {
-                        const auto counts = patches->category_counts();
-                        selection.menu_category = std::clamp(selection.menu_category, 0, int(category_menu_count(counts)) - 1);
-                        selection.category = category_menu_at(counts, selection.menu_category);
-                        selection.menu_patch = 0;
-                        selection.patch_error = false;
-                        selection.page = Page::patches;
-                    } else if (selection.page == Page::patches) {
-                        const int count = patches->category_counts()[static_cast<unsigned>(selection.category)];
-                        selection.menu_patch = std::clamp(selection.menu_patch, 0, std::max(0, count - 1));
-                        const int index = patches->category_patch(selection.category, selection.menu_patch);
-                        if (index >= 0) {
-                            const ModuleMask mask = load_patch(index);
-                            if (mask) {
-                                selection.active_patch = index;
-                                selection.module_mask = editable_modules(mask);
-                                selection.module = selection.module_mask ? 0 : settings_module;
-                                selection.parameter = 0;
-                                selection.page = Page::parameters;
-                                selection.dirty = false;
-                                xQueueReset(control_changes);
-                                set_headphone_volume(patches->settings().parameters[master_volume].get());
-                            } else {
-                                selection.patch_error = true;
-                            }
-                        }
-                    } else if (selection.page == Page::samples) {
-                        if (selection.parameter == 1) sample_library.play();
-                        if (selection.parameter == 2) sample_library.record();
-                        if (selection.parameter == 3) {
-                            if (selection.confirm_sample_delete) {
-                                selection.sample_delete_status = sample_library.remove(selection.delete_sample_revision);
-                                selection.confirm_sample_delete = false;
-                            } else {
-                                const auto status = sample_library.status();
-                                if (status.index) {
-                                    selection.delete_sample_revision = status.revision;
-                                    selection.confirm_sample_delete = true;
-                                    selection.sample_delete_status = SampleDeleteStatus::none;
-                                }
-                            }
-                        }
-                    } else if (selection.page == Page::modules) {
-                        if (selection.menu_module == std::popcount(selection.module_mask) + 1) {
-                            selection.parameter = 0;
-                            selection.page = Page::samples;
-                            break;
-                        }
-                        selection.module = selection.menu_module == std::popcount(selection.module_mask)
-                            ? settings_module : selection.menu_module;
-                        selection.parameter = 0;
-                        selection.page = Page::parameters;
-                    } else if (saving_patch(selection)) {
-                        save_active_patch(selection);
-                    } else if (on_sample_action(selection)) {
-                        if (selection.parameter == 1) sample_controls.play(selected_slot(selection) - sampler);
-                    } else {
-                        selection.learning = !was_learning;
-                    }
-                    break;
-                case menu:
-                    selection.menu_module = selection.page == Page::samples
-                        ? std::popcount(selection.module_mask) + 1 : selection.module == settings_module
-                            ? std::popcount(selection.module_mask) : selection.module;
-                    selection.page = selection.page == Page::modules
-                        ? Page::parameters : Page::modules;
-                    break;
-                case encoder_press:
-                    if (selection.page == Page::patches) {
-                        selection.page = Page::categories;
-                    } else if (selection.page == Page::categories) {
-                        selection.page = Page::parameters;
-                    } else {
-                        selection.page = Page::categories;
-                        selection.menu_category = 0;
-                    }
-                    selection.patch_error = false;
-                    break;
-            }
-            publish(selection);
+            apply_button(selection, input);
         }
-        const int step = encoder.poll();
-        if (step != 0 && (selection.page != Page::parameters || !saving_patch(selection))) {
-            selection.learning = false;
-            selection.save_status = SaveStatus::none;
-            if (selection.page == Page::samples) {
-                if (selection.parameter == 0) {
-                    selection.sample_delete_status = SampleDeleteStatus::none;
-                    sample_library.step(step);
-                }
-            } else if (selection.page != Page::parameters) {
-                move_selection(selection, step);
-            } else if (on_sample_action(selection)) {
-                if (selection.parameter == 0 && sample_controls.step(selected_slot(selection) - sampler, step)) {
-                    ++selection.sample_revision;
-                    selection.dirty = true;
-                }
+        apply_encoder(selection, encoder.poll());
+        PanelInput input;
+        for (int count = 0; count < 8 && xQueueReceive(remote_controls, &input, 0) == pdTRUE; ++count) {
+            if (input == clockwise || input == counterclockwise) {
+                apply_encoder(selection, input == clockwise ? 1 : -1);
             } else {
-                const auto module = selected_module(selection);
-                const auto& parameter = module.parameters[parameter_index(selection)];
-                const int value = parameter.get();
-                const int increment = parameter.step_divisor == 0
-                    ? parameter.step : std::max(parameter.step, value / parameter.step_divisor);
-                set_parameter(selection, value + step * increment);
+                apply_button(selection, input);
             }
-            publish(selection);
         }
         ControlChange cc;
         for (int count = 0; count < 8 && xQueueReceive(control_changes, &cc, 0) == pdTRUE; ++count) {
@@ -979,6 +1008,11 @@ void post_midi_cc(uint8_t number, uint8_t value)
     xQueueSend(control_changes, &cc, 0);
 }
 
+bool post_control_input(PanelInput input)
+{
+    return remote_controls && xQueueSend(remote_controls, &input, 0) == pdTRUE;
+}
+
 void start_controls(std::span<const ModuleParameters> available_modules,
                     const std::atomic<unsigned>& load_tenths,
                     const PatchStore& available_patches, ModuleMask (*load)(unsigned),
@@ -999,9 +1033,11 @@ void start_controls(std::span<const ModuleParameters> available_modules,
     initial_selection.module_mask = editable_modules(initial_module_mask);
     initial_selection.module = initial_selection.module_mask ? 0 : settings_module;
     audio_load_tenths = &load_tenths;
+    display::init_mirror();
     selection_updates = xQueueCreate(1, sizeof(Selection));
+    remote_controls = xQueueCreate(16, sizeof(PanelInput));
     control_changes = xQueueCreate(32, sizeof(ControlChange));
-    ESP_ERROR_CHECK(selection_updates && control_changes ? ESP_OK : ESP_ERR_NO_MEM);
+    ESP_ERROR_CHECK(selection_updates && control_changes && remote_controls ? ESP_OK : ESP_ERR_NO_MEM);
     ESP_ERROR_CHECK(xTaskCreatePinnedToCore(input_task, "controls", 6144, nullptr, 5, nullptr, 0)
                     == pdPASS ? ESP_OK : ESP_ERR_NO_MEM);
     ESP_ERROR_CHECK(xTaskCreatePinnedToCore(display_task, "display", 6144, nullptr, 3, nullptr, 0)

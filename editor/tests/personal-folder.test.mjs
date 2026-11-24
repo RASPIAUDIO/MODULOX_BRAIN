@@ -18,6 +18,7 @@ const nodes = new Map();
 const element = (tag, text = "") => ({ textContent: text, children: [], append(...children) { this.children.push(...children); }, replaceChildren(...children) { this.children = children; }, close() {}, });
 const $ = id => { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); };
 const context = { $, element, tr, busy: "", renderActions() {}, showError(message) { $("error").textContent = message; },
+  deviceScreen: { async idle() {} },
   window: { async showDirectoryPicker(options) { assert.equal(options.mode, "readwrite"); picks++; return directory; } },
   folderReady: Promise.resolve(), folderPreference: async handle => { assert.equal(handle, directory); remembered++; },
   patchFolder: undefined, packPatch, readPatchFile, writePatchFile, sampleModuleTypes,

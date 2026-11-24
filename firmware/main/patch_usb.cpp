@@ -1,4 +1,6 @@
 #include "patch_usb.h"
+#include "controls.h"
+#include "display.h"
 #include "runtime_diagnostics.h"
 #include "sample_store.h"
 #include "firmware_update.h"
@@ -9,6 +11,7 @@
 #include <memory>
 #include <string_view>
 #include <string>
+#include <utility>
 
 #include "cJSON.h"
 #include "freertos/task.h"
@@ -157,6 +160,12 @@ bool build_catalog(PatchStore::Modules modules, ModuleParameters settings, const
     cJSON* output = cJSON_AddObjectToObject(root.get(), "output");
     cJSON* firmware = cJSON_AddObjectToObject(root.get(), "firmware");
     if (!firmware || !firmware_info(firmware)) return false;
+    if (display::mirror_available()) {
+        auto* screen = cJSON_AddObjectToObject(root.get(), "screenMirror");
+        if (!screen || !cJSON_AddNumberToObject(screen, "width", display::width) ||
+            !cJSON_AddNumberToObject(screen, "height", display::height) ||
+            !cJSON_AddNumberToObject(screen, "bandHeight", display::mirror_band_height)) return false;
+    }
     if (!types || !options || !output || !describe_parameters(options, settings) ||
         !describe_modulation(output, output_slot) ||
         !cJSON_AddBoolToObject(root.get(), "midiLearn", true) ||
@@ -256,6 +265,32 @@ void make_response(PatchStore& patches, PatchStore::Modules modules, const WaveS
         begin_upload(size, Upload::firmware_chunk); return;
     }
     if (firmware_update_active()) { reply("ERR firmware-busy\n"); return; }
+    if (line.starts_with("SCREEN ")) {
+        const auto args = line.substr(7);
+        const auto split = args.find(' ');
+        unsigned since = 0, first_band = 0;
+        if (split == std::string_view::npos || !parse_number(args.substr(0, split), since) ||
+            !parse_number(args.substr(split + 1), first_band)) { reply("ERR screen-invalid\n"); return; }
+        const unsigned size = display::read_mirror(since, first_band, std::span{response}.subspan(header_space));
+        if (size) send_body(size);
+        else reply("ERR screen-invalid\n");
+        return;
+    }
+    if (line.starts_with("UIKEY ")) {
+        using enum PanelInput;
+        constexpr std::pair<std::string_view, PanelInput> keys[] = {
+            {"left", left}, {"center", center}, {"right", right}, {"menu", menu},
+            {"push", encoder_press}, {"cw", clockwise}, {"ccw", counterclockwise},
+        };
+        const auto key = line.substr(6);
+        for (const auto& [name, input] : keys) {
+            if (key != name) continue;
+            reply(display::mirror_available() && post_control_input(input) ? "OK 0\n" : "ERR screen-busy\n");
+            return;
+        }
+        reply("ERR screen-invalid\n");
+        return;
+    }
     if (line.starts_with("DELETE ")) {
         const std::string filename(line.substr(7));
         reply(patches.remove(filename.c_str()) ? "OK 0\n" : "ERR storage\n");
@@ -534,9 +569,10 @@ void service_patch_usb(PatchStore& patches, PatchStore::Modules modules, WaveSto
             break;
         }
         if (byte == '\n') {
-            if (recording) reply("ERR recording-busy\n");
-            else make_response(patches, modules, waves, samples, prune_waves, delete_sample, command_overflow ? std::string_view{} :
-                                                              std::string_view{command, command_length});
+            const auto line = command_overflow ? std::string_view{} : std::string_view{command, command_length};
+            // The virtual panel also needs to show and stop an ongoing recording.
+            if (recording && !line.starts_with("SCREEN ") && !line.starts_with("UIKEY ")) reply("ERR recording-busy\n");
+            else make_response(patches, modules, waves, samples, prune_waves, delete_sample, line);
             command_length = 0;
             command_overflow = false;
             break;

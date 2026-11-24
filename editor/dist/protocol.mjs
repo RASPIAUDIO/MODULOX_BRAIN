@@ -24,6 +24,7 @@ class DeviceError extends Error {
       "sample-in-use": tr("Ce sample est utilisé par un patch sauvegardé ou par le patch chargé sur le Modulox. Remplace-le dans ce patch avant de le supprimer."),
       "sample-busy": tr("Un enregistrement ou un transfert de sample est en cours. Réessaie après sa sauvegarde."),
       "recording-busy": tr("Un enregistrement est en cours sur le Modulox. Attends la fin de sa sauvegarde."),
+      "screen-busy": tr("Les commandes du Modulox sont occupées. Réessaie dans un instant."),
       "firmware-busy": tr("Une mise à jour ou une vérification de démarrage est en cours."),
       "firmware-layout": tr("Le Modulox nécessite d’abord la migration vers le partitionnement A/B."),
       "firmware-invalid": tr("Le firmware a été refusé : image ou transfert invalide."),
@@ -114,6 +115,20 @@ async function exchange(port, run, timeoutMs = 8000) {
 export const fetchFirmwareInfo = port => exchange(port, async ({ command, json }) => {
   await command("FWINFO"); return json(2048);
 });
+
+export function fetchScreenBands(port, revision, firstBand) {
+  return exchange(port, async ({ command, number, take }) => {
+    await command(`SCREEN ${revision} ${firstBand}`);
+    return take(await number(20480));
+  });
+}
+
+export function sendScreenKey(port, key) {
+  return exchange(port, async ({ command, number }) => {
+    await command(`UIKEY ${key}`);
+    await number(0);
+  });
+}
 export const rollbackFirmware = port => exchange(port, async ({ command, number }) => {
   await command("FWROLLBACK"); await number(0);
 });

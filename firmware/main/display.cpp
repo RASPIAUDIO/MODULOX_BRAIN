@@ -3,11 +3,13 @@
 #include "runtime_diagnostics.h"
 
 #include <algorithm>
+#include <cstring>
 
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "esp_attr.h"
 #include "esp_err.h"
+#include "esp_heap_caps.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_vendor.h"
@@ -23,10 +25,32 @@ namespace {
 #undef PROGMEM
 
 constexpr gpio_num_t backlight = GPIO_NUM_45;
-constexpr int stripe_height = 8;
+constexpr int stripe_height = mirror_band_height;
+static_assert(height % mirror_band_height == 0 && mirror_band_count < 255);
 DMA_ATTR uint16_t pixels[width * stripe_height];
 esp_lcd_panel_handle_t panel = nullptr;
 SemaphoreHandle_t completion = nullptr;
+SemaphoreHandle_t mirror_mutex = nullptr;
+uint16_t* mirror = nullptr;
+uint32_t revision = 1;
+uint32_t band_revisions[mirror_band_count]{};
+
+void mirror_stripe(int x, int y, int w, int lines)
+{
+    if (!mirror_available()) return;
+    xSemaphoreTake(mirror_mutex, portMAX_DELAY);
+    for (int line = 0; line < lines; ++line) {
+        const int row = y + line;
+        auto* destination = mirror + row * width + x;
+        const auto* source = pixels + line * w;
+        const size_t bytes = w * sizeof(*mirror);
+        if (std::memcmp(destination, source, bytes) == 0) continue;
+        std::memcpy(destination, source, bytes);
+        if (++revision == 0) ++revision;
+        band_revisions[row / mirror_band_height] = revision;
+    }
+    xSemaphoreGive(mirror_mutex);
+}
 
 bool transfer_done(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_data_t*, void* context)
 {
@@ -46,9 +70,53 @@ void transfer_stripe(int x, int y, int w, int lines)
         record_driver_error(DriverOperation::display_wait, ESP_ERR_TIMEOUT);
         ESP_ERROR_CHECK(ESP_ERR_TIMEOUT);
     }
+    mirror_stripe(x, y, w, lines);
 }
 
 }  // namespace
+
+void init_mirror()
+{
+    mirror = static_cast<uint16_t*>(heap_caps_calloc(width * height, sizeof(*mirror), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT));
+    if (!mirror) return;
+    mirror_mutex = xSemaphoreCreateMutex();
+    if (!mirror_mutex) {
+        heap_caps_free(mirror);
+        mirror = nullptr;
+    }
+}
+
+bool mirror_available()
+{
+    return mirror != nullptr;
+}
+
+unsigned read_mirror(uint32_t since, unsigned first_band, std::span<char> output)
+{
+    constexpr unsigned header_bytes = 6;
+    constexpr unsigned band_bytes = width * mirror_band_height * sizeof(*mirror);
+    if (!mirror_available() || first_band >= mirror_band_count || output.size() < header_bytes + 1 + band_bytes) return 0;
+
+    // Header: revision (little endian), continuation band (255 at the end), band count.
+    xSemaphoreTake(mirror_mutex, portMAX_DELAY);
+    for (unsigned i = 0; i < 4; ++i) output[i] = static_cast<char>(revision >> (8 * i));
+    unsigned band = first_band;
+    unsigned count = 0;
+    unsigned offset = header_bytes;
+    for (; band < mirror_band_count; ++band) {
+        const uint32_t age = band_revisions[band] - since;
+        if (since && (!age || age > UINT32_MAX / 2)) continue;
+        if (output.size() - offset < 1 + band_bytes) break;
+        output[offset++] = static_cast<char>(band);
+        std::memcpy(output.data() + offset, mirror + band * width * mirror_band_height, band_bytes);
+        offset += band_bytes;
+        ++count;
+    }
+    output[4] = static_cast<char>(band == mirror_band_count ? 255 : band);
+    output[5] = static_cast<char>(count);
+    xSemaphoreGive(mirror_mutex);
+    return offset;
+}
 
 void init()
 {

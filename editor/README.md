@@ -109,6 +109,18 @@ peut contenir jusqu’à trois Osc, trois LFO et trois Pan, ainsi que les autres
 modules selon les limites de la palette. Les câbles orange sont mono ; les
 câbles turquoise transportent L/R. Les boucles de rétroaction sont refusées.
 
+## Écran du Modulox
+
+Connecter le Modulox en USB et ouvrir **Écran du Modulox**. L’onglet affiche
+les mêmes menus et réglages que l’écran physique. Utiliser **Menu**, les
+flèches et **Valider** comme sur la façade. Cliquer sur l’encodeur pour
+l’enfoncer, ou le tourner avec la molette, les flèches du clavier quand il
+a le focus, ou les boutons **−** et **+**. Les gestes effectués sur la façade
+se reflètent aussi dans le navigateur.
+
+La fonction est disponible à partir du firmware 1.3.3 sur les modèles
+16/8 Mio et 32/16 Mio.
+
 ## Banque de patches sur le serveur
 
 La banque comprend **40 presets** : 9 basses, 8 leads, 7 nappes, 8 claviers,

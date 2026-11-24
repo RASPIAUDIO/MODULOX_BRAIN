@@ -1,5 +1,5 @@
 import { initializeLanguage, tr } from "./i18n.mjs";
-import { deleteDeviceSample, deletePatch, fetchPatches, fetchSample, fetchSampleLibrary, fetchSamplePreview, fetchWave, renameSample, uploadPatch, uploadSample, fetchFirmwareInfo, uploadFirmware, rollbackFirmware } from "./protocol.mjs?v=18";
+import { deleteDeviceSample, deletePatch, fetchPatches, fetchSample, fetchSampleLibrary, fetchSamplePreview, fetchWave, renameSample, uploadPatch, uploadSample, fetchFirmwareInfo, uploadFirmware, rollbackFirmware } from "./protocol.mjs?v=19";
 import { builtinWaves, deleteWave, drawWave, maxPatchWaves, readLibrary, readWave, saveWaves } from "./waves.mjs?v=4";
 import {
   connectionError, firstOscillator, fm4Topologies, modulationError, moduleSpec, nodeSpec, normalizePatch, offlineCatalog, outputModule,
@@ -15,11 +15,13 @@ import { boardForModel, defaultBoard } from "./hardware.mjs";
 import { recoverFirmware } from "./firmware-recovery.mjs";
 import { factoryConsentValid, prepareFactoryInstaller } from "./factory-install.mjs";
 import { initializeMidiKeyboard } from "./midi-keyboard.mjs";
+import { initializeDeviceScreen } from "./device-screen.mjs";
 
 await initializeLanguage();
 
 const $ = (id) => document.getElementById(id);
 const midiKeyboard = initializeMidiKeyboard($("midi-keyboard"));
+const deviceScreen = initializeDeviceScreen($("device-screen"));
 const graph = $("graph");
 const viewport = $("viewport");
 const canvas = $("wires");
@@ -255,8 +257,9 @@ function showScreen(next) {
   $("patch-editor").hidden = screen !== "editor";
   $("wave-screen").hidden = screen !== "waveforms";
   $("sample-screen").hidden = screen !== "samples";
+  $("device-screen").hidden = screen !== "device";
   if (screen !== "samples") samplePlayback?.stop();
-  for (const name of ["patches", "editor", "waveforms", "samples"]) {
+  for (const name of ["patches", "editor", "waveforms", "samples", "device"]) {
     const button = "nav-" + name;
     if (screen === name) $(button).setAttribute("aria-current", "page");
     else $(button).removeAttribute("aria-current");
@@ -338,6 +341,7 @@ function renderLibrary() {
 
 function renderActions() {
   midiKeyboard.setBusy(Boolean(busy));
+  deviceScreen.update(port, deviceCatalog?.screenMirror, screen === "device", Boolean(busy));
   $("language-picker").inert = Boolean(busy);
   const item = current();
   const draft = activeDraft();
@@ -1288,11 +1292,15 @@ async function disconnect() {
   port = undefined;
   deviceCatalog = undefined;
   currentFirmware = undefined;
+  deviceScreen.update(undefined, undefined, screen === "device", Boolean(busy));
   remoteSamples.clear();
   samplePreviewFailures.clear();
   if (screen === "samples") renderSamples();
   canUpload = false;
-  if (currentPort) await currentPort.close().catch(() => {});
+  if (currentPort) {
+    await deviceScreen.idle();
+    await currentPort.close().catch(() => {});
+  }
 }
 
 async function perform(label, operation, closeOnError = false) {
@@ -1300,6 +1308,7 @@ async function perform(label, operation, closeOnError = false) {
   showError("");
   renderActions();
   try {
+    await deviceScreen.idle();
     await operation();
   } catch (error) {
     if (closeOnError || !port?.readable || !port?.writable) await disconnect();
@@ -1415,6 +1424,7 @@ async function openSamples(forPatch) {
   showScreen("waveforms");
 }
 $("nav-waveforms").onclick = () => openSamples(false);
+$("nav-device").onclick = () => showScreen("device");
 $("wave-library").onclick = () => openSamples(true);
 
 function sampleList() {
@@ -1782,7 +1792,10 @@ $("modules-toggle").onclick = () => {
 async function fileOperation(label, operation) {
   if (busy) return;
   busy = label; showError(""); renderActions();
-  try { return await operation(); }
+  try {
+    await deviceScreen.idle();
+    return await operation();
+  }
   catch (error) { if (error.name !== "AbortError") showError(error.message); }
   finally { busy = ""; renderActions(); }
 }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Modulox · Éditeur de patches</title>
-  <link rel="stylesheet" href="./style.css?v=23">
+  <link rel="stylesheet" href="./style.css?v=24">
 </head>
 <body>
   <header class="bar">
@@ -14,6 +14,7 @@
       <button id="nav-editor" disabled>Éditeur</button>
       <button id="nav-waveforms">Waveforms</button>
       <button id="nav-samples">Samples</button>
+      <button id="nav-device">Écran du Modulox</button>
     </nav>
     <div class="usb">
       <span id="status" role="status">USB déconnecté</span>
@@ -81,6 +82,30 @@
             <p>Réinitialisation complète du Modulox depuis une image usine.</p>
           </div>
         </section>
+      </div>
+    </div>
+  </main>
+  <main id="device-screen" class="screen device-screen" aria-labelledby="device-screen-title" hidden>
+    <header class="screen-heading">
+      <h1 id="device-screen-title">Écran du Modulox</h1>
+      <p role="status">Connecte le Modulox en USB pour voir son écran.</p>
+    </header>
+    <div class="device-front">
+      <div class="device-display">
+        <canvas width="280" height="240" role="img" aria-label="Affichage du Modulox" translate="no" hidden></canvas>
+      </div>
+      <div class="device-controls" role="group" aria-label="Commandes du Modulox">
+        <button type="button" data-screen-key="menu" disabled>Menu</button>
+        <div class="device-encoder" role="group" aria-label="Encodeur">
+          <button type="button" data-screen-key="ccw" aria-label="Tourner à gauche" disabled>−</button>
+          <button type="button" class="device-knob" data-screen-key="push" aria-label="Appuyer sur l’encodeur" title="Tourner avec la molette ou les flèches du clavier" disabled></button>
+          <button type="button" data-screen-key="cw" aria-label="Tourner à droite" disabled>+</button>
+        </div>
+      </div>
+      <div class="device-buttons" role="group" aria-label="Boutons de navigation">
+        <button type="button" data-screen-key="left" aria-label="Gauche" disabled>←</button>
+        <button type="button" data-screen-key="center" disabled>Valider</button>
+        <button type="button" data-screen-key="right" aria-label="Droite" disabled>→</button>
       </div>
     </div>
   </main>
@@ -259,6 +284,6 @@
       <div class="piano-scroll"><div class="midi-piano" id="midi-piano" role="group" aria-label="Touches du piano"></div></div>
     </div>
   </details>
-  <script type="module" src="./app.mjs?v=25"></script>
+  <script type="module" src="./app.mjs?v=26"></script>
 </body>
 </html>

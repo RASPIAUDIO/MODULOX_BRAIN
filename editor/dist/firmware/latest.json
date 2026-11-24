@@ -4,10 +4,10 @@
   "chip": "esp32s3",
   "layout": "ab-1.5m-v1",
   "protocol": 1,
-  "version": "1.3.2",
-  "size": 676704,
-  "sha256": "9c2dee2d702287004695f602814469b789d26431e55befb2bedefe6b563d92ca",
-  "buildId": "21690ce09d95be291b969536dfaac2e50859f24eff5392750820def9901d6ae1",
-  "file": "modulox-1.3.2.bin",
-  "notes": "1.3.2 : d\u00e9connexion USB compl\u00e8te via TinyUSB, puis reconnexion apr\u00e8s 500 ms et annonce Full Speed explicite, pour que Windows reconnaisse les interfaces MIDI et s\u00e9rie apr\u00e8s le port de d\u00e9marrage. Le correctif s\u2019applique uniquement au d\u00e9marrage. Deux profils mat\u00e9riels 16/8 Mio et 32/16 Mio et syst\u00e8me A/B conserv\u00e9s."
+  "version": "1.3.3",
+  "size": 677456,
+  "sha256": "cecb5e64d2e0cb9f51c7f6cf4286220a7d34799cefcc9c9113553d2ed780d6a7",
+  "buildId": "2f8dd7796dc861079f177ee8a4fbc342be76a15daea6d6cfedcd0ab0d869326b",
+  "file": "modulox-1.3.3.bin",
+  "notes": "Le firmware 1.3.3 permet d\u2019afficher l\u2019\u00e9cran du Modulox en direct et de naviguer avec les boutons et l\u2019encodeur virtuels depuis le configurateur USB. Disponible pour les profils 16/8 Mio et 32/16 Mio avec mise \u00e0 jour A/B."
 }

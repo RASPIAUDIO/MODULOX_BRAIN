@@ -7,6 +7,7 @@ const assets = new Map([
   ["/app.mjs", ["./dist/app.mjs", "text/javascript"]],
   ["/i18n.mjs", ["./dist/i18n.mjs", "text/javascript"]],
   ["/midi-keyboard.mjs", ["./dist/midi-keyboard.mjs", "text/javascript"]],
+  ["/device-screen.mjs", ["./dist/device-screen.mjs", "text/javascript"]],
   ["/protocol.mjs", ["./dist/protocol.mjs", "text/javascript"]],
   ["/patch.mjs", ["./dist/patch.mjs", "text/javascript"]],
   ["/waves.mjs", ["./dist/waves.mjs", "text/javascript"]],

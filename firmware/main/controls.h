@@ -34,6 +34,9 @@ struct SampleLibraryControls {
 
 void post_midi_cc(uint8_t number, uint8_t value);
 
+enum class PanelInput { left, center, right, menu, encoder_press, clockwise, counterclockwise };
+bool post_control_input(PanelInput input);
+
 void start_controls(std::span<const ModuleParameters> modules,
                     const std::atomic<unsigned>& audio_load_tenths,
                     const PatchStore& patches, ModuleMask (*load_patch)(unsigned),
