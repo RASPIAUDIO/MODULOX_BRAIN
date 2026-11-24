@@ -9,7 +9,7 @@ inline constexpr std::array module_menu_order{
     sampler, sampler2, sampler3, granulizer, clock1, clock2, arp,
     sample_hold, sample_hold2, random1, random2, gain_offset, slew,
     noise, sub, vca, ring_mod, wavefolder,
-    pan, pan2, pan3, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303,
+    pan, pan2, pan3, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303, audio_input,
 };
 inline constexpr unsigned menu_module_slot(ModuleMask mask, unsigned position)
 {

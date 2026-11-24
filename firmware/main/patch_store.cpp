@@ -391,7 +391,7 @@ bool compile(const char* json, PatchStore::Modules modules, ModuleParameters set
     if (plan.has(oscillator) && patch.values[oscillator][Osc::fm] && !plan.has(oscillator2)) return false;
     if ((plan.modulation & (1ull << osc_fm)) && !plan.has(oscillator2)) return false;
     if (plan.output == no_module || (plan.oscillators == 0 && plan.samplers == 0 && !plan.has(granulizer) && !plan.has(fm4) &&
-                                   !plan.has(noise) && !plan.has(sub)) ||
+                                   !plan.has(noise) && !plan.has(sub) && !plan.has(audio_input)) ||
         !visit(plan, plan.output, ready, visiting) ||
         (ready | control_contributors) != plan.modules) {
         return false;

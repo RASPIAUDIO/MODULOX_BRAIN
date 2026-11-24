@@ -1,0 +1,69 @@
+{
+  "version": 3,
+  "name": "INPUT Reverb",
+  "settings": {
+    "Voices": 1,
+    "Volume": 50,
+    "MIDI Ch": 0
+  },
+  "modules": [
+    {
+      "id": "mic",
+      "type": "INPUT",
+      "parameters": {
+        "Level": 100
+      }
+    },
+    {
+      "id": "stereo",
+      "type": "Stereo",
+      "parameters": {}
+    },
+    {
+      "id": "reverb",
+      "type": "Reverb",
+      "parameters": {
+        "Decay": 1200,
+        "Damping": 55,
+        "Pre-delay": 0,
+        "Width": 80,
+        "Mix": 25
+      }
+    }
+  ],
+  "connections": [
+    [
+      "mic",
+      "stereo",
+      0
+    ],
+    [
+      "stereo",
+      "reverb",
+      0
+    ],
+    [
+      "reverb",
+      "out",
+      0
+    ]
+  ],
+  "layout": {
+    "mic": {
+      "x": 48,
+      "y": 100
+    },
+    "stereo": {
+      "x": 260,
+      "y": 100
+    },
+    "reverb": {
+      "x": 470,
+      "y": 100
+    },
+    "out": {
+      "x": 700,
+      "y": 100
+    }
+  }
+}

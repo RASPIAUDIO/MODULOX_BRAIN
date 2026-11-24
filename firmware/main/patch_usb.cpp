@@ -181,6 +181,7 @@ bool build_catalog(PatchStore::Modules modules, ModuleParameters settings, const
         !cJSON_AddBoolToObject(root.get(), "resourceTelemetry", true) ||
         !cJSON_AddBoolToObject(root.get(), "simpleEffects", true) ||
         !cJSON_AddBoolToObject(root.get(), "tb303", true) ||
+        !cJSON_AddBoolToObject(root.get(), "audioInput", true) ||
         !cJSON_AddNumberToObject(output, "inputChannels", 2) ||
         !cJSON_AddNumberToObject(root.get(), "maxPatches", max_patches) ||
         !cJSON_AddNumberToObject(root.get(), "maxBytes", max_patch_bytes) ||
@@ -198,7 +199,7 @@ bool build_catalog(PatchStore::Modules modules, ModuleParameters settings, const
     CatalogWriter writer(response + header_space, sizeof(response) - header_space);
     for (const auto slot : {oscillator, filter, envelope, mixer, lfo, env1, midi, disto, delay, sampler, granulizer,
                              clock1, arp, sample_hold, random1, gain_offset, slew, noise, sub, vca, ring_mod, wavefolder,
-                             pan, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303}) {
+                             pan, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303, audio_input}) {
         cJSON* type = cJSON_CreateObject();
         if (!cJSON_AddItemToArray(types, type)) {
             cJSON_Delete(type);
@@ -207,11 +208,12 @@ bool build_catalog(PatchStore::Modules modules, ModuleParameters settings, const
         if (!cJSON_AddStringToObject(type, "type", patch_module_types[slot]) ||
             !cJSON_AddNumberToObject(type, "limit", module_limit(slot)) ||
             !cJSON_AddNumberToObject(type, "inputs", patch_module_inputs[slot]) ||
-            !cJSON_AddNumberToObject(type, "inputChannels", stereo_input(slot) ? 2 : 1) ||
+            !cJSON_AddNumberToObject(type, "inputChannels", slot == audio_input ? 0 : stereo_input(slot) ? 2 : 1) ||
             !cJSON_AddNumberToObject(type, "outputChannels", stereo_output(slot) ? 2 : 1) ||
             !describe_parameters(type, modules[slot]) || !describe_modulation(type, slot) ||
             !describe_midi_ports(type, slot) || !describe_control_ports(type, slot) ||
             (!audio_source(slot) && !cJSON_AddBoolToObject(type, "controlOutput", true)) ||
+            (slot == audio_input && !cJSON_AddBoolToObject(type, "sharedSource", true)) ||
             (shared_effect(slot) && !cJSON_AddBoolToObject(type, "sharedEffect", true))) {
             return false;
         }

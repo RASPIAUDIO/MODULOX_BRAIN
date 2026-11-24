@@ -684,5 +684,7 @@
   "Éditeur": "エディター",
   "Édition du patch": "パッチを編集",
   "← Patches": "パッチ",
-  "← Retour à l’éditeur": "編集者へ戻る"
+  "← Retour à l’éditeur": "編集者へ戻る",
+  "Le module INPUT demande le nouveau firmware avec entrée audio en direct.": "INPUT モジュールには、リアルタイム音声入力に対応した新しいファームウェアが必要です。",
+  "Entrée micro du Modulox en direct (mono). Le signal reste actif sans note MIDI. Level règle le niveau ; utilise Stereo ou Pan avant un effet stéréo. L’enregistrement suspend temporairement cette entrée dans le graphe.": "Modulox のマイク音声をリアルタイムで入力します（モノラル）。MIDI ノートがなくても動作します。Level で音量を調整し、ステレオエフェクトの前には Stereo または Pan を接続してください。録音中はグラフ内のこの入力が一時停止します。"
 }

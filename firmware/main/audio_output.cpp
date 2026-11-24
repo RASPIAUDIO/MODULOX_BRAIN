@@ -1,7 +1,9 @@
 #include "audio_output.h"
 #include "runtime_diagnostics.h"
+#include "firmware_update.h"
 
 #include <cstdint>
+#include <atomic>
 
 #include "driver/i2c_master.h"
 #include "esp_err.h"
@@ -41,6 +43,49 @@ namespace {
 i2c_master_dev_handle_t headphone_codec;
 int applied_headphone_gain = -1;
 constexpr uint16_t initial_headphone_gain = 0x68;
+constexpr const char* speaker_outputs[] = {"Off", "Left", "Right", "Stereo"};
+Parameter speaker_parameters[] = {
+    {"Output", 0, 3, 1, 0, "", speaker_outputs},
+    {"Level", -60, 0, 1, -30, "dB"},
+};
+// Low byte is a coherent request; high 24 bits distinguish explicit retries.
+std::atomic<uint32_t> speaker_request{30u << 2};
+std::atomic<uint32_t> speaker_published{0};
+
+void queue_speaker_request()
+{
+    const unsigned output = speaker_parameters[0].get();
+    const unsigned level = speaker_parameters[1].get() + 60;
+    const unsigned config = output | (level << 2);
+    uint32_t old = speaker_request.load(std::memory_order_relaxed);
+    while (!speaker_request.compare_exchange_weak(old, ((old + 0x100) & ~0xffu) | config,
+           std::memory_order_release, std::memory_order_relaxed)) {}
+}
+
+void speaker_task(void*)
+{
+    Wm8960Speaker speaker;
+    for (;;) {
+        const uint32_t request = speaker_request.load(std::memory_order_acquire);
+        SpeakerConfig config{SpeakerOutput(request & 3), int((request >> 2) & 63) - 60};
+        if (firmware_update_active()) config.output = SpeakerOutput::off;
+        speaker.service(config, request >> 8, [](uint8_t address, uint16_t value) {
+            const uint8_t bytes[] = {uint8_t((address << 1) | (value >> 8)), uint8_t(value)};
+            // One bounded attempt. No infinite retry, codec reset or fatal check
+            // during a hot switch; all register work stays off the audio core.
+            const auto error = i2c_master_transmit(headphone_codec, bytes, sizeof(bytes), 20);
+            if (error != ESP_OK) {
+                record_driver_error(DriverOperation::speaker_write, error);
+                ESP_LOGW("codec", "Speaker R%u failed: %s", address, esp_err_to_name(error));
+            }
+            return error == ESP_OK;
+        });
+        const auto status = speaker.status();
+        speaker_published.store(unsigned(status.output) | (status.gain << 2) |
+            (unsigned(status.fault) << 9) | (1u << 10), std::memory_order_release);
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+}
 
 esp_err_t try_write_register(i2c_master_dev_handle_t codec, uint8_t address, uint16_t value)
 {
@@ -67,6 +112,23 @@ void write_register(i2c_master_dev_handle_t codec, uint8_t address, uint16_t val
 }
 
 }  // namespace
+
+ModuleParameters speaker_controls()
+{
+    return {"Speaker", speaker_parameters, [](void*) { queue_speaker_request(); }};
+}
+
+SpeakerStatus speaker_status()
+{
+    const auto state = speaker_published.load(std::memory_order_acquire);
+    return {SpeakerOutput(state & 3), (state >> 2) & 127, bool(state & (1u << 9)), bool(state & (1u << 10))};
+}
+
+void stop_speaker()
+{
+    speaker_parameters[0].set(0);
+    queue_speaker_request();
+}
 
 void set_headphone_volume(unsigned percent)
 {
@@ -136,10 +198,19 @@ void start_headphone_codec()
     write_register(codec, 0x2f, 0x03c);  // Input PGAs and output mixers.
     write_register(codec, 0x02, initial_headphone_gain);  // Headphone left at -17 dB.
     write_register(codec, 0x03, 0x100 | initial_headphone_gain);  // Headphone right, update both.
-    write_register(codec, 0x1a, 0x1e3);  // DACs, headphones, OUT3 mixer, PLL.
+    write_register(codec, 0x28, 0x000); // Both speaker volumes muted before any enabling.
+    write_register(codec, 0x29, 0x100);
+    write_register(codec, 0x31, Wm8960Speaker::class_d_off); // Class D off, reserved bits retained.
+    write_register(codec, 0x1a, Wm8960Speaker::power2_base); // DACs, headphones, OUT3, PLL; speakers off.
     vTaskDelay(pdMS_TO_TICKS(100));
     write_register(codec, 0x05, 0x000);  // Release DAC mute.
 
     headphone_codec = codec;
     applied_headphone_gain = initial_headphone_gain;
+    // TX/I2S already runs and the PLL/DCLK /16 are stable at this point.
+    // The optional speaker never prevents the rest of the instrument booting.
+    if (xTaskCreatePinnedToCore(speaker_task, "codec_speaker", 4096, nullptr, 3, nullptr, 0) != pdPASS) {
+        speaker_published.store(1u << 9, std::memory_order_release);
+        ESP_LOGE("codec", "Speaker control task could not start; Class D remains off");
+    }
 }

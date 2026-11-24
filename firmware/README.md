@@ -379,8 +379,8 @@ et les patches sans FM restent compatibles.
 I2S0 fonctionne maintenant en duplex : TX conserve ses réglages, RX reçoit
 sur GPIO4, avec les mêmes horloges, format MSB/left-justified, 16 bits et
 44,1 kHz. RX possède quatre buffers DMA de 32 frames stéréo. Son canal
-reste désactivé hors enregistrement, sans lecture ni copie d’entrée dans
-la boucle normale du moteur. Le callback de débordement RX est en IRAM ;
+reste désactivé hors enregistrement et hors patch utilisant INPUT, sans lecture
+ni copie d’entrée dans la boucle normale d’un patch sans INPUT. Le callback de débordement RX est en IRAM ;
 une perte de données ou une erreur de lecture interrompt la prise et
 affiche Input error.
 
@@ -547,3 +547,86 @@ ni la mesure du budget temps réel de la carte.
 Depuis 1.6.0, le catalogue USB est sérialisé un type à la fois et utilise
 un buffer de réponse borné à 24 Kio ; la limite est également relevée dans
 l’éditeur. Cette sérialisation réduit le pic de heap interne pendant CATALOG.
+
+## INPUT (1.7.0-dev, local)
+
+Le slot 46 ajoute la source mono partagée INPUT. Les slots historiques et
+les 64 ports CV sont conservés ; Level (0–100 %) accepte MIDI Learn et se
+lisse sur un bloc. Le catalogue annonce `audioInput: true` et `sharedSource`
+pour distinguer une source commune des effets stéréo communs.
+
+Le compilateur marque INPUT et ses descendants comme communs : la capture
+reste audible sans MIDI et n’est jamais multipliée par la polyphonie. Les
+branches de synthèse se somment à la frontière existante ; les effets mono
+et stéréo réutilisent leurs états communs. Les ADSR audio et modulations par
+voix en aval sont refusés. Le niveau du micro est en unités PCM dans cette
+partie du graphe ; le limiteur final et le volume casque restent communs.
+
+`AudioInputStream` est l’unique propriétaire de RX sur le cœur audio. Il
+sépare les modes arrêté, live et enregistrement, avec désactivation avant
+changement de propriétaire. En live, lecture I2S à timeout nul, drainage
+borné à quatre blocs et conservation du plus récent. Une lecture vide,
+incomplète ou erronée ne rejoue aucune donnée précédente. Les deux buffers
+stéréo de 32 frames occupent 256 octets sur la pile audio, sans allocation
+ni copie PSRAM. La taille des DMA et les horloges existantes sont conservées.
+
+Le bloc fait 0,726 ms ; ce n’est pas une mesure de latence aller-retour. Les
+DMA TX/RX, la conversion du codec et les effets s’ajoutent. La latence réelle,
+les underruns en charge, l’écoute du micro et la reprise après enregistrement
+restent à valider sur les deux cartes. Aucun firmware n’est flashé ni publié
+par ces tests locaux.
+
+## Haut-parleur : Settings → Speaker (1.7.0-dev.1, local)
+
+Dans Settings, passer **Save patch** avec la flèche droite pour atteindre
+**Speaker**, puis appuyer au centre. Les flèches choisissent **Output** ou
+**Level** ; l’encodeur règle la sortie (Off, Left, Right, Stereo) ou le niveau
+(-60 à 0 dB, initial -30 dB). Au centre : retour à Settings ; sur erreur I2C,
+le bouton central demande explicitement Off et permet de réessayer l’arrêt.
+Le menu physique et son miroir USB utilisent la même page.
+
+Ces réglages sont globaux au matériel, conservés pendant les changements de
+patch mais jamais sauvés dans un patch, ni affectables par MIDI Learn. Le
+haut-parleur redémarre toujours sur Off. Les douze paramètres Settings et
+l’indice historique de Save patch restent inchangés.
+
+La tâche `codec_speaker` sur le cœur de contrôle reçoit une requête atomique
+cohérente et effectue les écritures I2C avec un délai de 20 ms par tentative,
+sans boucle de réessai infinie ni ESP_ERROR_CHECK à chaud. Le moteur audio,
+les horloges I2S et la PLL ne sont pas redémarrés. Le DCLK existant, SYSCLK/16
+(705,6 kHz à 44,1 kHz), convient déjà à la plage recommandée de 700–800 kHz.
+
+La séquence coupe d’abord les volumes, les drivers Class D et leurs PGAs,
+préserve les bits réservés de R49 (0x037), active les protections thermiques
+et laisse ACGAIN/DCGAIN à 1x avec les bits réservés de R51 (0x080). Elle
+alimente uniquement les PGAs voulus, active les drivers avec l’horloge déjà
+stable, puis part de -73 dB et monte de 1 dB tous les 10 ms vers la consigne.
+Le plafond du réglage est 0 dB. Les volumes HP et casque sont indépendants ;
+les registres de volume casque, le routage DAC et l’entrée micro ne changent
+pas pendant ces transitions. Left et Right diffusent leurs canaux respectifs.
+
+En cas d’erreur, arrêt de l’ampli tenté avec un nombre borné d’écritures,
+puis erreur verrouillée : aucun réessai d’allumage tant qu’une nouvelle
+commande Off n’a pas été appliquée. Une erreur de bus ne permet pas de
+confirmer l’état physique des sorties, ce que l’écran indique. Le diagnostic
+USB DIAG conserve `speaker_write` en cas d’erreur de registre ; son champ
+`reset` distingue notamment un brownout d’un watchdog. L’échec de création
+de la tâche optionnelle laisse le HP Off sans empêcher le synthé de démarrer.
+
+L’ancienne bibliothèque Arduino locale contient des boucles `while(!ret)`
+non bornées lors des écritures de bits ; un NACK à chaud peut donc bloquer.
+Son `disableSpeakers()` appelle aussi les fonctions d’arrêt du casque. Ces
+constats ne prouvent pas la cause exacte des anciens resets : alimentation,
+charge et connexions du HP restent à contrôler.
+
+Référence : [fiche constructeur WM8960 rev 4.4](https://cdn-learn.adafruit.com/assets/assets/000/096/503/original/WM8960_v4.4.pdf?1603825540=),
+pages 41–45 et 49, registres R26/R40/R41/R49/R51. Les sorties sont BTL : le
+HP se branche entre les bornes + et - de son canal, jamais entre une borne
+HP et GND, et les retours des deux canaux ne se réunissent pas. Le câblage,
+l’impédance et SPKVDD du montage actuel ne sont pas connus. Le 25 novembre
+2026, l’utilisateur a confirmé le fonctionnement du HP sur son montage, avec
+des erreurs I2C intermittentes récupérables en répétant la commande. Ce retour
+ne constitue pas une qualification électrique ni un essai exhaustif des deux
+modèles. Les tests automatiques ne font pas de flash ; commencer à faible
+niveau après vérification du montage. Une chute d’alimentation ne se corrige
+pas par une séquence de registres.

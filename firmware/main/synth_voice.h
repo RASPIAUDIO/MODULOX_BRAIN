@@ -18,6 +18,7 @@
 #include "reverb.h"
 #include "simple_effects.h"
 #include "tb303_filter.h"
+#include "live_input.h"
 
 class SynthVoice {
 public:
@@ -84,6 +85,8 @@ public:
     ModuleParameters bitcrusher_controls() { return bitcrusher_.controls(); }
     ModuleParameters compressor_controls() { return compressor_.controls(); }
     ModuleParameters tb303_controls() { return tb303_.controls(); }
+    ModuleParameters input_controls() { return input_.controls(); }
+    bool uses_audio_input() const { return plan_.has(audio_input); }
     ModuleParameters reverb_controls() { return reverb_.controls(); }
     unsigned effect_allocated_bytes(int slot) const
     {
@@ -112,7 +115,7 @@ public:
     void note_on(uint8_t source, uint8_t channel, uint8_t note, uint8_t velocity);
     void note_off(uint8_t source, uint8_t channel, uint8_t note);
     void all_notes_off(uint8_t source, int channel = -1, bool immediate = false);
-    void render(int16_t* stereo);
+    void render(int16_t* stereo, const int16_t* input = nullptr);
 
 private:
     struct Voice {
@@ -164,7 +167,7 @@ private:
     void update_oscillators(std::array<Osc::Settings, 3>& osc, const std::array<Modulation, 2>* env) const;
     void gate_envelopes(Voice& voice, bool on, bool repeated = false);
     void filter_voice(Voice& voice, float* samples);
-    void render_shared();
+    void render_shared(const int16_t* input);
     bool render_stereo_node(int slot, Voice& voice, float* left, float* right,
                             const float* in_left, const float* in_right, bool shared);
     void collect_voice(float gain, bool add);
@@ -221,6 +224,7 @@ private:
     Bitcrusher bitcrusher_;
     Compressor compressor_;
     Tb303Filter tb303_;
+    LiveInput input_;
     Mixer stereo_mixer_;
     Voice post_voice_;
     HeldNotes held_notes_;

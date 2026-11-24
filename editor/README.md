@@ -261,6 +261,38 @@ Save patch, comme les autres paramètres.
    la lecture et les buffers sont partagés si plusieurs Sampler du patch
    pointent vers le même fichier.
 
+## INPUT : entrée micro en direct (1.7.0-dev, validation locale)
+
+Dans **Modules → Generators**, **INPUT** expose le canal mono gauche de
+l’entrée audio/micro du Modulox, comme l’enregistreur. Il fonctionne sans
+note MIDI et une seule fois pour tout le patch, même à huit voix. **Level**
+règle son niveau de 0 à 100 %, avec une transition sur un bloc.
+
+Exemples : **INPUT → TB-303 → Stereo → Sortie**, ou
+**INPUT → Stereo → Reverb → Sortie**. Stereo ou Pan convertit le signal
+mono avant un effet stéréo. Pour moduler son amplitude, utiliser un VCA
+avec un LFO ou un contrôle global. Un ADSR audio ou une enveloppe par voix
+ne se place pas après cette source commune. Level accepte MIDI Learn.
+
+Le patch `examples/INPUT-Reverb.json` est prêt à ouvrir via **Importer un
+fichier**. Cette version reste locale : installer le firmware `1.7.0-dev`
+du bon modèle via le panneau Firmware de l’éditeur local avant l’envoi.
+Un appareil équipé d’un ancien firmware laisse préparer le patch, mais
+l’envoi d’INPUT reste bloqué jusqu’à la mise à jour.
+
+RX fonctionne à 44,1 kHz avec les mêmes horloges I2S que la sortie. Le
+traitement utilise des blocs de 32 frames (environ 0,73 ms), sans nouvelle
+file audio ni accès flash. La lecture live ne bloque pas ; après un retard,
+les blocs anciens sont abandonnés pour reprendre le plus récent. Une absence
+de données produit du silence, sans répéter le bloc précédent. La latence
+totale inclut les DMA, le codec et les effets ; elle reste à mesurer sur carte.
+
+L’enregistrement suspend la restitution live pendant la prise et la
+sauvegarde. Changer de patch, suspendre l’audio ou lancer une mise à jour
+arrête RX ; la reprise repart d’une file fraîche. Aucun buffer PSRAM
+supplémentaire n’est alloué pour INPUT. L’écoute et les transitions matérielles
+restent à valider avant publication.
+
 ## Granulizer
 
 Ajoute un **Granulizer** dans **Câblage**, choisis un fichier dans **Sample**

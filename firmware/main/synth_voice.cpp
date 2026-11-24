@@ -75,6 +75,7 @@ void SynthVoice::select_plan(const AudioPlan& plan)
     rotary_.reset();
     reverb_.reset();
     compressor_.reset();
+    input_.reset();
     output_gain_ = 1.0f;
     for (auto& voice : voices_) {
         reset(voice);
@@ -464,7 +465,7 @@ void SynthVoice::update_oscillators(std::array<Osc::Settings, 3>& osc,
     }
 }
 
-void IRAM_ATTR SynthVoice::render(int16_t* stereo)
+void IRAM_ATTR SynthVoice::render(int16_t* stereo, const int16_t* input)
 {
     update_timing();
     update_limits();
@@ -479,7 +480,7 @@ void IRAM_ATTR SynthVoice::render(int16_t* stereo)
     update_controls();
     const bool has_delay = plan_.has(delay);
     const bool tails = has_delay || plan_.has(chorus) || plan_.has(rotary) || plan_.has(reverb) || plan_.has(compressor);
-    if (!sounding && !tails && !sample_preview_.active()) {
+    if (!sounding && !tails && !plan_.has(audio_input) && !sample_preview_.active()) {
         midi_trigger_ = false;
         std::fill_n(stereo, 2 * block_frames, int16_t{0});
         return;
@@ -534,7 +535,7 @@ void IRAM_ATTR SynthVoice::render(int16_t* stereo)
         stereo[2 * frame] = static_cast<int16_t>(std::clamp(left, -32768.0f, 32767.0f));
         stereo[2 * frame + 1] = static_cast<int16_t>(std::clamp(right, -32768.0f, 32767.0f));
     };
-    if (plan_.mix_graph) render_shared();
+    if (plan_.mix_graph) render_shared(input);
     else {
         if (has_delay) delay_.process(sum_, block_frames, modulation(delay_time),
                                       modulation(delay_feedback), modulation(delay_mix), transport_.bpm());
@@ -900,7 +901,7 @@ bool SynthVoice::render_stereo_node(int slot, Voice& voice, float* left, float* 
     return true;
 }
 
-void SynthVoice::render_shared()
+void SynthVoice::render_shared(const int16_t* input_pcm)
 {
     for (unsigned bus = 0; bus < plan_.mix_count; ++bus) {
         const int slot = plan_.mix_slots[bus];
@@ -918,6 +919,9 @@ void SynthVoice::render_shared()
         const float* r = in[0] < 0 ? silence_ : right_signal(in[0]);
         if (render_stereo_node(slot, post_voice_, output, right_signal(slot), input, r, true)) continue;
         switch (slot) {
+        case audio_input:
+            input_.render(input_pcm, output, block_frames);
+            break;
         case decimator: case bitcrusher: case tb303:
             render_insert(slot, post_voice_, input, output, true);
             break;

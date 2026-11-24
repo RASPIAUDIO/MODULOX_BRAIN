@@ -5,7 +5,7 @@
 
 using ModuleMask = uint64_t;
 inline constexpr ModuleMask module_bit(unsigned slot) { return ModuleMask{1} << slot; }
-inline constexpr unsigned max_patch_modules = 46;
+inline constexpr unsigned max_patch_modules = 47;
 inline constexpr unsigned fm4_parameter_count = 30;
 inline constexpr unsigned max_patch_inputs = 3;
 inline constexpr unsigned max_mix_buses = 12;
@@ -15,16 +15,17 @@ enum PatchModule : int8_t { oscillator, envelope, filter, oscillator2, oscillato
                            lfo2, lfo3, env1, env2, midi, disto, delay, sampler, sampler2, sampler3, granulizer,
                            clock1, clock2, arp, sample_hold, sample_hold2, random1, random2, gain_offset, slew,
                            noise, sub, vca, ring_mod, wavefolder,
-                           pan, pan2, pan3, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303 };
+                           pan, pan2, pan3, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303, audio_input };
 inline constexpr int8_t no_module = -1;
 inline constexpr const char* patch_module_types[] = {
     "Osc", "ADSR", "Filter", "Osc", "Osc", "Mix", "LFO", "LFO", "LFO",
     "Env", "Env", "MIDI", "Disto", "Delay", "Sampler", "Sampler", "Sampler", "Granulizer",
     "Clock", "Clock", "Arpeggiator", "S&H", "S&H", "Random", "Random", "Gain/Offset", "Slew",
     "Noise", "Sub", "VCA", "Ring Mod", "Wavefolder",
-    "Pan", "Pan", "Pan", "Chorus", "Rotary", "Stereo", "Mono", "Stereo Mix", "FM4", "Reverb", "Decimator", "Bitcrusher", "Compressor", "TB-303"};
+    "Pan", "Pan", "Pan", "Chorus", "Rotary", "Stereo", "Mono", "Stereo Mix", "FM4", "Reverb", "Decimator", "Bitcrusher", "Compressor", "TB-303", "INPUT"};
 inline constexpr unsigned patch_module_inputs[] = {0, 1, 1, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1,
-                                                  1, 1, 1, 1, 1, 2, 1, 3, 0, 1, 1, 1, 1, 1};
+                                                  1, 1, 1, 1, 1, 2, 1, 3, 0, 1, 1, 1, 1, 1, 0};
+static_assert(std::size(patch_module_types) == max_patch_modules && std::size(patch_module_inputs) == max_patch_modules);
 inline constexpr std::array stereo_slots{delay, pan, pan2, pan3, chorus, rotary, stereo_join, stereo_mix, reverb, compressor};
 inline constexpr int stereo_buffer(int slot)
 {
@@ -165,7 +166,7 @@ inline bool configure_audio_plan(AudioPlan& plan)
     plan.mix_graph = plan.stereo_graph;
     for (unsigned i = 0; i < plan.count; ++i) {
         const int slot = plan.order[i];
-        plan.shared[slot] = shared_effect(slot);
+        plan.shared[slot] = shared_effect(slot) || slot == audio_input;
         for (int input : plan.inputs[slot]) if (input >= 0) plan.shared[slot] = plan.shared[slot] || plan.shared[input];
         if (plan.shared[slot]) {
             plan.mix_graph = true;

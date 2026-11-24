@@ -684,5 +684,7 @@
   "Éditeur": "편집기",
   "Édition du patch": "패치 편집하기",
   "← Patches": "← 패치",
-  "← Retour à l’éditeur": "에디터로 돌아가기"
+  "← Retour à l’éditeur": "에디터로 돌아가기",
+  "Le module INPUT demande le nouveau firmware avec entrée audio en direct.": "INPUT 모듈을 사용하려면 실시간 오디오 입력을 지원하는 새 펌웨어가 필요합니다.",
+  "Entrée micro du Modulox en direct (mono). Le signal reste actif sans note MIDI. Level règle le niveau ; utilise Stereo ou Pan avant un effet stéréo. L’enregistrement suspend temporairement cette entrée dans le graphe.": "Modulox의 실시간 마이크 입력(모노)입니다. MIDI 음표 없이도 계속 작동합니다. Level로 음량을 조절하고, 스테레오 이펙트 앞에는 Stereo 또는 Pan을 연결하세요. 녹음 중에는 그래프의 이 입력이 일시 중지됩니다."
 }

@@ -684,5 +684,7 @@
   "Éditeur": "编辑器",
   "Édition du patch": "编辑音色",
   "← Patches": "音色",
-  "← Retour à l’éditeur": "返回上一页"
+  "← Retour à l’éditeur": "返回上一页",
+  "Le module INPUT demande le nouveau firmware avec entrée audio en direct.": "INPUT 模块需要支持实时音频输入的新固件。",
+  "Entrée micro du Modulox en direct (mono). Le signal reste actif sans note MIDI. Level règle le niveau ; utilise Stereo ou Pan avant un effet stéréo. L’enregistrement suspend temporairement cette entrée dans le graphe.": "Modulox 的实时麦克风输入（单声道），无需 MIDI 音符即可持续工作。Level 调节音量；连接立体声效果前，请使用 Stereo 或 Pan。录音时，图中的此输入会暂时停用。"
 }

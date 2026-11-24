@@ -1,4 +1,5 @@
 #include "audio_output.h"
+#include "audio_input_stream.h"
 #include "controls.h"
 #include "patch_store.h"
 #include "patch_usb.h"
@@ -138,7 +139,7 @@ const std::array<ModuleParameters, max_patch_modules>& patch_modules()
           voice.chorus_controls(), voice.rotary_controls(), {"Stereo", {}}, {"Mono", {}},
           voice.stereo_mix_controls(),
           voice.fm4_controls(), voice.reverb_controls(),
-          voice.decimator_controls(), voice.bitcrusher_controls(), voice.compressor_controls(), voice.tb303_controls(),
+          voice.decimator_controls(), voice.bitcrusher_controls(), voice.compressor_controls(), voice.tb303_controls(), voice.input_controls(),
     };
     return modules;
 }
@@ -596,6 +597,12 @@ void audio_task(void* startup_task)
     callbacks.on_recv_q_ovf = receive_overflow;
     ESP_ERROR_CHECK(i2s_channel_register_event_callback(rx, &callbacks, nullptr));
     int16_t stereo[block_frames * 2];
+    AudioInputStream<block_frames> input_stream;
+    using InputMode = AudioInputStream<block_frames>::Mode;
+    const auto select_input = [&](InputMode mode) {
+        return input_stream.select(mode, [&] { return i2s_channel_enable(rx) == ESP_OK; },
+                                         [&] { return i2s_channel_disable(rx) == ESP_OK; });
+    };
     uint64_t busy_cycles = 0;
     unsigned measured_blocks = 0, active_blocks = 0, peak_cycles = 0, overruns = 0;
     bool paused = false;
@@ -669,13 +676,22 @@ void audio_task(void* startup_task)
             }
         }
 
-        if (!paused && recording.state() == RecordingState::armed) {
+        // RX belongs to either the live graph or the recorder, never both.
+        // Pause/OTA stop RX as well as the graph; re-enable starts a fresh queue.
+        if (paused || updating || recording.busy() || !voice.uses_audio_input()) {
+            if (input_stream.mode() == InputMode::live) select_input(InputMode::off);
+        }
+        if ((paused || updating) && input_stream.mode() == InputMode::recording) {
+            select_input(InputMode::off);
+            recording.set(RecordingState::input_error);
+        }
+        if (!paused && !updating && recording.state() == RecordingState::armed) {
             voice.midi_clear(usb, -1, true);
             voice.midi_clear(physical, -1, true);
             voice.stop_sample_preview();
             input_overflow.store(false, std::memory_order_relaxed);
             if (recording.stopped()) recording.set(RecordingState::idle);
-            else recording.set(i2s_channel_enable(rx) == ESP_OK ? RecordingState::recording : RecordingState::input_error);
+            else recording.set(select_input(InputMode::recording) ? RecordingState::recording : RecordingState::input_error);
         }
         if (!paused && recording.state() == RecordingState::recording) {
             bool complete = recording.stopped();
@@ -688,7 +704,7 @@ void audio_task(void* startup_task)
                 if (!failed) complete = recording.capture({stereo, received / sizeof(int16_t)});
             }
             if (complete || failed) {
-                const bool disabled = i2s_channel_disable(rx) == ESP_OK;
+                const bool disabled = select_input(InputMode::off);
                 recording.set(failed || !disabled ? RecordingState::input_error :
                     recording.frames() >= 2 ? RecordingState::ready : RecordingState::idle);
             }
@@ -696,8 +712,23 @@ void audio_task(void* startup_task)
         if (paused || recording.busy() || updating) {
             std::fill_n(stereo, 2 * block_frames, int16_t{0});
         } else {
+            const int16_t* input = nullptr;
+            if (voice.uses_audio_input() && select_input(InputMode::live)) {
+                // No timeout/wait on RX in the render path. Discard queued old
+                // blocks after a delayed iteration; an underrun is one silent block.
+                input_overflow.exchange(false, std::memory_order_relaxed);
+                input = input_stream.latest([&](int16_t* data, size_t bytes) {
+                    size_t received = 0;
+                    const auto result = i2s_channel_read(rx, data, bytes, &received, 0);
+                    return AudioInputStream<block_frames>::Read{
+                        received, result != ESP_OK && result != ESP_ERR_TIMEOUT};
+                });
+                // A malformed/failed read restarts the DMA queue next block.
+                // Empty nonblocking reads do not restart RX or replay old data.
+                if (input_stream.failed()) select_input(InputMode::off);
+            }
             voice.set_time(esp_timer_get_time());
-            voice.render(stereo);
+            voice.render(stereo, input);
         }
         if (!paused && !recording.busy() && !updating) {
             const unsigned elapsed = uint32_t(esp_cpu_get_cycle_count() - start_cycles);

@@ -684,5 +684,7 @@
   "Éditeur": "Editor",
   "Édition du patch": "Edición del parche",
   "← Patches": "← Parches de seguridad",
-  "← Retour à l’éditeur": "← Volver al editor"
+  "← Retour à l’éditeur": "← Volver al editor",
+  "Le module INPUT demande le nouveau firmware avec entrée audio en direct.": "El módulo INPUT requiere el nuevo firmware con entrada de audio en directo.",
+  "Entrée micro du Modulox en direct (mono). Le signal reste actif sans note MIDI. Level règle le niveau ; utilise Stereo ou Pan avant un effet stéréo. L’enregistrement suspend temporairement cette entrée dans le graphe.": "Entrada de micrófono del Modulox en directo (mono). El audio permanece activo sin notas MIDI. Level ajusta el nivel; usa Stereo o Pan antes de un efecto estéreo. La grabación suspende temporalmente esta entrada en el grafo."
 }

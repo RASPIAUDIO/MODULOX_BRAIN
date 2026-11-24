@@ -4,12 +4,12 @@
   "chip": "esp32s3",
   "layout": "ab-1.5m-32m-v1",
   "protocol": 1,
-  "version": "1.6.0",
-  "size": 689040,
-  "sha256": "e7a124e9bd7b3e2d6daf5e2e232da5fc18e52ec8f3054222b8451382933fd465",
-  "buildId": "473eb02b336f5128f1a617f7d901356756cab877564dabde798816d9fc335b23",
-  "file": "modulox-1.6.0.bin",
-  "notes": "1.6.0 : modules Decimator (r\u00e9duction de fr\u00e9quence), Bitcrusher (r\u00e9duction de bits), Compressor st\u00e9r\u00e9o et TB-303 (adaptation float du noyau MIT Open303 TeeBee, sur\u00e9chantillonnage x4). Param\u00e8tres, MIDI Learn et cinq nouvelles entr\u00e9es CV ; 64 ports de modulation. Aucun buffer PSRAM suppl\u00e9mentaire pour ces modules. Profils 8/16 Mio et partitions A/B conserv\u00e9s. L\u2019\u00e9cran du Modulox et ses commandes restent accessibles en direct par USB depuis le configurateur.",
+  "version": "1.7.0-dev.1",
+  "size": 693584,
+  "sha256": "c0f64176cbe27d95be4b3aa41cae91b93c454220acacce3178c024862ec10491",
+  "buildId": "828f50a9ed5d9fdb1da6a814189c37c659906ac69a0f4da3a177fbdd7a719a25",
+  "file": "modulox-1.7.0-dev.1.bin",
+  "notes": "1.7.0-dev.1 (prerelease validee par utilisateur) : conserve le module INPUT et ajoute Settings > Speaker (Off/Left/Right/Stereo, niveau -60 a 0 dB, initial -30 dB). Activation a volume muet puis rampe de 1 dB par 10 ms, sans reset du codec ni changement des horloges. Commandes I2C asynchrones bornees, repli et erreur memorisee jusqu\u2019a une demande Off explicite. HP Off a chaque demarrage, independant des patches. Deux profils materiels compiles. Fonctionnement du HP confirme par utilisateur le 25/11/2026 ; erreurs I2C intermittentes, recuperables en repetant la commande. Validation electrique et essais exhaustifs sur les deux modeles non etablis.",
   "thirdPartyLicenses": {
     "Open303": "The Open303 source code is released under the terms of the MIT license:\n\nThe MIT License\n\nCopyright (c) 2009 Robin Schmidt (www.rs-met.com)\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE."
   }

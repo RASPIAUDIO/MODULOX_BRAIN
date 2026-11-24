@@ -62,3 +62,23 @@ les formats de ports, les modulations et le transport des patches.
 `cmd /c firmware\tests\run-catalog-writer-test.cmd` vérifie la sérialisation
 progressive du catalogue avec cJSON réel, la fusion des métadonnées, le
 catalogue vide et le refus de dépassement du buffer.
+
+`cmd /c firmware\tests\run-audio-input-test.cmd` vérifie le vrai moteur avec
+INPUT : chemin sec exact dans le même bloc sans MIDI, canal L uniquement,
+niveau et lissage, mélange à huit voix, TB-303 et queues Reverb. Le contrôleur
+RX portable vérifie le bloc le plus récent, le travail borné, le silence sur
+underrun/lecture invalide, la reprise après erreur et les transitions exclusives
+entre live, pause et enregistrement, y compris les refus du pilote.
+`node editor/tests/audio-input.test.mjs` contrôle les ports, le routage,
+les limites/CV/MIDI Learn, les fichiers portables, le coût CPU indépendant
+de Voices et le blocage d’envoi vers un ancien firmware dans l’interface réelle.
+Ces tests n’émulent pas les DMA, le codec ni la latence physique.
+
+`cmd /c firmware\tests\run-speaker-test.cmd` teste les transitions du vrai
+séquenceur WM8960 avec un bus simulé : activation/rampes, changements L/R,
+extinction, préservation des registres casque/ADC/horloges et des bits réservés,
+protection thermique, panne sur chacune des onze écritures d’activation,
+panne pendant une rampe, bus définitivement absent, borne des tentatives,
+verrouillage et reprise par Off explicite. Il vérifie les indices Settings/Save
+et rend la page réelle avec la police LCD dans quatre PPM sous `build`.
+Il ne mesure ni SPKVDD, ni le courant du HP, ni les transitoires analogiques.

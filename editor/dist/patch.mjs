@@ -13,7 +13,7 @@ export const simpleEffectTypes = ["Decimator", "Bitcrusher", "Compressor"];
 export const stereoModuleTypes = ["Pan", "Chorus", "Rotary", "Reverb", "Compressor", "Stereo", "Mono", "Stereo Mix"];
 // Palette presentation only: patch types, limits and DSP identities stay unchanged.
 export const moduleCategories = [
-  { id: "generators", label: "Generators", types: ["Osc", "Sampler", "FM4", "Granulizer", "Noise", "Sub"] },
+  { id: "generators", label: "Generators", types: ["Osc", "Sampler", "FM4", "Granulizer", "Noise", "Sub", "INPUT"] },
   { id: "effects", label: "Effects", types: ["Filter", "TB-303", "Disto", "Decimator", "Bitcrusher", "Compressor", "Ring Mod", "Wavefolder"] },
   { id: "time", label: "Time effects", types: ["Delay", "Reverb", "Chorus", "Rotary"] },
   { id: "modulation", label: "Modulation", types: ["ADSR", "Env", "LFO", "S&H", "Random", "Gain/Offset", "Slew"] },
@@ -57,6 +57,7 @@ export const offlineCatalog = {
   reverb: true,
   simpleEffects: true,
   tb303: true,
+  audioInput: true,
   output: { inputChannels: 2, modulationInputs: ["Pitch", "Level"] },
   settings: { parameters: [
     { name: "Voices", min: 1, max: 8, initial: 1 },
@@ -74,6 +75,8 @@ export const offlineCatalog = {
     { name: "Retrigger", min: 0, max: 1, initial: 0, choices: ["Off", "On"] },
   ] },
   modules: [
+    { type: "INPUT", limit: 1, inputs: 0, inputChannels: 0, outputChannels: 1, sharedSource: true,
+      parameters: [{ name: "Level", min: 0, max: 100, initial: 100, unit: "%" }] },
     { type: "Osc", limit: 3, inputs: 0, modulationInputs: ["Pitch", "Level", "PWM", "FM"],
       midiInputs: ["Pitch", "Velocity", "Trigger"], parameters: [
       { name: "Wave", min: 0, max: builtinWaves.length + maxPatchWaves - 1, initial: 0, choices: builtinWaves },
@@ -393,7 +396,7 @@ export function connectionError(patch, catalog, from, to, input) {
 }
 
 export function sharedAudioNodes(patch, catalog) {
-  const shared = new Set(patch.modules.filter(n => moduleSpec(catalog, n.type)?.sharedEffect).map(n => n.id));
+  const shared = new Set(patch.modules.filter(n => (moduleSpec(catalog, n.type)?.sharedEffect || moduleSpec(catalog, n.type)?.sharedSource)).map(n => n.id));
   for (let i = 0; i < patch.modules.length; ++i) {
     let added = false;
     for (const [from, to] of patch.connections) if (shared.has(from) && !shared.has(to)) { shared.add(to); added = true; }
@@ -585,5 +588,5 @@ export function validatePatch(patch, catalog, { allowIncomplete = false } = {}) 
     }
     if (!allowIncomplete && node.type === tr("Ring Mod") && incoming.get(node.id)?.size !== 2) return tr("Branche les deux entrées audio du Ring Mod.");
   }
-  return allowIncomplete || ["Osc", "Noise", "Sub", "FM4", ...sampleModuleTypes].some((type) => counts.get(type)) ? "" : tr("Ajoute une source audio.");
+  return allowIncomplete || ["Osc", "Noise", "Sub", "FM4", "INPUT", ...sampleModuleTypes].some((type) => counts.get(type)) ? "" : tr("Ajoute une source audio.");
 }

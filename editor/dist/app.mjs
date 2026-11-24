@@ -5,7 +5,7 @@ import {
   connectionError, firstOscillator, fm4Topologies, modulationError, moduleSpec, nodeSpec, normalizePatch, offlineCatalog, outputModule,
   patchForDevice, pitchCatalog, playSettings, routingError, sampleModuleTypes, timingModuleTypes, usesVaExpansion,
   modulePaletteGroups, simpleEffectTypes, stereoModuleTypes, usesFm4, vaModuleTypes, validatePatch, patchCategories,
-} from "./patch.mjs?v=17";
+} from "./patch.mjs?v=18";
 import { deleteSample, drawSample, readSample, readSamples, sampleRate, sampleWav, saveSample } from "./samples.mjs?v=7";
 import { loadPresetAssets } from "./preset-assets.mjs";
 import { loadFactoryBank, planFactoryUpload, uploadFactoryBank } from "./factory-bank.mjs";
@@ -400,9 +400,11 @@ function renderActions() {
   const insertError = draft && port && ((!deviceCatalog?.simpleEffects && draft.patch.modules.some(node => simpleEffectTypes.includes(node.type))) ||
     (!deviceCatalog?.tb303 && draft.patch.modules.some(node => node.type === "TB-303")))
     ? tr("Decimator, Bitcrusher, Compressor et TB-303 demandent le firmware 1.6.0.") : "";
+  const inputError = draft && port && !deviceCatalog?.audioInput && draft.patch.modules.some(node => node.type === "INPUT")
+    ? tr("Le module INPUT demande le nouveau firmware avec entrée audio en direct.") : "";
   const fmError = draft && port && !deviceCatalog?.fm4 && usesFm4(draft.patch)
     ? tr("FM4 et le couplage des Osc demandent le nouveau firmware FM.") : "";
-  $("upload").disabled = !port || !canUpload || Boolean(busy) || Boolean(budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || fmError) ||
+  $("upload").disabled = !port || !canUpload || Boolean(busy) || Boolean(budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || inputError || fmError) ||
     Boolean(draft?.key.startsWith("f") && !catalog.patchManagement);
   $("upload").textContent = draft?.targetFile ? tr("Remplacer sur le Modulox") : tr("Envoyer au Modulox");
   $("delete-patch").hidden = selection?.kind !== "usb";
@@ -421,7 +423,7 @@ function renderActions() {
   $("modules-toggle").disabled = !draft;
   $("parameter-view").inert = Boolean(busy);
   if (screen === "samples") renderSampleDetail();
-  $("upload").title = budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || fmError || (draft?.key.startsWith("f") && !catalog.patchManagement
+  $("upload").title = budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || inputError || fmError || (draft?.key.startsWith("f") && !catalog.patchManagement
     ? tr("Le remplacement d’un patch d’usine nécessite le nouveau firmware.")
     : canUpload ? "" : tr("Connecte un Modulox avec le firmware compatible."));
   $("arrange").hidden = !draft;
@@ -431,7 +433,7 @@ function renderActions() {
     : isModulationSource(cableSource)
     ? tr("Choisis une entrée de modulation bleue. Échap annule le câble.")
     : tr("Choisis une entrée audio. Échap annule le câble."))
-    : budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || fmError || (draft ? (editorView === "graph" ? tr("Dépose des modules mono ou stéréo. Pan ou Stereo convertissent une source mono.") : "")
+    : budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || inputError || fmError || (draft ? (editorView === "graph" ? tr("Dépose des modules mono ou stéréo. Pan ou Stereo convertissent une source mono.") : "")
       : item ? tr("Sélectionne un module pour voir ses paramètres.") : "");
 }
 
@@ -1220,6 +1222,8 @@ function renderNodeControls(details, node, patch, sliders = false) {
     details.append(element("p", tr("Mono : répétitions communes ; Stereo : canaux indépendants ; Ping-pong : répétitions alternées gauche/droite. Link lie Time L/R et les divisions. Désactive-le pour les régler séparément. Maximum 2 secondes par canal.")));
   } else if (node.type === "Pan") {
     details.append(element("p", tr("Convertit une source mono en stéréo. Pan déplace le son de gauche à droite à puissance constante ; le centre vaut −3 dB par canal.")));
+  } else if (node.type === "INPUT") {
+    details.append(element("p", tr("Entrée micro du Modulox en direct (mono). Le signal reste actif sans note MIDI. Level règle le niveau ; utilise Stereo ou Pan avant un effet stéréo. L’enregistrement suspend temporairement cette entrée dans le graphe.")));
   } else if (node.type === "Decimator") {
     details.append(element("p", tr("Réduit la fréquence d’échantillonnage par maintien du signal. Rate=44100 Hz conserve le signal ; les fréquences basses créent volontairement du repliement spectral. Mix dose l’effet.")));
   } else if (node.type === "Bitcrusher") {
@@ -1538,7 +1542,7 @@ async function readDevice() {
     for (const sample of await fetchSampleLibrary(port)) remoteSamples.set(sample.id, sample);
   }
   const received = pitchCatalog(result.catalog ?? offlineCatalog);
-  const missing = [...sampleModuleTypes, ...timingModuleTypes, ...vaModuleTypes, ...stereoModuleTypes, ...simpleEffectTypes, "TB-303", "FM4"].filter((type) => !moduleSpec(received, type));
+  const missing = [...sampleModuleTypes, ...timingModuleTypes, ...vaModuleTypes, ...stereoModuleTypes, ...simpleEffectTypes, "TB-303", "FM4", "INPUT"].filter((type) => !moduleSpec(received, type));
   catalog = { ...received, modules: [...received.modules, ...missing.map((type) => moduleSpec(offlineCatalog, type))] };
   if (!received.vaExpansion) {
     catalog.modules = catalog.modules.map(spec => spec.type !== "Osc" ? spec : { ...spec, parameters:

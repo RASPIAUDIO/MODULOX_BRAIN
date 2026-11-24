@@ -4,6 +4,8 @@
 #include "filter_plot.h"
 #include "lfo.h"
 #include "module_menu.h"
+#include "settings_menu.h"
+#include "speaker_panel.h"
 #include "osc.h"
 #include "sampler.h"
 
@@ -29,10 +31,10 @@ constexpr std::array buttons{
     std::pair{GPIO_NUM_12, left}, std::pair{GPIO_NUM_1, center}, std::pair{GPIO_NUM_38, right},
     std::pair{menu_pin, menu}, std::pair{GPIO_NUM_39, encoder_press},
 };
-enum class Page { parameters, modules, categories, patches, samples };
+enum class Page { parameters, modules, categories, patches, samples, speaker };
 enum class SaveStatus { none, saved, changed, error };
 constexpr int settings_module = -1;
-constexpr int save_action = patch_setting_count;
+constexpr int save_action = settings_save_entry;
 
 constexpr int visible_count = 4; // Parameter buttons; menus use five independent rows.
 static_assert(menu_top + menu_visible_rows * menu_row_height == display::height);
@@ -162,6 +164,12 @@ const ModuleParameters& module_at(ModuleMask mask, int index)
     return modules[module_slot(mask, index)];
 }
 
+bool settings_action(const Selection& selection)
+{
+    return selection.page == Page::parameters && selection.module == settings_module &&
+        settings_is_action(selection.parameter);
+}
+
 bool saving_patch(const Selection& selection)
 {
     return selection.module == settings_module && selection.parameter == save_action;
@@ -182,12 +190,14 @@ void save_active_patch(Selection& selection)
 
 ModuleParameters selected_module(const Selection& selection)
 {
+    if (selection.page == Page::speaker) return speaker_controls();
     return selection.module == settings_module ? patches->settings()
                                                 : module_at(selection.module_mask, selection.module);
 }
 
 unsigned selected_slot(const Selection& selection)
 {
+    if (selection.page == Page::speaker) return max_patch_modules + 1; // Not MIDI Learn / patch storage.
     return selection.module == settings_module ? max_patch_modules
         : module_slot(selection.module_mask, selection.module);
 }
@@ -228,7 +238,7 @@ unsigned parameter_index(const Selection& selection)
 void publish(Selection& selection)
 {
     selection.learned_cc = -1;
-    if (selection.page == Page::parameters && !saving_patch(selection) && !on_sample_action(selection)) {
+    if (selection.page == Page::parameters && !settings_action(selection) && !on_sample_action(selection)) {
         const auto slot = selected_slot(selection);
         const unsigned index = parameter_index(selection);
         if (slot < midi_learn->cc.size() && index < midi_learn->cc[slot].size()) {
@@ -242,6 +252,10 @@ void set_parameter(Selection& selection, int value)
 {
     const auto module = selected_module(selection);
     const int index = parameter_index(selection);
+    if (selection.page == Page::speaker) {
+        module.set(index, value); // Atomic request only; I2C runs on codec_speaker.
+        return; // Hardware settings never mark a patch dirty.
+    }
     const int before = module.parameters[index].get();
     const unsigned slot = selected_slot(selection);
     if (is_sampler_slot(slot)) {
@@ -278,6 +292,7 @@ void apply_cc(Selection& selection, ControlChange cc)
         }
     }
     Selection target = selection;
+    target.page = Page::parameters; // CCs always address patch controls, even on the Speaker page.
     const int count = std::popcount(selection.module_mask);
     for (int module = settings_module; module < count; ++module) {
         target.module = module;
@@ -302,6 +317,10 @@ void apply_cc(Selection& selection, ControlChange cc)
 void move_selection(Selection& selection, int direction)
 {
     const int count = std::popcount(selection.module_mask);
+    if (selection.page == Page::speaker) {
+        selection.parameter = (selection.parameter + direction + int(speaker_field_count)) % speaker_field_count;
+        return;
+    }
     if (selection.page == Page::samples) {
         selection.confirm_sample_delete = false;
         selection.sample_delete_status = SampleDeleteStatus::none;
@@ -326,8 +345,7 @@ void move_selection(Selection& selection, int direction)
         return;
     }
     if (selection.module == settings_module) {
-        constexpr int count = patch_setting_count + 1;
-        selection.parameter = (selection.parameter + direction + count) % count;
+        selection.parameter = settings_next(selection.parameter, direction);
         return;
     }
     selection.parameter += direction;
@@ -357,7 +375,19 @@ void apply_button(Selection& selection, PanelInput input)
             move_selection(selection, 1);
             break;
         case center:
-            if (selection.page == Page::categories) {
+            if (selection.page == Page::speaker) {
+                const auto status = speaker_status();
+                if (status.available && status.fault) stop_speaker(); // Explicit Off retry, never auto-re-enable.
+                else {
+                    selection.page = Page::parameters;
+                    selection.module = settings_module;
+                    selection.parameter = settings_speaker_entry;
+                }
+            } else if (selection.page == Page::parameters && selection.module == settings_module &&
+                       selection.parameter == settings_speaker_entry) {
+                selection.page = Page::speaker;
+                selection.parameter = 0;
+            } else if (selection.page == Page::categories) {
                 const auto counts = patches->category_counts();
                 selection.menu_category = std::clamp(selection.menu_category, 0, int(category_menu_count(counts)) - 1);
                 selection.category = category_menu_at(counts, selection.menu_category);
@@ -418,6 +448,12 @@ void apply_button(Selection& selection, PanelInput input)
             }
             break;
         case menu:
+            if (selection.page == Page::speaker) {
+                selection.page = Page::parameters;
+                selection.module = settings_module;
+                selection.parameter = settings_speaker_entry;
+                break;
+            }
             selection.menu_module = selection.page == Page::samples
                 ? std::popcount(selection.module_mask) + 1 : selection.module == settings_module
                     ? std::popcount(selection.module_mask) : selection.module;
@@ -444,10 +480,13 @@ void apply_button(Selection& selection, PanelInput input)
 
 void apply_encoder(Selection& selection, int step)
 {
-    if (step != 0 && (selection.page != Page::parameters || !saving_patch(selection))) {
+    if (step != 0 && (selection.page != Page::parameters || !settings_action(selection))) {
         selection.learning = false;
         selection.save_status = SaveStatus::none;
-        if (selection.page == Page::samples) {
+        if (selection.page == Page::speaker) {
+            const auto& parameter = speaker_controls().parameters[selection.parameter];
+            set_parameter(selection, parameter.get() + step * parameter.step);
+        } else if (selection.page == Page::samples) {
             if (selection.parameter == 0) {
                 selection.sample_delete_status = SampleDeleteStatus::none;
                 sample_library.step(step);
@@ -717,6 +756,15 @@ void draw_filter(const Selection& selection, bool entering)
 
 void draw_parameters(const Selection& selection, const Selection& previous, int& previous_value)
 {
+    if (selection.module == settings_module && selection.parameter == settings_speaker_entry) {
+        draw_title("Settings");
+        display::text(0, 52, display::width, 38, "Speaker", 2, accent, black);
+        display::text(0, 90, display::width, 55, "Configure", 3, white, black);
+        display::text(0, 145, display::width, 45, "Center: open | Off at boot", 1, white, black);
+        display::button(0, 190, 140, 50, "Save patch", 2, white, tile);
+        display::button(140, 190, 140, 50, "Speaker", 2, black, accent);
+        return;
+    }
     const auto module = selected_module(selection);
     const bool same_module = previous.page == Page::parameters && previous.module == selection.module
                              && previous.module_mask == selection.module_mask;
@@ -985,11 +1033,17 @@ void display_task(void*)
             processing_notice = false;
         }
         if (!changed && !restore) {
-            if (previous.page == Page::samples) draw_sample_library(previous, false);
+            if (selection.page == Page::speaker) {
+                if (draw_speaker_panel(selection.parameter, speaker_controls(), speaker_status()))
+                    draw_load(audio_load_tenths->load(std::memory_order_relaxed));
+            } else if (previous.page == Page::samples) draw_sample_library(previous, false);
             else if (selection.page == Page::parameters && selected_slot(selection) == filter) draw_filter(selection, false);
             continue;
         }
-        if (selection.page == Page::samples) {
+        if (selection.page == Page::speaker) {
+            if (draw_speaker_panel(selection.parameter, speaker_controls(), speaker_status(), previous.page != Page::speaker))
+                draw_load(audio_load_tenths->load(std::memory_order_relaxed));
+        } else if (selection.page == Page::samples) {
             draw_sample_library(selection, previous.page != Page::samples);
         } else if (selection.page != Page::parameters) {
             draw_menu(selection);
