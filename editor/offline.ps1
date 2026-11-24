@@ -128,6 +128,8 @@ public sealed class ModuloxOfflineServer {
         else if (Regex.IsMatch(path, "^/(firmware|factory)/(s3-32m16m/)?[a-z0-9][a-z0-9.-]*\\.(json|bin)$")) { filePath = Path.Combine(root, "dist", path.Substring(1).Replace('/', Path.DirectorySeparatorChar)); mime = path.EndsWith(".json") ? "application/json" : "application/octet-stream"; }
         else if (Regex.IsMatch(path, "^/vendor/esptool/([a-zA-Z0-9_-]+/)*[a-zA-Z0-9_.-]+\\.(js|json)$")) { filePath = Path.Combine(root, "dist", path.Substring(1).Replace('/', Path.DirectorySeparatorChar)); mime = path.EndsWith(".json") ? "application/json" : "text/javascript"; }
         else if (Regex.IsMatch(path, "^/demo-samples/(kick01|kick04|snare02|voice)\\.wav$")) { filePath = Path.Combine(root, "dist", path.Substring(1).Replace('/', Path.DirectorySeparatorChar)); mime = "audio/wav"; }
+        else if (Regex.IsMatch(path, "^/locales/(en|es|zh|de|it|pt|ja|ko)\\.json$")) { filePath = Path.Combine(root, "dist", path.Substring(1).Replace('/', Path.DirectorySeparatorChar)); mime = "application/json"; }
+        else if (Regex.IsMatch(path, "^/flags/(fr|gb|es|cn|de|it|pt|jp|kr)\\.png$")) { filePath = Path.Combine(root, "dist", path.Substring(1).Replace('/', Path.DirectorySeparatorChar)); mime = "image/png"; }
         else if (Regex.IsMatch(path, "^/examples/(01-basic|02-triple)\\.json$")) {
             filePath = Path.Combine(root, "dist", "examples", Path.GetFileName(path)); mime = "application/json";
             if (!File.Exists(filePath)) filePath = Path.Combine(root, "..", "firmware", "patches", Path.GetFileName(path));

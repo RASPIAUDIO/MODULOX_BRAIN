@@ -1,3 +1,4 @@
+import { tr } from "./i18n.mjs";
 import { waveId } from "./waves.mjs";
 
 export const sampleRate = 44100;
@@ -8,7 +9,7 @@ export async function readSample(file) {
   const context = new OfflineAudioContext(1, 1, sampleRate);
   const audio = await context.decodeAudioData(await file.arrayBuffer());
   if (audio.length < 2 || audio.length * 2 > maxSampleBytes) {
-    throw new Error("Durée maximale : " + (maxSampleBytes / (2 * sampleRate)).toFixed(1) + " s.");
+    throw new Error(tr("Durée maximale : {0} s.", (maxSampleBytes / (2 * sampleRate)).toFixed(1)));
   }
   const channels = Array.from({ length: audio.numberOfChannels }, (_, index) => audio.getChannelData(index));
   const pcm = new Uint8Array(audio.length * 2);

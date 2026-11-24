@@ -1,3 +1,4 @@
+import { tr } from "./i18n.mjs";
 export const waveSamples = 1024;
 export const maxPatchWaves = 125;
 export const builtinWaves = ["Sine", "Square", "Triangle"];
@@ -30,7 +31,7 @@ export async function readWave(file) {
   const buffer = await file.arrayBuffer();
   const view = new DataView(buffer);
   const tag = (offset) => decoder.decode(new Uint8Array(buffer, offset, 4));
-  const invalid = () => new Error(file.name + " · attendu un cycle WAV mono PCM 16 bits.");
+  const invalid = () => new Error(tr("{0} · attendu un cycle WAV mono PCM 16 bits.", file.name));
   if (buffer.byteLength < 12 || tag(0) !== "RIFF" || tag(8) !== "WAVE") throw invalid();
   const end = 8 + view.getUint32(4, true);
   if (end > buffer.byteLength) throw invalid();
@@ -75,7 +76,7 @@ export async function decodeWave(id, bytes) {
   const pcm = bytes.slice(waveNameBytes);
   const name = decoder.decode(bytes.subarray(0, waveNameBytes)).split("\0")[0];
   if (pcm.length !== waveBytes || await waveId(pcm) !== id) {
-    throw new Error("Forme d’onde USB invalide.");
+    throw new Error(tr("Forme d’onde USB invalide."));
   }
   return { id, name: name || id, pcm };
 }

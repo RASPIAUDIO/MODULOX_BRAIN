@@ -1,3 +1,4 @@
+import { initializeLanguage, tr } from "./i18n.mjs";
 import { deleteDeviceSample, deletePatch, fetchPatches, fetchSample, fetchSampleLibrary, fetchSamplePreview, fetchWave, renameSample, uploadPatch, uploadSample, fetchFirmwareInfo, uploadFirmware, rollbackFirmware } from "./protocol.mjs?v=18";
 import { builtinWaves, deleteWave, drawWave, maxPatchWaves, readLibrary, readWave, saveWaves } from "./waves.mjs?v=4";
 import {
@@ -13,6 +14,8 @@ import { compareVersions, fetchFirmwareRelease, fetchFirmwareImage, readFirmware
 import { boardForModel, defaultBoard } from "./hardware.mjs";
 import { recoverFirmware } from "./firmware-recovery.mjs";
 import { factoryConsentValid, prepareFactoryInstaller } from "./factory-install.mjs";
+
+await initializeLanguage();
 
 const $ = (id) => document.getElementById(id);
 const graph = $("graph");
@@ -56,7 +59,7 @@ const samplePreviewFailures = new Set();
 const samplesReady = readSamples().then((samples) => {
   for (const sample of samples) sampleLibrary.set(sample.id, sample);
 }).catch(() => {
-  $("sample-message").textContent = "La bibliothèque locale n’a pas pu être lue.";
+  $("sample-message").textContent = tr("La bibliothèque locale n’a pas pu être lue.");
 });
 let selectedSample;
 let audioContext;
@@ -67,7 +70,7 @@ let samplesForPatch = false;
 const waveLibraryReady = readLibrary().then((waves) => {
   for (const wave of waves) waveLibrary.set(wave.id, wave);
 }).catch(() => {
-  $("wave-message").textContent = "La bibliothèque locale n’a pas pu être lue.";
+  $("wave-message").textContent = tr("La bibliothèque locale n’a pas pu être lue.");
 });
 let previewId;
 
@@ -99,12 +102,11 @@ function renderWaveBrowser() {
   const adding = editable && $("wave-scope").value === "library";
   $("wave-add").hidden = !adding;
   $("wave-add").disabled = patchIds.length >= maxWaves() || ids.every((id) => patchIds.includes(id));
-  $("wave-count").textContent = waveLibrary.size + " dans la bibliothèque" +
-    (editable ? " · " + patchIds.length + "/" + maxWaves() + " dans ce patch" : "");
+  $("wave-count").textContent = tr("{0} dans la bibliothèque{1}", waveLibrary.size, editable ? tr(" · {0}/{1} dans ce patch", patchIds.length, maxWaves()) : "");
   const scroll = list.scrollTop;
   list.replaceChildren();
   if (!ids.length) {
-    list.append(element("p", "Aucune forme d’onde dans cette liste."));
+    list.append(element("p", tr("Aucune forme d’onde dans cette liste.")));
   }
   for (const id of ids) {
     const row = element("div", "", "wave-row");
@@ -115,7 +117,7 @@ function renderWaveBrowser() {
       checkbox.type = "checkbox";
       checkbox.checked = at >= 0;
       checkbox.disabled = at < 0 && patchIds.length >= maxWaves();
-      checkbox.setAttribute("aria-label", label + " dans le patch");
+      checkbox.setAttribute("aria-label", tr("{0} dans le patch", label));
       checkbox.onchange = () => {
         if (checkbox.checked) setBank([...patchIds, id]);
         else setBank(patchIds.filter((key) => key !== id));
@@ -138,20 +140,20 @@ function renderWaveBrowser() {
     row.append(button);
     if ($("wave-scope").value === "library") {
       const remove = element("button", "×", "wave-remove");
-      remove.setAttribute("aria-label", "Supprimer " + label + " de la bibliothèque");
-      remove.title = "Supprimer de la bibliothèque";
+      remove.setAttribute("aria-label", tr("Supprimer {0} de la bibliothèque", label));
+      remove.title = tr("Supprimer de la bibliothèque");
       remove.onclick = async () => {
         const referenced = [...drafts, ...savedPatches, ...entries].some(({ patch }) => patch.waves?.includes(id));
-        if (referenced && !confirm("Ce WAV est référencé par un patch. Supprimer le fichier de la bibliothèque locale ?")) return;
+        if (referenced && !confirm(tr("Ce WAV est référencé par un patch. Supprimer le fichier de la bibliothèque locale ?"))) return;
         remove.disabled = true;
         try {
           await deleteWave(id);
           waveLibrary.delete(id);
           if (previewId === id) previewId = undefined;
-          $("wave-message").textContent = label + " supprimé de la bibliothèque.";
+          $("wave-message").textContent = tr("{0} supprimé de la bibliothèque.", label);
           renderWaveBrowser();
         } catch {
-          $("wave-message").textContent = "Impossible de supprimer " + label + ".";
+          $("wave-message").textContent = tr("Impossible de supprimer {0}.", label);
           remove.disabled = false;
         }
       };
@@ -165,9 +167,9 @@ function renderWaveBrowser() {
 
 function renderWaveDetail() {
   const wave = waveLibrary.get(previewId);
-  $("wave-name").textContent = previewId ? waveLabel(previewId) : "Aperçu";
-  $("wave-caption").textContent = wave ? "1 024 échantillons · mono" :
-    previewId ? "Aperçu indisponible localement." : "";
+  $("wave-name").textContent = previewId ? waveLabel(previewId) : tr("Aperçu");
+  $("wave-caption").textContent = wave ? tr("1 024 échantillons · mono") :
+    previewId ? tr("Aperçu indisponible localement.") : "";
   $("wave-fetch").hidden = !previewId || Boolean(wave) || !port || !catalog.maxWaves;
   $("wave-fetch").disabled = Boolean(busy);
   drawWave($("wave-preview"), wave);
@@ -224,7 +226,7 @@ try {
   localStorage.setItem(draftStorage, JSON.stringify(drafts));
   if (drafts.length) selection = { kind: "draft", key: drafts[0].key };
 } catch {
-  storageError = "Les patches locaux n’ont pas pu être relus.";
+  storageError = tr("Les patches locaux n’ont pas pu être relus.");
 }
 
 function persist() {
@@ -232,7 +234,7 @@ function persist() {
     localStorage.setItem(draftStorage, JSON.stringify(drafts));
     storageError = "";
   } catch {
-    storageError = "Impossible de sauvegarder les brouillons dans ce navigateur.";
+    storageError = tr("Impossible de sauvegarder les brouillons dans ce navigateur.");
   }
   showError("");
 }
@@ -271,9 +273,9 @@ function switchEditorView(view) {
 
 function createDraft(source) {
   if (busy) return;
-  if (drafts.length && !confirm("Remplacer le patch en cours ? Enregistre-le dans ton dossier si tu veux le conserver.")) return;
+  if (drafts.length && !confirm(tr("Remplacer le patch en cours ? Enregistre-le dans ton dossier si tu veux le conserver."))) return;
   const patch = source ? structuredClone(source.patch) : {
-    version: 3, name: "Nouveau patch", modules: [], connections: [],
+    version: 3, name: tr("Nouveau patch"), modules: [], connections: [],
   };
   patch.layout = source ? { ...layout(patch), ...patch.layout } : { out: { x: 232, y: 285 } };
   const file = source?.file;
@@ -300,20 +302,20 @@ function serialized(patch) {
 function draftStatus(draft) {
   const remote = entries.find((item) => item.file === (draft.targetFile ?? draft.key + ".json"));
   const snapshot = serialized(draft.patch);
-  if (remote && snapshot === serialized(remote.patch)) return "Sur le Modulox";
+  if (remote && snapshot === serialized(remote.patch)) return tr("Sur le Modulox");
   if (draft.lastSent) {
-    if (port && hasRead && !remote) return "À renvoyer";
-    if (remote && snapshot === draft.lastSent) return "Copie USB différente";
-    return snapshot === draft.lastSent ? "Dernier envoi effectué" : "Modifications locales";
+    if (port && hasRead && !remote) return tr("À renvoyer");
+    if (remote && snapshot === draft.lastSent) return tr("Copie USB différente");
+    return snapshot === draft.lastSent ? tr("Dernier envoi effectué") : tr("Modifications locales");
   }
-  return draft.targetFile ? "Modification du patch Modulox" : "En cours de création";
+  return draft.targetFile ? tr("Modification du patch Modulox") : tr("En cours de création");
 }
 
 function renderLibrary() {
   function rows(container, items, kind, status) {
     container.replaceChildren();
     for (const item of items) {
-      const button = element("button", item.patch.name || "Sans nom", "patch");
+      const button = element("button", item.patch.name || tr("Sans nom"), "patch");
       button.append(element("small", status(item)));
       button.setAttribute("aria-current", String(selection?.kind === kind && selection.key === item.key));
       button.onclick = () => {
@@ -326,13 +328,14 @@ function renderLibrary() {
   rows($("drafts"), drafts, "draft", draftStatus);
   rows($("patches"), hasRead ? entries : examples, hasRead ? "usb" : "example",
     (item) => item.patch.modules.length + " modules");
-  $("bank-title").textContent = hasRead ? "Patches du Modulox" : "Patches de démonstration";
-  $("source").textContent = hasRead && !port ? "Dernière lecture" : String((hasRead ? entries : examples).length);
+  $("bank-title").textContent = hasRead ? tr("Patches du Modulox") : tr("Patches de démonstration");
+  $("source").textContent = hasRead && !port ? tr("Dernière lecture") : String((hasRead ? entries : examples).length);
   $("draft-section").hidden = !drafts.length;
-  if (hasRead && !entries.length) $("patches").append(element("p", "Aucun patch sur le Modulox.", "empty-state"));
+  if (hasRead && !entries.length) $("patches").append(element("p", tr("Aucun patch sur le Modulox."), "empty-state"));
 }
 
 function renderActions() {
+  $("language-picker").inert = Boolean(busy);
   const item = current();
   const draft = activeDraft();
   renderFirmware();
@@ -341,17 +344,17 @@ function renderActions() {
   $("details").inert = Boolean(busy);
   $("name").disabled = Boolean(busy);
   $("patches").inert = $("drafts").inert = Boolean(busy);
-  $("status").textContent = busy || (port ? (canUpload ? "Modulox connecté" : "Firmware en lecture seule") : "USB déconnecté");
+  $("status").textContent = busy || (port ? (canUpload ? tr("Modulox connecté") : tr("Firmware en lecture seule")) : tr("USB déconnecté"));
   $("status").toggleAttribute("data-connected", Boolean(port) && !busy);
-  $("connect").textContent = port ? "Déconnecter" : "Connecter en USB";
+  $("connect").textContent = port ? tr("Déconnecter") : tr("Connecter en USB");
   $("connect").disabled = Boolean(busy) || !navigator.serial;
   $("refresh").disabled = Boolean(busy) || !port;
   $("nav-editor").disabled = !drafts.length || Boolean(busy);
-  $("home-name").textContent = item?.patch.name || "Aucun patch sélectionné";
-  $("home-source").textContent = item ? (draft ? "En cours d’édition" : selection.kind === "usb" ? "Sur le Modulox" : "Exemple") : "";
+  $("home-name").textContent = item?.patch.name || tr("Aucun patch sélectionné");
+  $("home-source").textContent = item ? (draft ? tr("En cours d’édition") : selection.kind === "usb" ? tr("Sur le Modulox") : tr("Exemple")) : "";
   $("home-summary").textContent = item
-    ? [item.patch.modules.length + " modules", (item.patch.waves?.length ?? 0) + " formes d’onde importées"].join(" · ")
-    : "Connecte le Modulox ou crée un patch pour commencer.";
+    ? [tr("{0} modules", item.patch.modules.length), tr("{0} formes d’onde importées", item.patch.waves?.length ?? 0)].join(" · ")
+    : tr("Connecte le Modulox ou crée un patch pour commencer.");
   $("save-home").hidden = !item;
   $("save-home").disabled = Boolean(busy);
   $("export-home").hidden = !item;
@@ -360,31 +363,31 @@ function renderActions() {
   if (draft && $("name").value !== draft.patch.name) $("name").value = draft.patch.name;
   $("summary").textContent = item ? [
     draft ? draftStatus(draft) : item.file,
-    item.patch.modules.length + " modules",
-    item.patch.connections.length + " câbles",
-    ...(item.patch.modulations?.length ? [item.patch.modulations.length + " modulations"] : []),
+    tr("{0} modules", item.patch.modules.length),
+    tr("{0} câbles", item.patch.connections.length),
+    ...(item.patch.modulations?.length ? [tr("{0} modulations", item.patch.modulations.length)] : []),
   ].join(" · ") : "";
   $("settings").hidden = !item || !catalog.settings;
   $("settings").setAttribute("aria-pressed", String(selectedNode === "$settings"));
   $("copy").hidden = !item;
-  $("copy").textContent = draft ? "Reprendre l’édition" : "Configurer";
+  $("copy").textContent = draft ? tr("Reprendre l’édition") : tr("Configurer");
   $("upload").hidden = !draft;
   const samplerError = draft ? patchSampleError(draft.patch) : "";
   const timingError = draft && port && !deviceCatalog?.clockRouting &&
     (draft.patch.modules.some((node) => timingModuleTypes.includes(node.type)) || draft.patch.routings?.length)
-    ? "Ces modules demandent le nouveau firmware d’horloge." : "";
+    ? tr("Ces modules demandent le nouveau firmware d’horloge.") : "";
   const vaError = draft && port && !deviceCatalog?.vaExpansion && usesVaExpansion(draft.patch)
-    ? "Ces fonctions demandent le nouveau firmware VA : unisson, glide et nouveaux modules." : "";
+    ? tr("Ces fonctions demandent le nouveau firmware VA : unisson, glide et nouveaux modules.") : "";
   const stereoError = draft && port && !deviceCatalog?.stereoGraph
-    ? "Ce graphe demande le nouveau firmware stéréo." : "";
+    ? tr("Ce graphe demande le nouveau firmware stéréo.") : "";
   const fmError = draft && port && !deviceCatalog?.fm4 && usesFm4(draft.patch)
-    ? "FM4 et le couplage des Osc demandent le nouveau firmware FM." : "";
+    ? tr("FM4 et le couplage des Osc demandent le nouveau firmware FM.") : "";
   $("upload").disabled = !port || !canUpload || Boolean(busy) || Boolean(samplerError || timingError || vaError || stereoError || fmError) ||
     Boolean(draft?.key.startsWith("f") && !catalog.patchManagement);
-  $("upload").textContent = draft?.targetFile ? "Remplacer sur le Modulox" : "Envoyer au Modulox";
+  $("upload").textContent = draft?.targetFile ? tr("Remplacer sur le Modulox") : tr("Envoyer au Modulox");
   $("delete-patch").hidden = selection?.kind !== "usb";
   $("delete-patch").disabled = !port || !catalog.patchManagement || Boolean(busy);
-  $("delete-patch").title = catalog.patchManagement ? "" : "La suppression nécessite le nouveau firmware.";
+  $("delete-patch").title = catalog.patchManagement ? "" : tr("La suppression nécessite le nouveau firmware.");
   $("save-local").disabled = !item || Boolean(busy);
   $("new-patch").disabled = $("load-local").disabled = Boolean(busy);
   $("load-factory").disabled = $("import-patch").disabled = Boolean(busy);
@@ -399,35 +402,35 @@ function renderActions() {
   $("parameter-view").inert = Boolean(busy);
   if (screen === "samples") renderSampleDetail();
   $("upload").title = samplerError || timingError || vaError || stereoError || fmError || (draft?.key.startsWith("f") && !catalog.patchManagement
-    ? "Le remplacement d’un patch d’usine nécessite le nouveau firmware."
-    : canUpload ? "" : "Connecte un Modulox avec le firmware compatible.");
+    ? tr("Le remplacement d’un patch d’usine nécessite le nouveau firmware.")
+    : canUpload ? "" : tr("Connecte un Modulox avec le firmware compatible."));
   $("arrange").hidden = !draft;
-  $("hint").textContent = cableSource ? (cableEventPort ? "Choisis une entrée Trigger, Reset ou Run compatible."
+  $("hint").textContent = cableSource ? (cableEventPort ? tr("Choisis une entrée Trigger, Reset ou Run compatible.")
     : cableMidiPort
-    ? "Choisis l’entrée MIDI violette de même nom. Échap annule le câble."
+    ? tr("Choisis l’entrée MIDI violette de même nom. Échap annule le câble.")
     : isModulationSource(cableSource)
-    ? "Choisis une entrée de modulation bleue. Échap annule le câble."
-    : "Choisis une entrée audio. Échap annule le câble.")
-    : samplerError || timingError || vaError || stereoError || fmError || (draft ? (editorView === "graph" ? "Dépose des modules mono ou stéréo. Pan ou Stereo convertissent une source mono." : "")
-      : item ? "Sélectionne un module pour voir ses paramètres." : "");
+    ? tr("Choisis une entrée de modulation bleue. Échap annule le câble.")
+    : tr("Choisis une entrée audio. Échap annule le câble."))
+    : samplerError || timingError || vaError || stereoError || fmError || (draft ? (editorView === "graph" ? tr("Dépose des modules mono ou stéréo. Pan ou Stereo convertissent une source mono.") : "")
+      : item ? tr("Sélectionne un module pour voir ses paramètres.") : "");
 }
 
 function samplerUnavailable() {
   if (!port || !hasRead || deviceCatalog?.maxSampleBytes) return "";
   const reasons = {
-    "partition-missing": "Sampler indisponible sur le Modulox : partition de samples absente.",
-    "storage-not-empty": "Sampler indisponible sur le Modulox : la partition contient des données non reconnues.",
-    "storage-error": "Sampler indisponible sur le Modulox : erreur de stockage.",
-    "psram-unavailable": "Sampler indisponible sur le Modulox : PSRAM inaccessible.",
+    "partition-missing": tr("Sampler indisponible sur le Modulox : partition de samples absente."),
+    "storage-not-empty": tr("Sampler indisponible sur le Modulox : la partition contient des données non reconnues."),
+    "storage-error": tr("Sampler indisponible sur le Modulox : erreur de stockage."),
+    "psram-unavailable": tr("Sampler indisponible sur le Modulox : PSRAM inaccessible."),
   };
-  return reasons[deviceCatalog?.sampleStatus] ?? "Sampler indisponible sur le Modulox connecté.";
+  return reasons[deviceCatalog?.sampleStatus] ?? tr("Sampler indisponible sur le Modulox connecté.");
 }
 
 function patchSampleError(patch) {
   const types = patch.modules.map((node) => node.type).filter((type) => sampleModuleTypes.includes(type));
   if (!types.length || !port) return "";
   return samplerUnavailable() || (types.some((type) => !deviceCatalog?.modules.some((module) => module.type === type))
-    ? "Le Granulizer nécessite le nouveau firmware." : "");
+    ? tr("Le Granulizer nécessite le nouveau firmware.") : "");
 }
 
 function renderPalette() {
@@ -436,7 +439,7 @@ function renderPalette() {
   palette.replaceChildren();
   for (const spec of catalog.modules) {
     const count = patch?.modules.filter((node) => node.type === spec.type).length ?? 0;
-    const button = element("button", spec.type, "palette-module");
+    const button = element("button", tr(spec.type), "palette-module");
     button.append(element("small", count + "/" + spec.limit));
     button.disabled = !patch || count >= spec.limit;
     if (spec.type === "Sampler") button.title = samplerUnavailable();
@@ -602,9 +605,9 @@ function setCable(id, midiPort, eventPort) {
 
 function cableError(patch, to, input, modulation, midiPort, routing = false) {
   if (routing) return routingError(patch, catalog, cableSource, to, input, cableEventPort ?? cableMidiPort ?? "CV");
-  if (cableEventPort) return "Relie cette sortie à une entrée de déclenchement.";
+  if (cableEventPort) return tr("Relie cette sortie à une entrée de déclenchement.");
   if (modulation !== isModulationSource(cableSource) || midiPort !== Boolean(cableMidiPort)) {
-    return "Ces ports sont de types différents.";
+    return tr("Ces ports sont de types différents.");
   }
   return modulation ? modulationError(patch, catalog, cableSource, to, input, cableMidiPort)
     : connectionError(patch, catalog, cableSource, to, input);
@@ -685,7 +688,7 @@ function renderGraph() {
     card.style.top = position.y + "px";
     card.style.height = height + "px";
     const label = element("button", "", "node-label");
-    label.append(element("strong", node.type), element("small", node.id === "out" ? "Audio stéréo" :
+    label.append(element("strong", tr(node.type)), element("small", node.id === "out" ? tr("Audio stéréo") :
       node.id + (spec?.controlOutput ? "" : spec?.outputChannels === 2 ? " · S" : " · M")));
     label.onclick = () => selectNode(node.id);
     label.onpointerdown = (event) => startNodeDrag(event, node, card);
@@ -694,8 +697,8 @@ function renderGraph() {
       const inlet = element(editable ? "button" : "span", "", "port input");
       if (spec.inputChannels === 2) inlet.classList.add("stereo-port");
       inlet.style.left = topPortPosition(spec, i, true) * 100 + "%";
-      const inputLabel = spec.inputLabels?.[i] ?? (spec.inputs > 1 ? "Entrée " + (i + 1) : "Entrée audio");
-      inlet.title = inputLabel + (spec.inputChannels === 2 ? " · stéréo L/R" : " · mono");
+      const inputLabel = spec.inputLabels?.[i] ?? (spec.inputs > 1 ? tr("Entrée {0}", i + 1) : tr("Entrée audio"));
+      inlet.title = inputLabel + (spec.inputChannels === 2 ? tr(" · stéréo L/R") : " · mono");
       if (editable) {
         inlet.dataset.to = node.id;
         inlet.dataset.input = i;
@@ -712,7 +715,7 @@ function renderGraph() {
         const inlet = element(editable ? "button" : "span", "", midi
           ? routing ? "port input event-port" : "port input midi-port" : "port mod-input");
         inlet.style[midi ? "left" : "top"] = (midi ? topPortPosition(spec, index) : portPosition(index, names.length)) * 100 + "%";
-        inlet.title = (routing ? midi ? "Horloge · " : "CV · " : midi ? "MIDI · " : "Modulation · ") + name;
+        inlet.title = tr(routing ? midi ? "Horloge" : "CV" : midi ? "MIDI" : "Modulation") + " · " + tr(name);
         if (editable) {
           inlet.dataset.to = node.id;
           if (routing) inlet.dataset.routing = name;
@@ -733,10 +736,10 @@ function renderGraph() {
       const outlet = element(editable ? "button" : "span", "",
         eventPort ? "port output-port event-port" : midiPort ? "port output-port midi-port" :
         spec?.controlOutput ? "port mod-output" : "port output-port");
-      outlet.title = eventPort ? "Horloge · " + eventPort : midiPort ? "MIDI · " + midiPort : spec?.controlOutput ? "Sortie de modulation" : "Sortie audio";
+      outlet.title = eventPort ? "Horloge · " + eventPort : midiPort ? "MIDI · " + midiPort : spec?.controlOutput ? tr("Sortie de modulation") : tr("Sortie audio");
       if (!spec?.controlOutput && spec?.outputChannels === 2) {
         outlet.classList.add("stereo-port");
-        outlet.title = "Sortie stéréo L/R";
+        outlet.title = tr("Sortie stéréo L/R");
       }
       if (output) {
         outlet.style.left = portPosition(index, (eventOutputs ?? spec.midiOutputs).length) * 100 + "%";
@@ -865,13 +868,13 @@ function parameterControl(owner, parameter, patch, key = "parameters", onValue, 
   const value = owner[key]?.[parameter.name] ?? parameter.initial;
   const hasSlider = slider && !parameter.choices;
   const label = element(hasSlider ? "div" : "label", "", "parameter");
-  const labelText = owner.type === "Delay" && parameter.name === "Time" ? "Time L" :
-    owner.type === "FM4" ? parameter.name.replace(/^[1-4] /, "") : parameter.name;
+  const labelText = tr(owner.type === "Delay" && parameter.name === "Time" ? "Time L" :
+    owner.type === "FM4" ? parameter.name.replace(/^[1-4] /, "") : parameter.name);
   const externalTrigger = owner.type === "Arpeggiator" && parameter.name === "Division" &&
     patch.routings?.some(([, to, input]) => to === owner.id && input === "Trigger");
   const noFmSource = owner.type === "Osc" && parameter.name === "FM" && patch.modules.filter(n=>n.type==="Osc").length < 2;
-  const disabledReason = externalTrigger ? "Pilotée par le câble Trigger. Débranche-le pour utiliser cette division." :
-    noFmSource ? "Ajoute un deuxième Osc : il modulera le premier, même avec son Level à zéro." : "";
+  const disabledReason = externalTrigger ? tr("Pilotée par le câble Trigger. Débranche-le pour utiliser cette division.") :
+    noFmSource ? tr("Ajoute un deuxième Osc : il modulera le premier, même avec son Level à zéro.") : "";
   if (disabledReason) {
     label.classList.add("parameter-inactive");
     label.title = disabledReason;
@@ -886,7 +889,7 @@ function parameterControl(owner, parameter, patch, key = "parameters", onValue, 
   const control = element(parameter.choices ? "select" : "input", "");
   if (parameter.choices) {
     parameter.choices.forEach((choice, index) => {
-      const option = element("option", choice);
+      const option = element("option", tr(choice));
       option.value = index + parameter.min;
       control.append(option);
     });
@@ -897,7 +900,7 @@ function parameterControl(owner, parameter, patch, key = "parameters", onValue, 
     control.step = owner.type === "Osc" && parameter.name === "Pitch" ? parameter.step ?? 1 : 1;
   }
   control.value = value;
-  control.title = "Valeur par défaut : " + (parameter.choices?.[parameter.initial - parameter.min] ?? parameter.initial);
+  control.title = tr("Valeur par défaut : {0}", tr(parameter.choices?.[parameter.initial - parameter.min] ?? parameter.initial));
   control.disabled = !activeDraft() || Boolean(disabledReason);
   if (disabledReason) control.title = disabledReason;
   let range;
@@ -934,7 +937,7 @@ function parameterControl(owner, parameter, patch, key = "parameters", onValue, 
     range.step = control.step;
     range.value = value;
     range.disabled = control.disabled;
-    range.setAttribute("aria-label", "Curseur " + labelText);
+    range.setAttribute("aria-label", tr("Curseur {0}", labelText));
     range.oninput = () => {
       control.value = range.value;
       saveValue(Number(range.value));
@@ -949,8 +952,8 @@ function oscillatorWavePreview(node, patch) {
   canvas.width = 320;
   canvas.height = 120;
   canvas.setAttribute("role", "img");
-  canvas.setAttribute("aria-label", "Courbe de la forme d’onde de l’oscillateur");
-  const fetch = element("button", "Lire la forme d’onde depuis le Modulox");
+  canvas.setAttribute("aria-label", tr("Courbe de la forme d’onde de l’oscillateur"));
+  const fetch = element("button", tr("Lire la forme d’onde depuis le Modulox"));
   const update = () => {
     const wave = node.parameters?.Wave ?? 0;
     const id = patch.waves?.[wave - builtinWaves.length];
@@ -964,16 +967,16 @@ function oscillatorWavePreview(node, patch) {
 
 function patchCategoryControl(patch) {
   const row = element("label", "", "parameter");
-  row.append(element("span", "Catégorie"));
+  row.append(element("span", tr("Catégorie")));
   const select = element("select");
   for (const [id, label] of patchCategories) {
-    const option = element("option", label);
+    const option = element("option", tr(label));
     option.value = id;
     select.append(option);
   }
   select.value = patch.category ?? "user";
   select.disabled = !activeDraft();
-  select.title = "Classement dans le menu des patches du Modulox (firmware 1.1 ou suivant).";
+  select.title = tr("Classement dans le menu des patches du Modulox (firmware 1.1 ou suivant).");
   select.onchange = () => { patch.category = select.value; changed(false); };
   row.append(select);
   return row;
@@ -984,7 +987,7 @@ function renderInspector() {
   details.replaceChildren();
   const patch = current()?.patch;
   if (patch && selectedNode === "$settings" && catalog.settings) {
-    details.append(element("h3", "Réglages du patch"));
+    details.append(element("h3", tr("Réglages du patch")));
     details.append(patchCategoryControl(patch));
     for (const parameter of catalog.settings.parameters) {
       details.append(parameterControl(patch, parameter, patch, "settings"));
@@ -993,23 +996,23 @@ function renderInspector() {
   }
   const node = selectedNode === "out" ? outputModule : patch?.modules.find((node) => node.id === selectedNode);
   if (!node || !patch) {
-    details.append(element("p", "Sélectionne un module dans le graphe."));
+    details.append(element("p", tr("Sélectionne un module dans le graphe.")));
     return;
   }
-  details.append(element("h3", node.type), element("p", node.id));
+  details.append(element("h3", tr(node.type)), element("p", node.id));
   renderNodeControls(details, node, patch);
   for (const key of ["connections", "modulations", "routings"]) {
     const cables = (patch[key] ?? []).filter(([from, to]) => from === node.id || to === node.id);
     if (!cables.length) continue;
-    details.append(element("h4", key === "routings" ? "Horloge et CV" : key === "modulations" ? "Modulations" : "Câbles audio"));
+    details.append(element("h4", key === "routings" ? tr("Horloge et CV") : key === "modulations" ? tr("Modulations") : tr("Câbles audio")));
     for (const edge of cables) {
       const [from, to, input] = edge;
       const row = element("div", "", "cable");
       const label = key === "connections" ? input + 1 : input;
-      row.append(element("span", from + " → " + (to === "out" ? "Sortie" : to) + " · " + label));
+      row.append(element("span", from + " → " + (to === "out" ? tr("Sortie") : to) + " · " + label));
       if (activeDraft()) {
         const remove = element("button", "×", "remove-cable");
-        remove.setAttribute("aria-label", "Retirer le câble " + from + " vers " + to + ", entrée " + label);
+        remove.setAttribute("aria-label", tr("Retirer le câble {0} vers {1}, entrée {2}", from, to, label));
         remove.onclick = () => {
           patch[key] = patch[key].filter((other) => other !== edge);
           if (key !== "connections" && !patch[key].length) delete patch[key];
@@ -1021,7 +1024,7 @@ function renderInspector() {
     }
   }
   if (activeDraft() && node.id !== "out") {
-    const remove = element("button", "Retirer le module", "remove-module");
+    const remove = element("button", tr("Retirer le module"), "remove-module");
     remove.onclick = () => {
       patch.modules = patch.modules.filter((item) => item !== node);
       patch.connections = patch.connections.filter(([from, to]) => from !== node.id && to !== node.id);
@@ -1051,39 +1054,38 @@ function renderNodeControls(details, node, patch, sliders = false) {
   if (node.type === "FM4") { renderFm4Controls(details, node, patch, spec, sliders); return; }
   if (node.type === "Arpeggiator") {
     const externalTrigger = patch.routings?.some(([, to, input]) => to === node.id && input === "Trigger");
-    details.append(element("p", "Les notes tenues pilotent l’arpège. Relie Pitch et Velocity aux oscillateurs. " +
-      (externalTrigger ? "Le câble Trigger détermine la cadence ; Division est désactivée." :
-        "Sans câble Trigger, Division règle la cadence à partir de l’horloge générale.")));
+    details.append(element("p", tr("Les notes tenues pilotent l’arpège. Relie Pitch et Velocity aux oscillateurs. {0}", externalTrigger ? tr("Le câble Trigger détermine la cadence ; Division est désactivée.") :
+        tr("Sans câble Trigger, Division règle la cadence à partir de l’horloge générale."))));
   } else if (node.type === "Clock") {
-    details.append(element("p", "La source et le BPM se règlent dans les réglages du patch."));
+    details.append(element("p", tr("La source et le BPM se règlent dans les réglages du patch.")));
   } else if (node.type === "Delay") {
-    details.append(element("p", "Mono : répétitions communes ; Stereo : canaux indépendants ; Ping-pong : répétitions alternées gauche/droite. Link lie Time L/R et les divisions. Désactive-le pour les régler séparément. Maximum 2 secondes par canal."));
+    details.append(element("p", tr("Mono : répétitions communes ; Stereo : canaux indépendants ; Ping-pong : répétitions alternées gauche/droite. Link lie Time L/R et les divisions. Désactive-le pour les régler séparément. Maximum 2 secondes par canal.")));
   } else if (node.type === "Pan") {
-    details.append(element("p", "Convertit une source mono en stéréo. Pan déplace le son de gauche à droite à puissance constante ; le centre vaut −3 dB par canal."));
+    details.append(element("p", tr("Convertit une source mono en stéréo. Pan déplace le son de gauche à droite à puissance constante ; le centre vaut −3 dB par canal.")));
   } else if (node.type === "Chorus") {
-    details.append(element("p", "Chorus stéréo : Rate règle la vitesse, Depth la profondeur et Mix le dosage. Une valeur de Rate de 100 correspond à 1 Hz."));
+    details.append(element("p", tr("Chorus stéréo : Rate règle la vitesse, Depth la profondeur et Mix le dosage. Une valeur de Rate de 100 correspond à 1 Hz.")));
   } else if (node.type === "Rotary") {
-    details.append(element("p", "Cabine rotative stéréo à deux rotors. Speed choisit Slow ou Fast ; Transition règle l’inertie. Slow/Fast sont en centièmes de Hz. Depth dose le mouvement."));
+    details.append(element("p", tr("Cabine rotative stéréo à deux rotors. Speed choisit Slow ou Fast ; Transition règle l’inertie. Slow/Fast sont en centièmes de Hz. Depth dose le mouvement.")));
   } else if (node.type === "Stereo") {
-    details.append(element("p", "Conversion mono → stéréo sans atténuation. L / Mono seul est envoyé aux deux canaux ; branche R pour assembler deux sources mono distinctes."));
+    details.append(element("p", tr("Conversion mono → stéréo sans atténuation. L / Mono seul est envoyé aux deux canaux ; branche R pour assembler deux sources mono distinctes.")));
   } else if (node.type === "Mono") {
-    details.append(element("p", "Conversion stéréo → mono : moyenne de L et R. Permet de rejoindre une chaîne mono."));
-  } else if (node.type === "Stereo Mix") {
-    details.append(element("p", "Somme jusqu’à trois signaux stéréo. Les réglages In 1–3 agissent sur les deux canaux ; même marge de niveau que Mix."));
+    details.append(element("p", tr("Conversion stéréo → mono : moyenne de L et R. Permet de rejoindre une chaîne mono.")));
+  } else if (node.type === tr("Stereo Mix")) {
+    details.append(element("p", tr("Somme jusqu’à trois signaux stéréo. Les réglages In 1–3 agissent sur les deux canaux ; même marge de niveau que Mix.")));
   } else if (node.type === "Osc") {
-    details.append(element("p", "Unison superpose jusqu’à quatre oscillations désaccordées. Mix dose cette couche avec le son simple ; Level règle l’ensemble."));
+    details.append(element("p", tr("Unison superpose jusqu’à quatre oscillations désaccordées. Mix dose cette couche avec le son simple ; Level règle l’ensemble.")));
     if (firstOscillator(patch)?.id === node.id)
-      details.append(element("p", "FM : à 0 le couplage est désactivé. Au-dessus, le deuxième Osc module ce premier Osc, même si son Level est à zéro. Il peut rester sans câble audio."));
+      details.append(element("p", tr("FM : à 0 le couplage est désactivé. Au-dessus, le deuxième Osc module ce premier Osc, même si son Level est à zéro. Il peut rester sans câble audio.")));
   } else if (node.type === "VCA") {
-    details.append(element("p", "Relie une enveloppe ou un LFO à Gain. Depth dose son action et Level fixe le niveau maximum. Une CV négative ferme le VCA. Velocity multiplie le gain."));
+    details.append(element("p", tr("Relie une enveloppe ou un LFO à Gain. Depth dose son action et Level fixe le niveau maximum. Une CV négative ferme le VCA. Velocity multiplie le gain.")));
   } else if (node.type === "Noise") {
-    details.append(element("p", "Bruit blanc par voix, avec contrôle du niveau et de la vélocité."));
+    details.append(element("p", tr("Bruit blanc par voix, avec contrôle du niveau et de la vélocité.")));
   } else if (node.type === "Sub") {
-    details.append(element("p", "Suit la note et le glide, une ou deux octaves plus bas. Avec un module MIDI ou Arpeggiator, câble son entrée Pitch."));
-  } else if (node.type === "Ring Mod") {
-    details.append(element("p", "Multiplie les deux entrées audio. Mix dose le résultat avec la première entrée."));
+    details.append(element("p", tr("Suit la note et le glide, une ou deux octaves plus bas. Avec un module MIDI ou Arpeggiator, câble son entrée Pitch.")));
+  } else if (node.type === tr("Ring Mod")) {
+    details.append(element("p", tr("Multiplie les deux entrées audio. Mix dose le résultat avec la première entrée.")));
   } else if (node.type === "Wavefolder") {
-    details.append(element("p", "Drive replie le signal, Symmetry décale le repliement et Mix dose le résultat. Les trois paramètres sont modulables."));
+    details.append(element("p", tr("Drive replie le signal, Symmetry décale le repliement et Mix dose le résultat. Les trois paramètres sont modulables.")));
   }
   if (sampleModuleTypes.includes(node.type)) renderSampleControl(details, node);
   const oscPreview = node.type === "Osc" ? oscillatorWavePreview(node, patch) : null;
@@ -1113,10 +1115,10 @@ function renderNodeControls(details, node, patch, sliders = false) {
 }
 
 function renderFm4Controls(panel, node, patch, spec, sliders) {
-  panel.append(element("p", "Quatre opérateurs sinus. Algorithm choisit leur architecture, Depth dose la modulation et Feedback réinjecte l’opérateur 1. Chaque opérateur possède son ratio, son niveau et son ADSR."));
+  panel.append(element("p", tr("Quatre opérateurs sinus. Algorithm choisit leur architecture, Depth dose la modulation et Feedback réinjecte l’opérateur 1. Chaque opérateur possède son ratio, son niveau et son ADSR.")));
   const canvas = element("canvas", "", "osc-wave-preview");
   canvas.width=360; canvas.height=160;
-  canvas.setAttribute("role", "img"); canvas.setAttribute("aria-label", "Architecture des quatre opérateurs FM");
+  canvas.setAttribute("role", "img"); canvas.setAttribute("aria-label", tr("Architecture des quatre opérateurs FM"));
   function draw() {
     const [inputs, carriers] = fm4Topologies[node.parameters?.Algorithm ?? 4];
     const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,360,160); ctx.lineWidth=2; ctx.strokeStyle="#a99de8";
@@ -1137,7 +1139,7 @@ function renderFm4Controls(panel, node, patch, spec, sliders) {
     panel.append(parameterControl(node,parameter,patch,"parameters",parameter.name==="Algorithm"?draw:undefined,sliders));
   for(let i=0;i<4;++i){
     const group=element("details","","fm-operator");group.open=i===0;
-    group.append(element("summary","Opérateur "+(i+1)));
+    group.append(element("summary",tr("Opérateur {0}", i+1)));
     for(const parameter of spec.parameters.filter(p=>p.name.startsWith(`${i+1} `)))group.append(parameterControl(node,parameter,patch,"parameters",undefined,sliders));
     panel.append(group);
   }
@@ -1145,9 +1147,9 @@ function renderFm4Controls(panel, node, patch, spec, sliders) {
 
 function renderSampleControl(panel, node) {
   const row = element("label", "", "parameter");
-  row.append(element("span", "Sample"));
+  row.append(element("span", tr("Sample")));
   const select = element("select", "");
-  const empty = element("option", "Choisir un sample");
+  const empty = element("option", tr("Choisir un sample"));
   empty.value = "";
   select.append(empty);
   for (const sample of sampleList()) {
@@ -1172,12 +1174,12 @@ function renderSampleControl(panel, node) {
     changed();
   };
   row.append(select);
-  const library = element("button", "Ouvrir Samples");
+  const library = element("button", tr("Ouvrir Samples"));
   library.onclick = () => openSampleLibrary(true, node.sample);
   const preview = element("canvas", "", "osc-wave-preview");
   preview.width = 320;
   preview.height = 90;
-  preview.setAttribute("aria-label", "Courbe du sample sélectionné");
+  preview.setAttribute("aria-label", tr("Courbe du sample sélectionné"));
   panel.append(row, preview, library);
   drawSample(preview, sampleLibrary.get(node.sample));
 }
@@ -1189,7 +1191,7 @@ function addModulePreview(panel, node, spec) {
   preview.width = 320;
   preview.height = 96;
   preview.setAttribute("role", "img");
-  preview.setAttribute("aria-label", envelope ? "Courbe de l’enveloppe ADSR" : "Forme d’onde du LFO");
+  preview.setAttribute("aria-label", envelope ? tr("Courbe de l’enveloppe ADSR") : tr("Forme d’onde du LFO"));
   panel.append(preview);
   const value = (name) => node.parameters?.[name] ?? spec.parameters.find((parameter) => parameter.name === name)?.initial;
   function update() {
@@ -1234,9 +1236,9 @@ function renderParameterPanels() {
       const parameters = catalog.settings.parameters.filter(p => playSettings.includes(p.name) === play);
       if (!parameters.length) continue;
       const panel = element("section", "", "panel module-card");
-      panel.append(element("h2", play ? "Jeu" : "Réglages du patch"));
+      panel.append(element("h2", play ? tr("Jeu") : tr("Réglages du patch")));
       if (!play) panel.append(patchCategoryControl(patch));
-      if (play) panel.append(element("p", "Mono : priorité à la dernière note tenue. Legato : glide sur les notes qui se chevauchent. Retrigger relance les enveloppes en mono legato."));
+      if (play) panel.append(element("p", tr("Mono : priorité à la dernière note tenue. Legato : glide sur les notes qui se chevauchent. Retrigger relance les enveloppes en mono legato.")));
       for (const parameter of parameters) panel.append(parameterControl(patch, parameter, patch, "settings", undefined, true));
       view.append(panel);
     }
@@ -1244,7 +1246,7 @@ function renderParameterPanels() {
   for (const node of patch.modules) {
     if (!moduleSpec(catalog, node.type)?.parameters?.length) continue;
     const panel = element("section", "", "panel module-card");
-    const title = element("h2", node.type);
+    const title = element("h2", tr(node.type));
     title.append(element("small", node.id));
     panel.append(title);
     renderNodeControls(panel, node, patch, true);
@@ -1308,13 +1310,13 @@ async function perform(label, operation, closeOnError = false) {
 
 function readRemoteWave(id) {
   if (!id || busy || !port) return;
-  perform("Lecture de la forme d’onde…", async () => {
+  perform(tr("Lecture de la forme d’onde…"), async () => {
     const wave = await fetchWave(port, id);
     waveLibrary.set(id, wave);
     try {
       await saveWaves([wave]);
     } catch {
-      $("wave-message").textContent = "L’aperçu est disponible pour cette session.";
+      $("wave-message").textContent = tr("L’aperçu est disponible pour cette session.");
     }
     renderInspector();
     if (screen === "waveforms") renderWaveBrowser();
@@ -1344,7 +1346,7 @@ async function readDevice() {
     catch (error) { $("firmware-latest").textContent = error.message; }
   }
   if (currentFirmware?.pendingVerify) {
-    $("firmware-message").textContent = "Le Modulox vérifie son premier démarrage. Clique sur Vérifier les mises à jour dans quelques secondes.";
+    $("firmware-message").textContent = tr("Le Modulox vérifie son premier démarrage. Clique sur Vérifier les mises à jour dans quelques secondes.");
   }
   samplePreviewFailures.clear();
   remoteSamples.clear();
@@ -1391,7 +1393,7 @@ $("copy").onclick = () => activeDraft() ? resumeDraft() : createDraft(current())
 $("tab-graph").onclick = () => switchEditorView("graph");
 $("tab-parameters").onclick = () => switchEditorView("parameters");
 $("discard-draft").onclick = () => {
-  if (!confirm("Fermer ce patch en cours ? Les modifications non sauvegardées seront perdues.")) return;
+  if (!confirm(tr("Fermer ce patch en cours ? Les modifications non sauvegardées seront perdues."))) return;
   drafts = [];
   persist();
   const items = hasRead ? entries : examples;
@@ -1429,15 +1431,14 @@ function renderSamples() {
   const list = $("sample-list");
   const items = sampleList();
   if (!items.some((item) => item.id === selectedSample)) selectedSample = items[0]?.id;
-  $("sample-count").textContent = sampleLibrary.size + " en local" +
-    (port && deviceCatalog?.sampleLibrary ? " · " + remoteSamples.size + " sur le Modulox" : "");
+  $("sample-count").textContent = tr("{0} en local{1}", sampleLibrary.size, port && deviceCatalog?.sampleLibrary ? tr(" · {0} sur le Modulox", remoteSamples.size) : "");
   $("sample-refresh").disabled = !port || !deviceCatalog?.sampleLibrary || Boolean(busy);
   list.replaceChildren();
-  if (!items.length) list.append(element("p", "Importe un WAV ou les démos de Sampbrain2.", "empty-state"));
+  if (!items.length) list.append(element("p", tr("Importe un WAV ou les démos de Sampbrain2."), "empty-state"));
   for (const item of items) {
     const row = element("div", "", "sample-row");
     const select = element("button", item.name);
-    select.append(element("small", remoteSamples.has(item.id) ? (item.pcm ? "Local + Modulox" : "Modulox") : "Local"));
+    select.append(element("small", remoteSamples.has(item.id) ? (item.pcm ? tr("Local + Modulox") : "Modulox") : tr("Local")));
     select.setAttribute("aria-pressed", String(selectedSample === item.id));
     select.onclick = () => {
       selectedSample = item.id;
@@ -1448,16 +1449,16 @@ function renderSamples() {
     row.append(select);
     if (item.pcm) {
       const remove = element("button", "×", "sample-remove");
-      remove.setAttribute("aria-label", "Supprimer " + item.name + " de la bibliothèque locale");
+      remove.setAttribute("aria-label", tr("Supprimer {0} de la bibliothèque locale", item.name));
       remove.onclick = async () => {
-        if (!confirm("Supprimer « " + item.name + " » de cette bibliothèque locale ?")) return;
+        if (!confirm(tr("Supprimer « {0} » de cette bibliothèque locale ?", item.name))) return;
         try {
           await deleteSample(item.id);
           sampleLibrary.delete(item.id);
           if (item.id === selectedSample) samplePlayback?.stop();
           renderSamples();
         } catch {
-          $("sample-message").textContent = "Impossible de supprimer ce sample.";
+          $("sample-message").textContent = tr("Impossible de supprimer ce sample.");
         }
       };
       row.append(remove);
@@ -1469,11 +1470,11 @@ function renderSamples() {
 
 function renderSampleDetail() {
   const sample = sampleList().find((item) => item.id === selectedSample);
-  $("sample-name").textContent = sample?.name ?? "Aperçu";
+  $("sample-name").textContent = sample?.name ?? tr("Aperçu");
   $("sample-info").textContent = sample?.pcm
     ? (sample.pcm.byteLength / (2 * sampleRate)).toFixed(2) + " s · mono · 44,1 kHz"
-    : sample ? (sample.bytes ? (sample.bytes / (2 * sampleRate)).toFixed(2) + " s · " : "") + "Disponible sur le Modulox. Récupère-le pour l’écouter ou l’exporter."
-      : "WAV mono ou stéréo, convertis en mono à l’import.";
+    : sample ? tr("{0}Disponible sur le Modulox. Récupère-le pour l’écouter ou l’exporter.", sample.bytes ? (sample.bytes / (2 * sampleRate)).toFixed(2) + " s · " : "")
+      : tr("WAV mono ou stéréo, convertis en mono à l’import.");
   $("sample-play").disabled = !sample?.pcm;
   $("sample-send").disabled = !sample?.pcm || !port || !deviceCatalog?.maxSampleBytes || Boolean(busy);
   $("sample-fetch").hidden = !sample || Boolean(sample.pcm);
@@ -1482,7 +1483,7 @@ function renderSampleDetail() {
   $("sample-export").disabled = !sample?.pcm;
   $("sample-delete-device").disabled = !sample || !port || !remoteSamples.has(sample.id) ||
     !deviceCatalog?.sampleDeletion || Boolean(busy);
-  $("sample-delete-device").title = port && !deviceCatalog?.sampleDeletion ? "Mets à jour le firmware pour supprimer les samples." : "Supprimer uniquement de la flash du Modulox";
+  $("sample-delete-device").title = port && !deviceCatalog?.sampleDeletion ? tr("Mets à jour le firmware pour supprimer les samples.") : tr("Supprimer uniquement de la flash du Modulox");
   $("sample-label").disabled = !sample || Boolean(busy);
   if (document.activeElement !== $("sample-label")) $("sample-label").value = sample?.name ?? "";
   $("sample-rename").disabled = !sample || Boolean(busy) ||
@@ -1496,7 +1497,7 @@ function loadSelectedSamplePreview() {
   if (screen !== "samples" || !sample || sample.pcm || samplePreviewCache.has(sample.id) ||
       samplePreviewFailures.has(sample.id) || !port || !deviceCatalog?.maxSampleBytes || busy) return;
   const connection = port;
-  perform("Chargement de l’aperçu…", async () => {
+  perform(tr("Chargement de l’aperçu…"), async () => {
     try {
       const preview = deviceCatalog?.samplePreview ? await fetchSamplePreview(connection, sample.id)
         : await fetchSample(connection, sample.id, sample.name);
@@ -1522,13 +1523,13 @@ async function openSampleLibrary(fromEditor = false, id) {
 
 function refreshSampleLibrary() {
   if (!port || busy || !deviceCatalog?.sampleLibrary) return;
-  return perform("Lecture de la bibliothèque…", async () => {
+  return perform(tr("Lecture de la bibliothèque…"), async () => {
     const items = await fetchSampleLibrary(port);
     samplePreviewFailures.clear();
     remoteSamples.clear();
     for (const sample of items) remoteSamples.set(sample.id, sample);
     renderSamples();
-    $("sample-message").textContent = items.length + " samples dans la flash du Modulox.";
+    $("sample-message").textContent = tr("{0} samples dans la flash du Modulox.", items.length);
   });
 }
 
@@ -1546,13 +1547,12 @@ async function importSamples(files) {
       rejected.push(file.name + " (" + error.message + ")");
     }
   }
-  $("sample-message").textContent = imported + " WAV importés" +
-    (rejected.length ? " · Échec : " + rejected.join(", ") : "");
+  $("sample-message").textContent = tr("{0} WAV importés{1}", imported, rejected.length ? tr(" · Échec : {0}", rejected.join(", ")) : "");
   if (screen === "samples") renderSamples();
 }
 
 function sampleProgress(sent, total) {
-  $("status").textContent = "Transfert du sample " + Math.round(sent / total * 100) + " %";
+  $("status").textContent = tr("Transfert du sample {0} %", Math.round(sent / total * 100));
 }
 
 $("nav-samples").onclick = () => openSampleLibrary();
@@ -1575,7 +1575,7 @@ $("sample-demos").onclick = async () => {
     }));
     await importSamples(files);
   } catch {
-    $("sample-message").textContent = "Impossible de lire les démos Sampbrain2.";
+    $("sample-message").textContent = tr("Impossible de lire les démos Sampbrain2.");
   } finally {
     button.disabled = false;
   }
@@ -1598,17 +1598,17 @@ $("sample-play").onclick = async () => {
     samplePlayback = source;
     source.start();
   } catch {
-    $("sample-message").textContent = "Impossible de lire le sample dans ce navigateur.";
+    $("sample-message").textContent = tr("Impossible de lire le sample dans ce navigateur.");
   }
 };
 $("sample-send").onclick = () => {
   const sample = sampleLibrary.get(selectedSample);
   if (!sample || !port || busy) return;
-  perform("Envoi du sample…", async () => {
+  perform(tr("Envoi du sample…"), async () => {
     await uploadSample(port, sample, sampleProgress, deviceCatalog?.sampleNames);
     if (deviceCatalog?.sampleLibrary) remoteSamples.set(sample.id, { id: sample.id, name: sample.name, bytes: sample.pcm.byteLength });
     renderSamples();
-    $("sample-message").textContent = sample.name + " disponible dans la flash du Modulox.";
+    $("sample-message").textContent = tr("{0} disponible dans la flash du Modulox.", sample.name);
   });
 };
 
@@ -1616,7 +1616,7 @@ $("sample-rename").onclick = () => {
   const sample = sampleList().find((item) => item.id === selectedSample);
   const entered = $("sample-label").value.trim();
   if (!sample || !entered || busy) return;
-  perform("Renommage du sample…", async () => {
+  perform(tr("Renommage du sample…"), async () => {
     const remote = port && remoteSamples.has(sample.id) && deviceCatalog?.sampleNames;
     const name = remote ? await renameSample(port, sample.id, entered) : entered.slice(0, 31);
     if (remote) remoteSamples.set(sample.id, { ...remoteSamples.get(sample.id), name });
@@ -1629,7 +1629,7 @@ $("sample-rename").onclick = () => {
       if (node.sample === sample.id) node.sampleName = name;
     persist();
     renderSamples();
-    $("sample-message").textContent = remote ? "Nom enregistré sur le Modulox." : "Nom enregistré dans la bibliothèque locale.";
+    $("sample-message").textContent = remote ? tr("Nom enregistré sur le Modulox.") : tr("Nom enregistré dans la bibliothèque locale.");
   });
 };
 
@@ -1645,7 +1645,7 @@ $("sample-export").onclick = () => {
 $("sample-fetch").onclick = () => {
   const sample = sampleList().find((item) => item.id === selectedSample);
   if (!sample || !port || busy) return;
-  perform("Lecture du sample…", async () => {
+  perform(tr("Lecture du sample…"), async () => {
     const cached = samplePreviewCache.get(sample.id);
     const local = cached?.pcm ? { ...cached, id: sample.id, name: sample.name } : await fetchSample(port, sample.id, sample.name);
     await saveSample(local);
@@ -1659,9 +1659,8 @@ $("sample-delete-device").onclick = () => {
   if (!sample || !port || busy || !deviceCatalog?.sampleDeletion) return;
   const localUse = [...drafts, ...savedPatches].some(({ patch }) => patch.modules.some((node) => node.sample === sample.id));
   const keepLocal = localUse && !sampleLibrary.has(sample.id);
-  if (!confirm("Supprimer « " + sample.name + " » de la flash du Modulox ?" +
-      (keepLocal ? " Un patch local l’utilise : une copie locale sera conservée pour pouvoir le renvoyer." : ""))) return;
-  perform("Suppression du sample…", async () => {
+  if (!confirm(tr("Supprimer « {0} » de la flash du Modulox ?{1}", sample.name, keepLocal ? tr(" Un patch local l’utilise : une copie locale sera conservée pour pouvoir le renvoyer.") : ""))) return;
+  perform(tr("Suppression du sample…"), async () => {
     if (keepLocal) {
       const cached = samplePreviewCache.get(sample.id);
       const local = cached?.pcm ? { ...cached, id: sample.id, name: sample.name } : await fetchSample(port, sample.id, sample.name);
@@ -1672,8 +1671,7 @@ $("sample-delete-device").onclick = () => {
     samplePreviewCache.delete(sample.id); samplePreviewFailures.delete(sample.id);
     samplePlayback?.stop();
     renderSamples();
-    $("sample-message").textContent = "Sample supprimé du Modulox." +
-      (sampleLibrary.has(sample.id) ? " Sa copie locale est conservée ; la croix permet de la supprimer aussi." : "");
+    $("sample-message").textContent = tr("Sample supprimé du Modulox.{0}", sampleLibrary.has(sample.id) ? tr(" Sa copie locale est conservée ; la croix permet de la supprimer aussi.") : "");
   });
 };
 
@@ -1702,12 +1700,11 @@ $("wave-files").onchange = async (event) => {
       if (!waveLibrary.has(wave.id)) added++;
       waveLibrary.set(wave.id, wave);
     }
-    $("wave-message").textContent = added + " ajoutées" +
-      (rejected ? " · " + rejected + " WAV incompatibles" : "");
+    $("wave-message").textContent = tr("{0} ajoutées{1}", added, rejected ? tr(" · {0} WAV incompatibles", rejected) : "");
     try {
       await saveWaves(imported);
     } catch {
-      $("wave-message").textContent += " · Bibliothèque conservée pour cette session seulement.";
+      $("wave-message").textContent += tr(" · Bibliothèque conservée pour cette session seulement.");
     }
     $("wave-scope").value = "library";
     $("wave-search").value = "";
@@ -1728,7 +1725,7 @@ $("arrange").onclick = () => {
   patch.layout = layout(patch);
   changed();
 };
-$("connect").onclick = () => perform("Connexion USB…", async () => {
+$("connect").onclick = () => perform(tr("Connexion USB…"), async () => {
   if (port) return disconnect();
   const selected = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a, usbProductId: 0x4009 }] });
   await selected.open({ baudRate: 115200 });
@@ -1740,18 +1737,18 @@ $("connect").onclick = () => perform("Connexion USB…", async () => {
     verifyFirmwareRestart();
   }
 }, true);
-$("refresh").onclick = () => perform("Téléchargement USB…", readDevice, true);
+$("refresh").onclick = () => perform(tr("Téléchargement USB…"), readDevice, true);
 $("upload").onclick = () => {
   const draft = activeDraft();
   const unavailable = patchSampleError(draft.patch);
   if (unavailable) return showError(unavailable);
   const error = validatePatch(draft.patch, catalog);
   if (error) return showError(error);
-  perform("Envoi en flash…", async () => {
+  perform(tr("Envoi en flash…"), async () => {
     if (draft.targetFile) {
       await readDevice();
       if (!entries.some((entry) => entry.file === draft.targetFile)) {
-        throw new Error("Le patch d’origine a été supprimé. Sauvegarde-le localement puis recharge-le pour créer un nouveau patch.");
+        throw new Error(tr("Le patch d’origine a été supprimé. Sauvegarde-le localement puis recharge-le pour créer un nouveau patch."));
       }
     }
     await Promise.all([waveLibraryReady, samplesReady]);
@@ -1759,7 +1756,7 @@ $("upload").onclick = () => {
     for (const node of patch.modules) if (remoteSamples.has(node.sample)) node.sampleName = remoteSamples.get(node.sample).name;
     const id = await uploadPatch(port, draft.key, patchForDevice(patch, catalog),
       catalog.maxBytes, catalog.maxPatches, waveLibrary, (sent, total) => {
-        $("status").textContent = "Formes d’onde " + sent + "/" + total;
+        $("status").textContent = tr("Formes d’onde {0}/{1}", sent, total);
       }, sampleLibrary, sampleProgress, deviceCatalog?.sampleNames);
     if (draft.patch.name.trim() === patch.name) draft.patch.name = patch.name;
     draft.lastSent = serialized(patch);
@@ -1770,7 +1767,7 @@ $("upload").onclick = () => {
     drafts = [];
     persist();
     select("usb", file);
-    $("home-message").textContent = "Patch enregistré sur le Modulox.";
+    $("home-message").textContent = tr("Patch enregistré sur le Modulox.");
     showScreen("patches");
   });
 };
@@ -1788,7 +1785,7 @@ async function fileOperation(label, operation) {
 }
 async function accessPatchFolder(change = false) {
   await folderReady;
-  if (!window.showDirectoryPicker) throw new Error("Le choix d’un dossier nécessite Chrome ou Edge. Utilise Exporter un fichier pour une sauvegarde sur cet ordinateur.");
+  if (!window.showDirectoryPicker) throw new Error(tr("Le choix d’un dossier nécessite Chrome ou Edge. Utilise Exporter un fichier pour une sauvegarde sur cet ordinateur."));
   if (change || !patchFolder) {
     const handle = await window.showDirectoryPicker({ id: "modulox-patches", mode: "readwrite", startIn: "documents" });
     patchFolder = handle;
@@ -1796,25 +1793,25 @@ async function accessPatchFolder(change = false) {
     await folderPreference(handle).catch(() => {});
   } else if (await patchFolder.queryPermission({ mode: "readwrite" }) !== "granted" &&
       await patchFolder.requestPermission({ mode: "readwrite" }) !== "granted") {
-    throw new Error("Autorise l’accès au dossier ou choisis un autre dossier de patches.");
+    throw new Error(tr("Autorise l’accès au dossier ou choisis un autre dossier de patches."));
   }
   return patchFolder;
 }
 async function ensurePersonalAssets(patch) {
   await Promise.all([waveLibraryReady, samplesReady]);
   for (const id of patch.waves ?? []) if (!waveLibrary.has(id)) {
-    if (!port) throw new Error("Forme d’onde absente : connecte le Modulox pour la récupérer avant de sauvegarder (" + id + ").");
+    if (!port) throw new Error(tr("Forme d’onde absente : connecte le Modulox pour la récupérer avant de sauvegarder ({0}).", id));
     const wave = await fetchWave(port, id); await saveWaves([wave]); waveLibrary.set(id, wave);
   }
   const samples = new Map(patch.modules.filter(n => sampleModuleTypes.includes(n.type) && n.sample).map(n => [n.sample, n.sampleName]));
   for (const [id, name] of samples) if (!sampleLibrary.get(id)?.pcm) {
-    if (!port) throw new Error("Sample absent : connecte le Modulox pour le récupérer avant de sauvegarder (" + id + ").");
+    if (!port) throw new Error(tr("Sample absent : connecte le Modulox pour le récupérer avant de sauvegarder ({0}).", id));
     const sample = await fetchSample(port, id, name ?? remoteSamples.get(id)?.name);
     await saveSample(sample); sampleLibrary.set(id, sample);
   }
 }
 async function openPersonalFile(file) {
-  const imported = await fileOperation("Ouverture du fichier…", async () => {
+  const imported = await fileOperation(tr("Ouverture du fichier…"), async () => {
     await Promise.all([waveLibraryReady, samplesReady]);
     const result = await readPatchFile(file, { waves: waveLibrary, samples: sampleLibrary });
     // Validate the whole file before touching the current patch or libraries.
@@ -1826,46 +1823,46 @@ async function openPersonalFile(file) {
   });
   if (imported && createDraft({ patch: imported.patch })) {
     $("local-dialog").close();
-    $("hint").textContent = "Fichier ouvert sur cet ordinateur. Enregistrer dans mon dossier crée une nouvelle copie complète.";
+    $("hint").textContent = tr("Fichier ouvert sur cet ordinateur. Enregistrer dans mon dossier crée une nouvelle copie complète.");
   }
 }
 async function showFolderPatches() {
   const list = $("folder-list"); list.replaceChildren();
-  if (!patchFolder) { $("folder-status").textContent = "Choisis un dossier pour retrouver tes fichiers de patches."; return; }
-  $("folder-status").textContent = "Dossier : " + patchFolder.name + " · Fichiers personnels, jamais publiés sur le serveur.";
+  if (!patchFolder) { $("folder-status").textContent = tr("Choisis un dossier pour retrouver tes fichiers de patches."); return; }
+  $("folder-status").textContent = tr("Dossier : {0} · Fichiers personnels, jamais publiés sur le serveur.", patchFolder.name);
   if (await patchFolder.queryPermission({ mode: "readwrite" }) !== "granted") {
-    list.append(element("p", "Clique sur Actualiser pour autoriser de nouveau l’accès à ce dossier.")); return;
+    list.append(element("p", tr("Clique sur Actualiser pour autoriser de nouveau l’accès à ce dossier."))); return;
   }
   const handles = [];
   for await (const entry of patchFolder.values()) if (entry.kind === "file" && entry.name.endsWith(".modulox.json")) handles.push(entry);
   handles.sort((a, b) => a.name.localeCompare(b.name));
-  if (!handles.length) list.append(element("p", "Aucun patch enregistré dans ce dossier."));
+  if (!handles.length) list.append(element("p", tr("Aucun patch enregistré dans ce dossier.")));
   for (const handle of handles) {
     const row = element("div", "", "local-row");
     const label = handle.name.replace(/(?:-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})?\.modulox\.json$/i, "").replace(/-/g, " ");
     const open = element("button", label);
-    open.title = "Ouvrir " + handle.name;
+    open.title = tr("Ouvrir {0}", handle.name);
     open.onclick = async () => { if (!busy) try { await openPersonalFile(await handle.getFile()); } catch (error) { showError(error.message); } };
     row.append(open); list.append(row);
   }
 }
-$("choose-folder").onclick = () => fileOperation("Choix du dossier…", async () => { await accessPatchFolder(true); await showFolderPatches(); });
-$("refresh-folder").onclick = () => fileOperation("Lecture du dossier…", async () => { await accessPatchFolder(); await showFolderPatches(); });
+$("choose-folder").onclick = () => fileOperation(tr("Choix du dossier…"), async () => { await accessPatchFolder(true); await showFolderPatches(); });
+$("refresh-folder").onclick = () => fileOperation(tr("Lecture du dossier…"), async () => { await accessPatchFolder(); await showFolderPatches(); });
 $("save-local").onclick = $("save-home").onclick = async () => {
   const item = current(); if (!item || busy) return;
   const patch = structuredClone(item.patch);
-  const filename = await fileOperation("Enregistrement du fichier…", async () => {
+  const filename = await fileOperation(tr("Enregistrement du fichier…"), async () => {
     const directory = await accessPatchFolder();
     await ensurePersonalAssets(patch);
     const contents = await packPatch(patch, { waves: waveLibrary, samples: sampleLibrary });
     return writePatchFile(directory, contents, patch.name);
   });
-  if (filename) $(screen === "editor" ? "hint" : "home-message").textContent = "Fichier enregistré dans " + patchFolder.name + " : " + filename;
+  if (filename) $(screen === "editor" ? "hint" : "home-message").textContent = tr("Fichier enregistré dans {0} : {1}", patchFolder.name, filename);
 };
 $("export-patch").onclick = $("export-home").onclick = async () => {
   const item = current(); if (!item || busy) return;
   const patch = structuredClone(item.patch);
-  await fileOperation("Export du fichier…", async () => {
+  await fileOperation(tr("Export du fichier…"), async () => {
     await ensurePersonalAssets(patch);
     const contents = await packPatch(patch, { waves: waveLibrary, samples: sampleLibrary });
     const url = URL.createObjectURL(new Blob([contents], { type: "application/json" }));
@@ -1884,22 +1881,22 @@ function showLocalPatches() {
   const list = $("local-list");
   list.replaceChildren();
   $("legacy-patches").hidden = !savedPatches.length;
-  if (!savedPatches.length) list.append(element("p", "Aucun patch sauvegardé dans ce navigateur."));
+  if (!savedPatches.length) list.append(element("p", tr("Aucun patch sauvegardé dans ce navigateur.")));
   for (const item of savedPatches) {
     const row = element("div", "", "local-row");
     const button = element("button", item.patch.name);
     button.onclick = () => {
       if (createDraft(item)) $("local-dialog").close();
     };
-    const remove = element("button", "Supprimer");
+    const remove = element("button", tr("Supprimer"));
     remove.onclick = () => {
-      if (!confirm("Supprimer cette sauvegarde locale ?")) return;
+      if (!confirm(tr("Supprimer cette sauvegarde locale ?"))) return;
       const next = savedPatches.filter((p) => p !== item);
       try {
         localStorage.setItem("modulox.saved.v1", JSON.stringify(next));
         savedPatches = next;
         showLocalPatches();
-      } catch { showError("Impossible de supprimer la sauvegarde locale."); }
+      } catch { showError(tr("Impossible de supprimer la sauvegarde locale.")); }
     };
     row.append(button, remove);
     list.append(row);
@@ -1907,17 +1904,17 @@ function showLocalPatches() {
 }
 async function showServerPatches() {
   const list = $("server-patch-list");
-  list.replaceChildren(element("p", "Chargement des presets d’usine…"));
+  list.replaceChildren(element("p", tr("Chargement des presets d’usine…")));
   try {
     const items = await loadFactoryBank();
     list.replaceChildren();
-    if (!items.length) list.append(element("p", "Aucun preset d’usine disponible."));
+    if (!items.length) list.append(element("p", tr("Aucun preset d’usine disponible.")));
     for (const item of items) {
       const row = element("div", "", "local-row");
       const button = element("button", item.patch.name);
       button.onclick = async () => {
         button.disabled = true;
-        button.textContent = "Chargement…";
+        button.textContent = tr("Chargement…");
         const message = element("p", "");
         try {
           await Promise.all([waveLibraryReady, samplesReady]);
@@ -1932,29 +1929,29 @@ async function showServerPatches() {
   } catch (error) { list.replaceChildren(element("p", error.message)); }
 }
 $("load-local").onclick = () => {
-  $("local-title").textContent = "Mes patches";
-  $("local-description").textContent = "Des fichiers dans ton dossier, avec les formes d’onde et samples nécessaires. Aucune publication sur le serveur.";
+  $("local-title").textContent = tr("Mes patches");
+  $("local-description").textContent = tr("Des fichiers dans ton dossier, avec les formes d’onde et samples nécessaires. Aucune publication sur le serveur.");
   $("factory-bank").hidden = true; $("personal-bank").hidden = false;
   showLocalPatches();
   folderReady.then(showFolderPatches).catch(error => showError(error.message));
   $("local-dialog").showModal();
 };
 $("load-factory").onclick = () => {
-  $("local-title").textContent = "Presets d’usine";
-  $("local-description").textContent = "La banque fournie avec Modulox. Chaque preset s’ouvre comme une copie personnelle à modifier.";
+  $("local-title").textContent = tr("Presets d’usine");
+  $("local-description").textContent = tr("La banque fournie avec Modulox. Chaque preset s’ouvre comme une copie personnelle à modifier.");
   $("factory-bank").hidden = false; $("personal-bank").hidden = true;
-  $("factory-upload-status").textContent = port ? "Banque à 85 %. Les copies déjà envoyées par ce bouton seront réinstallées si nécessaire." : "Connecte le Modulox pour envoyer toute la banque.";
+  $("factory-upload-status").textContent = port ? tr("Banque à 85 %. Les copies déjà envoyées par ce bouton seront réinstallées si nécessaire.") : tr("Connecte le Modulox pour envoyer toute la banque.");
   showServerPatches();
   $("local-dialog").showModal();
 };
 $("factory-upload-stop").onclick = () => {
   factoryAbort?.abort();
-  $("factory-upload-status").textContent = "Arrêt demandé : le patch en cours sera terminé.";
+  $("factory-upload-status").textContent = tr("Arrêt demandé : le patch en cours sera terminé.");
 };
 $("local-dialog").addEventListener("close", () => factoryAbort?.abort());
 $("factory-upload-all").onclick = () => {
   if (busy || !port || !canUpload) return;
-  perform("Préparation de la banque d’usine…", async () => {
+  perform(tr("Préparation de la banque d’usine…"), async () => {
     const controller = new AbortController();
     factoryAbort = controller;
     renderActions();
@@ -1964,13 +1961,13 @@ $("factory-upload-all").onclick = () => {
       await readDevice();
       const items = await loadFactoryBank();
       const plan = await planFactoryUpload(items, entries, deviceCatalog);
-      if (controller.signal.aborted) { status.textContent = "Envoi annulé."; return; }
+      if (controller.signal.aborted) { status.textContent = tr("Envoi annulé."); return; }
       if (!plan.added && !plan.updated) {
-        status.textContent = `${items.length} presets déjà à jour sur le Modulox.`;
+        status.textContent = tr("{0} presets déjà à jour sur le Modulox.", items.length);
         return;
       }
-      if (!confirm(`Charger la banque d’usine à 85 % ?\n${plan.added} ajout(s), ${plan.updated} mise(s) à jour, ${plan.unchanged} déjà à jour.\nLes copies dont le son a été modifié sont conservées. Les presets non modifiés sont mis à jour avec le volume à 85 %.`)) {
-        status.textContent = "Envoi annulé.";
+      if (!confirm(tr("Charger la banque d’usine à 85 % ?\n{0} ajout(s), {1} mise(s) à jour, {2} déjà à jour.\nLes copies dont le son a été modifié sont conservées. Les presets non modifiés sont mis à jour avec le volume à 85 %.", plan.added, plan.updated, plan.unchanged))) {
+        status.textContent = tr("Envoi annulé.");
         return;
       }
       await Promise.all([waveLibraryReady, samplesReady]);
@@ -1979,7 +1976,7 @@ $("factory-upload-all").onclick = () => {
         port, catalog: deviceCatalog, signal: controller.signal,
         libraries: { waves: waveLibrary, samples: sampleLibrary, saveWaves, saveSample },
         progress({ phase, item, done, total }) {
-          const text = phase === "prepare" ? "Préparation des ressources : " + item.patch.name
+          const text = phase === "prepare" ? tr("Préparation des ressources : {0}", item.patch.name)
             : `${done}/${total} · ${item.patch.name}`;
           status.textContent = text; $("status").textContent = text;
           progress.value = done;
@@ -1987,8 +1984,8 @@ $("factory-upload-all").onclick = () => {
         onSaved(entry) { entries = [...entries.filter(item => item.file !== entry.file), entry].sort((a, b) => a.id - b.id); },
       });
       const message = result.cancelled
-        ? `Arrêté : ${result.saved} patch(s) enregistré(s), ${result.done}/${items.length} traités. Relance pour terminer.`
-        : `${items.length} presets d’usine à jour sur le Modulox, volume 85 %.`;
+        ? tr("Arrêté : {0} patch(s) enregistré(s), {1}/{2} traités. Relance pour terminer.", result.saved, result.done, items.length)
+        : tr("{0} presets d’usine à jour sur le Modulox, volume 85 %.", items.length);
       status.textContent = $("home-message").textContent = message;
     } catch (error) {
       status.textContent = error.message;
@@ -2001,7 +1998,7 @@ $("factory-upload-all").onclick = () => {
 };
 $("delete-patch").onclick = () => {
   const item = current();
-  if (!item || !confirm("Supprimer « " + item.patch.name + " » du Modulox ? Recharge un patch sur le synthé avant de sauvegarder depuis ses menus.")) return;
+  if (!item || !confirm(tr("Supprimer « {0} » du Modulox ? Recharge un patch sur le synthé avant de sauvegarder depuis ses menus.", item.patch.name))) return;
   perform("Suppression…", async () => {
     await deletePatch(port, item.file);
     if (drafts[0]?.targetFile === item.file) {
@@ -2019,13 +2016,13 @@ navigator.serial?.addEventListener("disconnect", async (event) => {
 });
 function renderFirmware() {
   $("firmware-current").textContent = currentFirmware
-    ? `Installé : ${currentFirmware.version} · ${(() => { try { return boardForModel(currentFirmware.model).label; } catch { return "Modèle inconnu"; } })()} · ${currentFirmware.pendingVerify ? "vérification de démarrage" : "démarrage confirmé"}`
-    : port ? "Firmware ancien : version non exposée. Une migration initiale A/B est nécessaire." : "Connecte le Modulox pour lire sa version.";
+    ? tr("Installé : {0} · {1} · {2}", currentFirmware.version, (() => { try { return boardForModel(currentFirmware.model).label; } catch { return tr("Modèle inconnu"); } })(), currentFirmware.pendingVerify ? tr("vérification de démarrage") : tr("démarrage confirmé"))
+    : port ? tr("Firmware ancien : version non exposée. Une migration initiale A/B est nécessaire.") : tr("Connecte le Modulox pour lire sa version.");
   const older = currentFirmware && firmwareRelease && compareVersions(firmwareRelease.version, currentFirmware.version) < 0;
-  if (firmwareRelease) $("firmware-latest").textContent = `Disponible : ${firmwareRelease.version}` + (older ? " · Plus ancienne que le firmware installé" : "") +
-    (currentFirmware && compareVersions(firmwareRelease.version, currentFirmware.version) === 0 && firmwareRelease.buildId === currentFirmware.buildId ? " · À jour" : "");
+  if (firmwareRelease) $("firmware-latest").textContent = `Disponible : ${firmwareRelease.version}` + (older ? tr(" · Plus ancienne que le firmware installé") : "") +
+    (currentFirmware && compareVersions(firmwareRelease.version, currentFirmware.version) === 0 && firmwareRelease.buildId === currentFirmware.buildId ? tr(" · À jour") : "");
   $("firmware").disabled = Boolean(busy) || !port || !currentFirmware?.usbUpdate || currentFirmware.pendingVerify || !firmwareRelease || currentFirmware.model !== firmwareRelease.model || older && !firmwareManual;
-  $("firmware").textContent = currentFirmware?.version === firmwareRelease?.version ? "Réinstaller cette version" : "Mettre à jour";
+  $("firmware").textContent = currentFirmware?.version === firmwareRelease?.version ? tr("Réinstaller cette version") : tr("Mettre à jour");
   $("firmware-rollback").disabled = Boolean(busy) || !port || !currentFirmware?.canRollback || currentFirmware.pendingVerify;
   $("firmware-check").disabled = $("firmware-file-button").disabled = Boolean(busy);
   $("firmware-recovery").disabled = Boolean(busy) || !navigator.serial || !firmwareRelease;
@@ -2059,8 +2056,8 @@ $("firmware-factory").onclick = () => {
   ++factoryInstallGeneration;
   factoryInstallRelease = undefined;
   clearFactoryConsent();
-  $("factory-install-release").textContent = "L’image usine sera choisie automatiquement après identification du modèle connecté.";
-  $("factory-install-device").textContent = "Aucune carte identifiée. Aucune écriture effectuée.";
+  $("factory-install-release").textContent = tr("L’image usine sera choisie automatiquement après identification du modèle connecté.");
+  $("factory-install-device").textContent = tr("Aucune carte identifiée. Aucune écriture effectuée.");
   $("factory-install-status").textContent = "";
   $("factory-install-progress").hidden = true;
   $("factory-install-dialog").showModal();
@@ -2078,23 +2075,22 @@ $("factory-install-prepare").onclick = async () => {
   clearFactoryConsent();
   $("factory-install-progress").hidden = true;
   try {
-    await fileOperation("Préparation de l’installation usine…", async () => {
+    await fileOperation(tr("Préparation de l’installation usine…"), async () => {
       try {
         const romPort = await selected;
         await closeFactorySession();
-        $("factory-install-device").textContent = "Identification de la carte en cours…";
+        $("factory-install-device").textContent = tr("Identification de la carte en cours…");
         if (port) await disconnect();
         expectedFirmware = undefined;
         factoryInstallRelease = undefined;
         factoryInstallSession = await prepareFactoryInstaller(romPort, undefined, undefined, reportFactoryInstallation);
         const release = factoryInstallRelease = factoryInstallSession.release;
         const device = factoryInstallSession.device;
-        $("factory-install-release").textContent = `Image usine choisie : firmware ${release.firmwareVersion} · ${device.label}.` +
-          (release.hardwareValidated === false ? " Premier démarrage à valider sur ce modèle." : "");
+        $("factory-install-release").textContent = tr("Image usine choisie : firmware {0} · {1}.{2}", release.firmwareVersion, device.label, release.hardwareValidated === false ? tr(" Premier démarrage à valider sur ce modèle.") : "");
         $("factory-install-device").textContent = `${device.chip} · Flash ${device.flashBytes / 1048576} Mio · PSRAM ${device.psramBytes / 1048576} Mio · MAC ${device.mac}`;
-        reportFactoryInstallation("Cette carte est prête. Vérifie son identité, puis confirme l’effacement ci-dessous. Aucune donnée n’a encore été effacée.");
+        reportFactoryInstallation(tr("Cette carte est prête. Vérifie son identité, puis confirme l’effacement ci-dessous. Aucune donnée n’a encore été effacée."));
       } catch (error) {
-        reportFactoryInstallation(error.name === "NotFoundError" ? "Choix du port annulé. Aucune écriture effectuée." : "Aucun effacement lancé : " + error.message);
+        reportFactoryInstallation(error.name === "NotFoundError" ? tr("Choix du port annulé. Aucune écriture effectuée.") : tr("Aucun effacement lancé : {0}", error.message));
         if (error.name !== "NotFoundError") throw error;
       }
     });
@@ -2113,15 +2109,15 @@ $("factory-install-start").onclick = async () => {
   $("factory-install-progress").value = 0;
   window.addEventListener("beforeunload", protectFactoryInstallation);
   try {
-    await fileOperation("Installation usine complète…", async () => {
+    await fileOperation(tr("Installation usine complète…"), async () => {
       try {
         const result = await session.install({ checked, phrase });
         expectedFirmware = { version: result.version, buildId: release.buildId };
-        reportFactoryInstallation(`Image usine ${result.version} écrite et vérifiée. Appuie sur RESET sans BOOT si nécessaire, puis reconnecte le Modulox dans l’éditeur pour vérifier son démarrage.`, 100);
+        reportFactoryInstallation(tr("Image usine {0} écrite et vérifiée. Appuie sur RESET sans BOOT si nécessaire, puis reconnecte le Modulox dans l’éditeur pour vérifier son démarrage.", result.version), 100);
       } catch (error) {
         reportFactoryInstallation(error.factoryWriteStarted
-          ? `Installation interrompue : ${error.message} Remets le Modulox en BOOT et recommence l’installation complète.`
-          : "Aucun effacement lancé : " + error.message);
+          ? tr("Installation interrompue : {0} Remets le Modulox en BOOT et recommence l’installation complète.", error.message)
+          : tr("Aucun effacement lancé : {0}", error.message));
         throw error;
       }
     });
@@ -2139,9 +2135,9 @@ function verifyFirmwareRestart() {
     : currentFirmware.version === expectedFirmware.version && currentFirmware.buildId === expectedFirmware.buildId;
   if (!matches) {
     expectedFirmware = undefined;
-    throw new Error(`Le Modulox a redémarré en version ${currentFirmware.version}. La nouvelle version n’a pas été confirmée ; un retour arrière a pu avoir lieu.`);
+    throw new Error(tr("Le Modulox a redémarré en version {0}. La nouvelle version n’a pas été confirmée ; un retour arrière a pu avoir lieu.", currentFirmware.version));
   }
-  $("firmware-message").textContent = `Firmware ${currentFirmware.version} confirmé après redémarrage.`;
+  $("firmware-message").textContent = tr("Firmware {0} confirmé après redémarrage.", currentFirmware.version);
   expectedFirmware = undefined; return true;
 }
 async function reconnectAfterFirmware(previousPort) {
@@ -2158,38 +2154,38 @@ async function reconnectAfterFirmware(previousPort) {
       catch { if (port) await disconnect(); else await candidate.close().catch(() => {}); }
     }
     if (port) {
-      if (!currentFirmware) throw new Error("Le Modulox répond avec un ancien firmware. La nouvelle version n’est pas active ; reconnecte-le pour vérifier son état.");
+      if (!currentFirmware) throw new Error(tr("Le Modulox répond avec un ancien firmware. La nouvelle version n’est pas active ; reconnecte-le pour vérifier son état."));
       try { currentFirmware = await fetchFirmwareInfo(port); }
       catch { await disconnect(); }
       if (port && verifyFirmwareRestart()) return;
     }
     await new Promise(resolve => setTimeout(resolve, 1000));
   }
-  throw new Error("Le transfert est terminé. Clique sur Connecter en USB pour retrouver le Modulox et vérifier son redémarrage.");
+  throw new Error(tr("Le transfert est terminé. Clique sur Connecter en USB pour retrouver le Modulox et vérifier son redémarrage."));
 }
-$("firmware-check").onclick = () => fileOperation("Vérification du firmware…", async () => {
+$("firmware-check").onclick = () => fileOperation(tr("Vérification du firmware…"), async () => {
   if (port && deviceCatalog?.firmware) { currentFirmware = await fetchFirmwareInfo(port); verifyFirmwareRestart(); }
   firmwareRelease = await fetchFirmwareRelease(fetch, currentFirmware?.model ?? defaultBoard.model); firmwareImage = undefined; firmwareManual = false;
-  $("firmware-message").textContent = firmwareRelease.notes ?? "Version disponible vérifiée.";
+  $("firmware-message").textContent = tr(firmwareRelease.notes ?? "Version disponible vérifiée.");
 });
 $("firmware-file-button").onclick = () => $("firmware-file").click();
 $("firmware-file").onchange = () => {
   const file = $("firmware-file").files[0]; $("firmware-file").value = "";
-  if (file) fileOperation("Lecture de la mise à jour…", async () => {
+  if (file) fileOperation(tr("Lecture de la mise à jour…"), async () => {
     const bundle = await readFirmwareFile(file);
     if (currentFirmware && bundle.release.model !== currentFirmware.model)
-      throw new Error("Ce fichier de firmware est destiné à un autre modèle de Modulox.");
+      throw new Error(tr("Ce fichier de firmware est destiné à un autre modèle de Modulox."));
     firmwareRelease = bundle.release; firmwareImage = bundle.image; firmwareManual = true;
-    $("firmware-message").textContent = `Fichier ${bundle.release.version} vérifié. Prêt pour une installation USB hors ligne.`;
+    $("firmware-message").textContent = tr("Fichier {0} vérifié. Prêt pour une installation USB hors ligne.", bundle.release.version);
   });
 };
 $("firmware-cancel").onclick = () => firmwareAbort?.abort();
-$("firmware").onclick = () => fileOperation("Préparation du firmware…", async () => {
-  if (!port || !currentFirmware?.usbUpdate || !firmwareRelease) throw new Error("Connecte un Modulox compatible avec la mise à jour A/B.");
+$("firmware").onclick = () => fileOperation(tr("Préparation du firmware…"), async () => {
+  if (!port || !currentFirmware?.usbUpdate || !firmwareRelease) throw new Error(tr("Connecte un Modulox compatible avec la mise à jour A/B."));
   const release = structuredClone(firmwareRelease);
   const image = firmwareImage ?? await fetchFirmwareImage(release, currentFirmware);
   await validateFirmware(image, release, currentFirmware);
-  if (!confirm(`Installer le firmware ${release.version} à la place de ${currentFirmware.version} ?\nLe son sera interrompu et le Modulox redémarrera. Laisse le câble USB branché jusqu’à la fin.`)) return;
+  if (!confirm(tr("Installer le firmware {0} à la place de {1} ?\nLe son sera interrompu et le Modulox redémarrera. Laisse le câble USB branché jusqu’à la fin.", release.version, currentFirmware.version))) return;
   const previousPort = port;
   firmwareAbort = new AbortController();
   $("firmware-progress").hidden = false; $("firmware-progress").value = 0; $("firmware-cancel").hidden = false;
@@ -2200,22 +2196,22 @@ $("firmware").onclick = () => fileOperation("Préparation du firmware…", async
     }, firmwareAbort.signal);
     expectedFirmware = { version: release.version, buildId: release.buildId };
     $("firmware-cancel").hidden = true;
-    $("firmware-message").textContent = "Transfert vérifié. Redémarrage et vérification du Modulox…";
+    $("firmware-message").textContent = tr("Transfert vérifié. Redémarrage et vérification du Modulox…");
     await disconnect(); await reconnectAfterFirmware(previousPort);
   } finally { firmwareAbort = undefined; $("firmware-cancel").hidden = true; }
 });
-$("firmware-rollback").onclick = () => fileOperation("Retour à la version précédente…", async () => {
+$("firmware-rollback").onclick = () => fileOperation(tr("Retour à la version précédente…"), async () => {
   if (!port || !currentFirmware?.canRollback) return;
-  if (!confirm("Redémarrer sur le firmware précédent ? Le son sera interrompu. Les données de patches et samples ne sont pas effacées.")) return;
+  if (!confirm(tr("Redémarrer sur le firmware précédent ? Le son sera interrompu. Les données de patches et samples ne sont pas effacées."))) return;
   const previousPort = port;
   const expected = { rollback: true, fromSlot: currentFirmware.running, fromBuild: currentFirmware.buildId };
   await rollbackFirmware(port); expectedFirmware = expected;
-  $("firmware-message").textContent = "Redémarrage sur le firmware précédent…";
+  $("firmware-message").textContent = tr("Redémarrage sur le firmware précédent…");
   await disconnect(); await reconnectAfterFirmware(previousPort);
 });
-$("firmware-recovery").onclick = () => fileOperation("Récupération USB…", async () => {
-  if (!firmwareRelease) throw new Error("Choisis d’abord un fichier de mise à jour ou vérifie les versions disponibles.");
-  if (!confirm("Récupération pour un Modulox déjà migré en A/B.\nPlace le Modulox en mode programmation avec BOOT maintenu pendant RESET, puis relâche BOOT et sélectionne le port USB de programmation.\nLe firmware sera écrit dans un emplacement inactif ; patches et samples ne seront pas effacés.")) return;
+$("firmware-recovery").onclick = () => fileOperation(tr("Récupération USB…"), async () => {
+  if (!firmwareRelease) throw new Error(tr("Choisis d’abord un fichier de mise à jour ou vérifie les versions disponibles."));
+  if (!confirm(tr("Récupération pour un Modulox déjà migré en A/B.\nPlace le Modulox en mode programmation avec BOOT maintenu pendant RESET, puis relâche BOOT et sélectionne le port USB de programmation.\nLe firmware sera écrit dans un emplacement inactif ; patches et samples ne seront pas effacés."))) return;
   if (port) await disconnect();
   const romPort = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a, usbProductId: 0x1001 }] });
   const release = structuredClone(firmwareRelease);
@@ -2226,10 +2222,10 @@ $("firmware-recovery").onclick = () => fileOperation("Récupération USB…", as
     if (percent !== undefined) $("firmware-progress").value = percent;
   });
   expectedFirmware = { version: release.version, buildId: release.buildId };
-  $("firmware-message").textContent = "Récupération vérifiée. Clique sur Connecter en USB pour vérifier le démarrage et la version.";
+  $("firmware-message").textContent = tr("Récupération vérifiée. Clique sur Connecter en USB pour vérifier le démarrage et la version.");
 });
 fetchFirmwareRelease().then(release => { if (!currentFirmware || currentFirmware.model === release.model) firmwareRelease = release; renderFirmware(); }).catch(() => {
-  $("firmware-latest").textContent = "Aucune version publiée sur cette copie. Un fichier de mise à jour peut être choisi hors ligne.";
+  $("firmware-latest").textContent = tr("Aucune version publiée sur cette copie. Un fichier de mise à jour peut être choisi hors ligne.");
 });
 
 window.addEventListener("resize", () => {
@@ -2240,10 +2236,10 @@ render();
 waveLibraryReady.then(() => {
   if (selectedNode) renderInspector();
 });
-if (!navigator.serial) showError("Ouvre cette adresse dans Chrome ou Edge pour utiliser l’USB.");
+if (!navigator.serial) showError(tr("Ouvre cette adresse dans Chrome ou Edge pour utiliser l’USB."));
 Promise.all(["01-basic.json", "02-triple.json"].map(async (file) => {
   const response = await fetch("./examples/" + file);
-  if (!response.ok) throw new Error("Exemple indisponible.");
+  if (!response.ok) throw new Error(tr("Exemple indisponible."));
   return { file, patch: await response.json() };
 })).then((items) => {
   examples = withKeys(items);

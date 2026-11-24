@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import { readFile } from "node:fs/promises";
 import { factoryConsentValid } from "../dist/factory-install.mjs";
+import { tr } from "../dist/i18n.mjs";
 const source = await readFile(new URL("../dist/app.mjs", import.meta.url), "utf8");
 const code = source.slice(source.indexOf("function renderFactoryInstallation()"), source.indexOf("function verifyFirmwareRestart()"));
 assert.ok(code.includes('$("factory-install-start").onclick'));
@@ -14,7 +15,7 @@ const $ = id => {
   return elements.get(id);
 };
 let identity = 0, closed = 0, pauseInstall = false, finishWrite;
-const context = { $, busy: "", port: undefined, expectedFirmware: undefined,
+const context = { $, tr, busy: "", port: undefined, expectedFirmware: undefined,
   factoryInstallGeneration: 0, factoryInstallWorking: false, factoryInstallWriting: false,
   factoryInstallRelease: undefined, factoryInstallImage: undefined, factoryInstallSession: undefined,
   factoryConsentValid, navigator: { serial: { requestPort: async () => ({}) } },

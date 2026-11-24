@@ -5,6 +5,7 @@ const assets = new Map([
   ["/", ["./dist/index.html", "text/html"]],
   ["/style.css", ["./dist/style.css", "text/css"]],
   ["/app.mjs", ["./dist/app.mjs", "text/javascript"]],
+  ["/i18n.mjs", ["./dist/i18n.mjs", "text/javascript"]],
   ["/protocol.mjs", ["./dist/protocol.mjs", "text/javascript"]],
   ["/patch.mjs", ["./dist/patch.mjs", "text/javascript"]],
   ["/waves.mjs", ["./dist/waves.mjs", "text/javascript"]],
@@ -42,11 +43,15 @@ const server = createServer(async (request, response) => {
   const firmware = /^\/firmware\/((?:s3-32m16m\/)?[a-z0-9.-]+\.(?:json|bin))$/.exec(path);
   const factory = /^\/factory\/((?:s3-32m16m\/)?[a-z0-9.-]+\.(?:json|bin))$/.exec(path);
   const vendor = /^\/vendor\/esptool\/((?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(?:js|json))$/.exec(path);
+  const locale = /^\/locales\/(en|es|zh|de|it|pt|ja|ko)\.json$/.test(path);
+  const flag = /^\/flags\/(fr|gb|es|cn|de|it|pt|jp|kr)\.png$/.test(path);
   const asset = preset ? [`./dist/presets/${preset[1]}`, "application/json"] :
     pcm ? [`./dist/presets/assets/${pcm[1]}`, "application/octet-stream"] :
     firmware ? [`./dist/firmware/${firmware[1]}`, firmware[1].endsWith(".json") ? "application/json" : "application/octet-stream"] :
     factory ? [`./dist/factory/${factory[1]}`, factory[1].endsWith(".json") ? "application/json" : "application/octet-stream"] :
-    vendor ? [`./dist/vendor/esptool/${vendor[1]}`, vendor[1].endsWith(".json") ? "application/json" : "text/javascript"] : assets.get(path);
+    vendor ? [`./dist/vendor/esptool/${vendor[1]}`, vendor[1].endsWith(".json") ? "application/json" : "text/javascript"] :
+    locale ? ["./dist" + path, "application/json"] :
+    flag ? ["./dist" + path, "image/png"] : assets.get(path);
   if (!asset) {
     response.writeHead(404).end();
     return;

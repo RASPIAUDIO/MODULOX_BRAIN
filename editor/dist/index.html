@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Modulox · Éditeur de patches</title>
-  <link rel="stylesheet" href="./style.css?v=20">
+  <link rel="stylesheet" href="./style.css?v=21">
 </head>
 <body>
   <header class="bar">
@@ -19,6 +19,7 @@
       <span id="status" role="status">USB déconnecté</span>
       <button id="connect">Connecter en USB</button>
     </div>
+    <nav id="language-picker" aria-label="Langue"></nav>
   </header>
   <p id="error" role="alert" hidden></p>
   <main id="patch-home" class="screen library-screen" aria-labelledby="library-title">
@@ -238,6 +239,6 @@
       <p id="factory-install-status" role="status"></p>
     </section>
   </dialog>
-  <script type="module" src="./app.mjs?v=22"></script>
+  <script type="module" src="./app.mjs?v=23"></script>
 </body>
 </html>

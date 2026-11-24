@@ -21,6 +21,9 @@ try {
     foreach ($name in @('lancer.cmd', 'arreter.cmd', 'offline.ps1', 'HORS-LIGNE.txt')) {
         Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $package
     }
+    foreach ($name in @('flags', 'locales')) {
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot "dist/$name") -Destination (Join-Path $package 'dist') -Recurse
+    }
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'dist') -File)) {
         if ($file.Extension -in @('.mjs', '.css', '.html')) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $package 'dist') }
     }

@@ -1,3 +1,4 @@
+import { tr } from "./i18n.mjs";
 import { normalizePatch, validatePatch, offlineCatalog, sampleModuleTypes } from "./patch.mjs";
 import { waveId, waveBytes } from "./waves.mjs";
 import { maxSampleBytes } from "./samples.mjs";
@@ -12,7 +13,7 @@ function checkedPatch(value) {
     const error = validatePatch(patch, offlineCatalog, { allowIncomplete: true });
     if (error) throw new Error(error);
     return patch;
-  } catch (error) { throw new Error("Patch invalide : " + error.message); }
+  } catch (error) { throw new Error(tr("Patch invalide : {0}", error.message)); }
 }
 function base64(bytes) {
   let binary = "";
@@ -23,7 +24,7 @@ async function checkedResource(resource, kind) {
   const pcm = resource?.pcm;
   if (!(pcm instanceof Uint8Array) || !/^[a-f0-9]{14}$/.test(resource.id) ||
       (kind === "waves" ? pcm.length !== waveBytes : pcm.length < 4 || pcm.length % 2 || pcm.length > maxSampleBytes) ||
-      await waveId(pcm) !== resource.id) throw new Error("Ressource absente ou corrompue : " + (resource?.name ?? resource?.id ?? kind));
+      await waveId(pcm) !== resource.id) throw new Error(tr("Ressource absente ou corrompue : {0}", resource?.name ?? resource?.id ?? kind));
   return { id: resource.id, name: String(resource.name ?? resource.id).slice(0, 60), pcm };
 }
 export async function packPatch(value, libraries) {
@@ -34,28 +35,28 @@ export async function packPatch(value, libraries) {
     bundle[kind].push({ ...resource, pcm: base64(resource.pcm) });
   }
   const text = JSON.stringify(bundle);
-  if (new TextEncoder().encode(text).length > maxPatchFileBytes) throw new Error("Fichier de patch trop volumineux (8 Mio maximum).");
+  if (new TextEncoder().encode(text).length > maxPatchFileBytes) throw new Error(tr("Fichier de patch trop volumineux (8 Mio maximum)."));
   return text;
 }
 export async function unpackPatch(text, libraries = { waves: new Map(), samples: new Map() }) {
-  if (typeof text !== "string" || new TextEncoder().encode(text).length > maxPatchFileBytes) throw new Error("Fichier de patch trop volumineux (8 Mio maximum).");
+  if (typeof text !== "string" || new TextEncoder().encode(text).length > maxPatchFileBytes) throw new Error(tr("Fichier de patch trop volumineux (8 Mio maximum)."));
   let bundle;
-  try { bundle = JSON.parse(text); } catch { throw new Error("Ce fichier n’est pas un JSON valide."); }
+  try { bundle = JSON.parse(text); } catch { throw new Error(tr("Ce fichier n’est pas un JSON valide.")); }
   const portable = bundle?.format === format;
-  if (bundle?.format !== undefined && (!portable || bundle.version !== 1)) throw new Error("Version de fichier incompatible.");
+  if (bundle?.format !== undefined && (!portable || bundle.version !== 1)) throw new Error(tr("Version de fichier incompatible."));
   const patch = checkedPatch(portable ? bundle.patch : bundle), ids = idsFor(patch);
   const result = { patch, waves: [], samples: [] };
   for (const kind of ["waves", "samples"]) {
-    if (portable && (!Array.isArray(bundle[kind]) || bundle[kind].length !== ids[kind].length)) throw new Error("Ressources du fichier incomplètes : " + kind);
+    if (portable && (!Array.isArray(bundle[kind]) || bundle[kind].length !== ids[kind].length)) throw new Error(tr("Ressources du fichier incomplètes : {0}", kind));
     const seen = new Set();
     for (const id of ids[kind]) {
       let resource;
       if (portable) {
         const encoded = bundle[kind].find(item => item?.id === id);
         if (!encoded || seen.has(id) || typeof encoded.pcm !== "string" || encoded.pcm.length % 4 ||
-            !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded.pcm)) throw new Error("Ressource manquante ou encodage invalide : " + id);
+            !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded.pcm)) throw new Error(tr("Ressource manquante ou encodage invalide : {0}", id));
         const limit = kind === "waves" ? waveBytes : maxSampleBytes;
-        if (encoded.pcm.length > Math.ceil(limit / 3) * 4) throw new Error("Ressource trop volumineuse : " + id);
+        if (encoded.pcm.length > Math.ceil(limit / 3) * 4) throw new Error(tr("Ressource trop volumineuse : {0}", id));
         resource = { ...encoded, pcm: Uint8Array.from(atob(encoded.pcm), char => char.charCodeAt(0)) };
       } else resource = libraries[kind].get(id);
       result[kind].push(await checkedResource(resource, kind)); seen.add(id);
@@ -64,7 +65,7 @@ export async function unpackPatch(text, libraries = { waves: new Map(), samples:
   return result;
 }
 export async function readPatchFile(file, libraries) {
-  if (file.size > maxPatchFileBytes) throw new Error("Fichier de patch trop volumineux (8 Mio maximum).");
+  if (file.size > maxPatchFileBytes) throw new Error(tr("Fichier de patch trop volumineux (8 Mio maximum)."));
   return unpackPatch(await file.text(), libraries);
 }
 export async function writePatchFile(directory, contents, name) {

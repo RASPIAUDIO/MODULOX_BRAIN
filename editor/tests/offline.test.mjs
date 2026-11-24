@@ -44,6 +44,9 @@ try {
   await run(["-File", script, "-Port", String(port), "-NoBrowser"]);
   assert.equal((await (await request("/__modulox/status")).json()).instance, first.instance);
   const root = await request("/"); assert.equal(root.status, 200); assert.match(root.bytes.toString(), /Mes patches/);
+  assert.match((await request("/i18n.mjs")).headers["content-type"], /javascript/);
+  assert.match((await request("/flags/jp.png")).headers["content-type"], /image\/png/);
+  assert.equal((await (await request("/locales/ja.json")).json()).Langue, "言語");
   for (const path of ["/app.mjs?v=16", "/patch.mjs", "/patch-files.mjs", "/preset-assets.mjs", "/firmware.mjs", "/firmware-recovery.mjs", "/firmware/latest.json", "/vendor/esptool/index.js", "/vendor/esptool/targets/stub_flasher/esp32s3.json", "/style.css", "/examples/01-basic.json", "/examples/02-triple.json", "/demo-samples/voice.wav"]) {
     const response = await request(path); assert.equal(response.status, 200, path);
     if (path.includes(".mjs")) assert.match(response.headers["content-type"], /javascript/);

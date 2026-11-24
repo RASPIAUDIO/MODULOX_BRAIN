@@ -1,20 +1,21 @@
+import { tr } from "./i18n.mjs";
 import { normalizePatch, offlineCatalog, patchForDevice, pitchCatalog, validatePatch } from "./patch.mjs?v=15";
 import { loadPresetAssets } from "./preset-assets.mjs";
 import { uploadPatch } from "./protocol.mjs?v=18";
 
 export async function loadFactoryBank(request = fetch) {
   const response = await request("./presets/index.json", { cache: "no-store" });
-  if (!response.ok) throw new Error("Presets d’usine indisponibles.");
+  if (!response.ok) throw new Error(tr("Presets d’usine indisponibles."));
   const files = await response.json();
   if (!Array.isArray(files) || !files.length || files.length > 64 || new Set(files).size !== files.length ||
       files.some(file => typeof file !== "string" || !/^[a-z0-9-]+\.json$/.test(file)))
-    throw new Error("Liste des presets d’usine invalide.");
+    throw new Error(tr("Liste des presets d’usine invalide."));
   const items = [];
   // Bound parallel requests for the lightweight local Python server.
   for (let offset = 0; offset < files.length; offset += 4) {
     items.push(...await Promise.all(files.slice(offset, offset + 4).map(async file => {
       const response = await request("./presets/" + file, { cache: "no-store" });
-      if (!response.ok) throw new Error("Preset indisponible : " + file);
+      if (!response.ok) throw new Error(tr("Preset indisponible : {0}", file));
       const patch = normalizePatch(await response.json());
       const error = validatePatch(patch, offlineCatalog);
       if (error) throw new Error(file + " : " + error);
@@ -46,8 +47,8 @@ function canonical(patch, soundOnly = false) {
 }
 
 export async function planFactoryUpload(items, entries, deviceCatalog) {
-  if (!deviceCatalog?.maxPatches || !deviceCatalog.maxBytes) throw new Error("Connecte un Modulox compatible avant l’envoi.");
-  if (deviceCatalog.firmware?.pendingVerify) throw new Error("Attends la confirmation du démarrage du firmware.");
+  if (!deviceCatalog?.maxPatches || !deviceCatalog.maxBytes) throw new Error(tr("Connecte un Modulox compatible avant l’envoi."));
+  if (deviceCatalog.firmware?.pendingVerify) throw new Error(tr("Attends la confirmation du démarrage du firmware."));
   const catalog = pitchCatalog(deviceCatalog), used = new Set();
   const plan = [];
   for (const item of items) {
@@ -55,12 +56,12 @@ export async function planFactoryUpload(items, entries, deviceCatalog) {
     if (error) throw new Error(item.patch.name + " : " + error);
     const patch = patchForDevice(structuredClone(item.patch), catalog);
     if (new TextEncoder().encode(JSON.stringify(patch)).length > catalog.maxBytes)
-      throw new Error(item.patch.name + " dépasse la taille acceptée par ce firmware.");
+      throw new Error(tr("{0} dépasse la taille acceptée par ce firmware.", item.patch.name));
     let key = await presetKey(item.file);
     // A customized copy keeps its slot, even if originally created by this button.
     // A stable alternate slot receives the fresh factory sound instead.
     for (let copy = 1; entries.some(entry => entry.file === key + ".json" && canonical(entry.patch, true) !== canonical(item.patch, true)); ++copy) {
-      if (copy > entries.length + 1) throw new Error("Impossible de réserver un emplacement pour " + item.patch.name);
+      if (copy > entries.length + 1) throw new Error(tr("Impossible de réserver un emplacement pour {0}", item.patch.name));
       key = await presetKey(item.file + "#" + copy);
     }
     // First reuse this button's stable slot. Adopt older manually uploaded copies
@@ -69,7 +70,7 @@ export async function planFactoryUpload(items, entries, deviceCatalog) {
       /^u[0-9a-f]{13}\.json$/.test(entry.file) && !used.has(entry.file) && canonical(entry.patch, true) === canonical(item.patch, true));
     const target = previous ? previous.file.slice(0, -5) : key;
     const file = target + ".json";
-    if (used.has(file)) throw new Error("Deux presets ciblent le même emplacement : " + item.patch.name);
+    if (used.has(file)) throw new Error(tr("Deux presets ciblent le même emplacement : {0}", item.patch.name));
     used.add(file);
     const unchanged = Boolean(previous && canonical(previous.patch) === canonical(item.patch));
     plan.push({ ...item, patch, key: target, targetFile: file, action: !previous ? "add" : unchanged ? "skip" : "update" });
@@ -77,8 +78,7 @@ export async function planFactoryUpload(items, entries, deviceCatalog) {
   const added = plan.filter(item => item.action === "add").length;
   const updated = plan.filter(item => item.action === "update").length;
   if (entries.length + added > catalog.maxPatches) throw new Error(
-    `Place insuffisante : ${added} nouveaux emplacements nécessaires, ${Math.max(0, catalog.maxPatches - entries.length)} disponibles. ` +
-    (catalog.maxPatches < items.length ? "Le chargement complet nécessite le firmware 1.1 ou suivant (64 patches)." : "Libère des emplacements avant de recommencer."));
+    tr("Place insuffisante : {0} nouveaux emplacements nécessaires, {1} disponibles. {2}", added, Math.max(0, catalog.maxPatches - entries.length), catalog.maxPatches < items.length ? tr("Le chargement complet nécessite le firmware 1.1 ou suivant (64 patches).") : tr("Libère des emplacements avant de recommencer.")));
   return { items: plan, added, updated, unchanged: plan.length - added - updated };
 }
 
@@ -108,7 +108,6 @@ export async function uploadFactoryBank(plan, { port, catalog, libraries, signal
     }
     return { saved, done, cancelled: false };
   } catch (cause) {
-    throw new Error(`Envoi interrompu : ${saved} patch(s) enregistré(s), ${done}/${plan.items.length} traités. ${cause.message} ` +
-      "Tu peux relancer : les presets déjà à jour seront conservés.", { cause });
+    throw new Error(tr("Envoi interrompu : {0} patch(s) enregistré(s), {1}/{2} traités. {3} Tu peux relancer : les presets déjà à jour seront conservés.", saved, done, plan.items.length, cause.message), { cause });
   }
 }

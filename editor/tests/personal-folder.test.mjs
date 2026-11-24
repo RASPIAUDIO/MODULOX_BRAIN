@@ -3,6 +3,7 @@ import vm from "node:vm";
 import { readFile } from "node:fs/promises";
 import { packPatch, readPatchFile, writePatchFile, unpackPatch } from "../dist/patch-files.mjs";
 import { sampleModuleTypes } from "../dist/patch.mjs";
+import { tr } from "../dist/i18n.mjs";
 
 const source = await readFile(new URL("../dist/app.mjs", import.meta.url), "utf8");
 const code = source.slice(source.indexOf("async function fileOperation("), source.indexOf("function showLocalPatches("));
@@ -16,7 +17,7 @@ const directory = { name: "Mes sons", async queryPermission() { return allowed ?
 const nodes = new Map();
 const element = (tag, text = "") => ({ textContent: text, children: [], append(...children) { this.children.push(...children); }, replaceChildren(...children) { this.children = children; }, close() {}, });
 const $ = id => { if (!nodes.has(id)) nodes.set(id, element()); return nodes.get(id); };
-const context = { $, element, busy: "", renderActions() {}, showError(message) { $("error").textContent = message; },
+const context = { $, element, tr, busy: "", renderActions() {}, showError(message) { $("error").textContent = message; },
   window: { async showDirectoryPicker(options) { assert.equal(options.mode, "readwrite"); picks++; return directory; } },
   folderReady: Promise.resolve(), folderPreference: async handle => { assert.equal(handle, directory); remembered++; },
   patchFolder: undefined, packPatch, readPatchFile, writePatchFile, sampleModuleTypes,

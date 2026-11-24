@@ -1,3 +1,4 @@
+import { tr } from "./i18n.mjs";
 import { waveId, waveBytes } from "./waves.mjs";
 import { maxSampleBytes } from "./samples.mjs";
 
@@ -9,17 +10,17 @@ export async function loadPresetAssets(patch, { waves, samples, saveWaves, saveS
     .map(n => n.sample))].filter(id => !samples.has(id));
   if (!waveIds.length && !sampleIds.length) return;
   const response = await request("./presets/assets/index.json");
-  if (!response.ok) throw new Error("Bibliothèque des presets indisponible.");
+  if (!response.ok) throw new Error(tr("Bibliothèque des presets indisponible."));
   const manifest = await response.json();
   const read = async (id, kind) => {
     const entry = manifest[kind]?.find(item => item.id === id);
-    if (!/^[a-f0-9]{14}$/.test(id) || !entry) throw new Error("Ressource absente du serveur : " + id);
+    if (!/^[a-f0-9]{14}$/.test(id) || !entry) throw new Error(tr("Ressource absente du serveur : {0}", id));
     const response = await request("./presets/assets/" + id + ".pcm");
-    if (!response.ok) throw new Error("Ressource indisponible : " + entry.name);
+    if (!response.ok) throw new Error(tr("Ressource indisponible : {0}", entry.name));
     const pcm = new Uint8Array(await response.arrayBuffer());
     if (kind === "waves" ? pcm.length !== waveBytes : pcm.length < 4 || pcm.length % 2 || pcm.length > maxSampleBytes)
-      throw new Error("Taille PCM invalide : " + entry.name);
-    if (await waveId(pcm) !== id) throw new Error("Ressource corrompue : " + entry.name);
+      throw new Error(tr("Taille PCM invalide : {0}", entry.name));
+    if (await waveId(pcm) !== id) throw new Error(tr("Ressource corrompue : {0}", entry.name));
     return { id, name: entry.name, pcm };
   };
   const newWaves = await Promise.all(waveIds.map(id => read(id, "waves")));

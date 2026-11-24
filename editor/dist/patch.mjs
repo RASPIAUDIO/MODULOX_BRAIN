@@ -1,3 +1,4 @@
+import { tr } from "./i18n.mjs";
 import { builtinWaves, maxPatchWaves } from "./waves.mjs";
 import { maxSampleBytes } from "./samples.mjs";
 
@@ -275,7 +276,7 @@ export function patchForDevice(patch, catalog) {
 export function normalizePatch(patch) {
   if (![1, 2, 3].includes(patch?.version) || typeof patch.name !== "string" ||
       !Array.isArray(patch.modules) || !Array.isArray(patch.connections)) {
-    throw new Error("Format de patch incompatible.");
+    throw new Error(tr("Format de patch incompatible."));
   }
   const oscillators = patch.modules.filter((module) => module.type === "Osc").map((module) => module.id);
   const mixes = new Set(patch.modules.filter((module) => module.type === "Mix").map((module) => module.id));
@@ -320,12 +321,12 @@ export function connectionError(patch, catalog, from, to, input) {
   const source = patch.modules.find((module) => module.id === from);
   const target = to === "out" ? outputModule : patch.modules.find((module) => module.id === to);
   if (!source || moduleSpec(catalog, source.type)?.controlOutput || !target || !Number.isInteger(input) || input < 0 ||
-      input >= (moduleSpec(catalog, target.type)?.inputs ?? 0)) return "Port audio invalide.";
+      input >= (moduleSpec(catalog, target.type)?.inputs ?? 0)) return tr("Port audio invalide.");
   const outputChannels = moduleSpec(catalog, source.type)?.outputChannels ?? 1;
   const inputChannels = moduleSpec(catalog, target.type)?.inputChannels ?? 1;
   if (outputChannels !== inputChannels) return outputChannels === 1
-    ? "Ajoute Pan ou Stereo pour passer de mono à stéréo."
-    : "Ajoute Mono pour convertir la stéréo en mono.";
+    ? tr("Ajoute Pan ou Stereo pour passer de mono à stéréo.")
+    : tr("Ajoute Mono pour convertir la stéréo en mono.");
   const visited = new Set();
   const reachesSource = (node) => {
     if (node === from) return true;
@@ -334,7 +335,7 @@ export function connectionError(patch, catalog, from, to, input) {
     return patch.connections.some(([a, b, port]) =>
       a === node && (b !== to || port !== input) && reachesSource(b));
   };
-  return reachesSource(to) ? "Ce câble créerait une boucle audio." : "";
+  return reachesSource(to) ? tr("Ce câble créerait une boucle audio.") : "";
 }
 
 export function sharedAudioNodes(patch, catalog) {
@@ -360,22 +361,22 @@ export function modulationError(patch, catalog, from, to, parameter, midiPort) {
   const spec = moduleSpec(catalog, source?.type);
   if (parameter === "FM" && target?.type === "Osc" &&
       (target.id !== firstOscillator(patch)?.id || patch.modules.filter(n=>n.type==="Osc").length < 2))
-    return "FM relie le premier Osc au deuxième : ajoute deux oscillateurs.";
+    return tr("FM relie le premier Osc au deuxième : ajoute deux oscillateurs.");
   const shared = sharedAudioNodes(patch, catalog).has(to);
   if (midiPort !== undefined) {
-    if (shared) return "Les commandes par voix doivent précéder les effets communs.";
+    if (shared) return tr("Les commandes par voix doivent précéder les effets communs.");
     if (!spec?.midiOutputs?.includes(midiPort) || midiPort !== parameter ||
         !moduleSpec(catalog, target?.type)?.midiInputs?.includes(parameter)) {
-      return "Relie une sortie MIDI à l’entrée de même nom.";
+      return tr("Relie une sortie MIDI à l’entrée de même nom.");
     }
     return "";
   }
   if (!spec?.controlOutput || spec.midiOutputs || spec.triggerOutputs?.length ||
       !moduleSpec(catalog, target?.type)?.modulationInputs?.includes(parameter)) {
-    return "Relie le LFO ou l’enveloppe à une entrée de modulation bleue.";
+    return tr("Relie le LFO ou l’enveloppe à une entrée de modulation bleue.");
   }
   if ((target.type === "Disto" || shared) && perVoiceSource(patch, from)) {
-    return "Cette entrée d’effet accepte une modulation globale.";
+    return tr("Cette entrée d’effet accepte une modulation globale.");
   }
   return "";
 }
@@ -385,10 +386,10 @@ export function routingError(patch, catalog, from, to, input, output) {
   const target = patch.modules.find((node) => node.id === to);
   const spec = moduleSpec(catalog, source?.type);
   const destination = moduleSpec(catalog, target?.type);
-  if (!catalog.clockRouting || !spec || !destination || from === to) return "Routage de contrôle invalide.";
+  if (!catalog.clockRouting || !spec || !destination || from === to) return tr("Routage de contrôle invalide.");
   if (input === "Value") {
     if (output !== "CV" || !destination.cvInputs?.includes(input) || !spec.controlOutput ||
-        spec.midiOutputs || spec.triggerOutputs?.length) return "Relie une valeur CV à cette entrée.";
+        spec.midiOutputs || spec.triggerOutputs?.length) return tr("Relie une valeur CV à cette entrée.");
     const seen = new Set();
     function dependsOn(id) {
       if (id === to) return true;
@@ -396,33 +397,33 @@ export function routingError(patch, catalog, from, to, input, output) {
       seen.add(id);
       return (patch.routings ?? []).some(([a, b, port]) => b === id && port === "Value" && dependsOn(a));
     }
-    if (dependsOn(from)) return "Ce câble créerait une boucle de modulation.";
+    if (dependsOn(from)) return tr("Ce câble créerait une boucle de modulation.");
   } else if (!destination.triggerInputs?.includes(input) ||
       !(spec.triggerOutputs?.includes(output) || (spec.midiOutputs?.includes(output) && output === "Trigger")) ||
       (input === "Run" ? output !== "Run" : output === "Run")) {
-    return "Relie une impulsion à Trigger ou Reset, et Run à Run.";
+    return tr("Relie une impulsion à Trigger ou Reset, et Run à Run.");
   }
   return "";
 }
 
 export function validatePatch(patch, catalog, { allowIncomplete = false } = {}) {
   if (patch.category !== undefined && !patchCategories.some(([id]) => id === patch.category)) {
-    return "Catégorie de patch invalide.";
+    return tr("Catégorie de patch invalide.");
   }
-  if (patch.version !== 3) return "Ouvre ce patch pour adapter son graphe à la stéréo.";
+  if (patch.version !== 3) return tr("Ouvre ce patch pour adapter son graphe à la stéréo.");
   const name = patch.name.trim();
   if (!name || new TextEncoder().encode(name).length > 31 || /[\x00-\x1f]/.test(name)) {
-    return "Le nom doit faire entre 1 et 31 octets UTF-8.";
+    return tr("Le nom doit faire entre 1 et 31 octets UTF-8.");
   }
   const waves = patch.waves ?? [];
   if (!Array.isArray(waves) || waves.some((id) => typeof id !== "string" || !/^[a-f0-9]{14}$/.test(id)) ||
       new Set(waves).size !== waves.length || waves.length > (catalog.maxWaves ?? 0)) {
-    return "La banque de formes d’onde est incompatible avec ce firmware.";
+    return tr("La banque de formes d’onde est incompatible avec ce firmware.");
   }
   for (const [name, value] of Object.entries(patch.settings ?? {})) {
     const parameter = catalog.settings?.parameters.find((item) => item.name === name);
     if (!parameter || !Number.isInteger(value) || value < parameter.min || value > parameter.max) {
-      return "Réglage incompatible avec le firmware · " + name + ".";
+      return tr("Réglage incompatible avec le firmware · {0}.", name);
     }
   }
   const nodes = new Map();
@@ -431,40 +432,40 @@ export function validatePatch(patch, catalog, { allowIncomplete = false } = {}) 
     const spec = moduleSpec(catalog, node.type);
     if (sampleModuleTypes.includes(node.type) && (!catalog.maxSampleBytes ||
         !(allowIncomplete && !node.sample) && !/^[a-f0-9]{14}$/.test(node.sample ?? ""))) {
-      return "Choisis un sample pour " + node.id + " sur un firmware compatible.";
+      return tr("Choisis un sample pour {0} sur un firmware compatible.", node.id);
     }
     if (!spec?.limit || !/^[\w-]{1,31}$/.test(node.id) || node.id === "out" || nodes.has(node.id)) {
-      return "Identifiant ou type de module invalide.";
+      return tr("Identifiant ou type de module invalide.");
     }
     nodes.set(node.id, node);
     counts.set(node.type, (counts.get(node.type) ?? 0) + 1);
-    if (counts.get(node.type) > spec.limit) return "Trop de modules " + node.type + ".";
+    if (counts.get(node.type) > spec.limit) return tr("Trop de modules {0}.", node.type);
     for (const [name, value] of Object.entries(node.parameters ?? {})) {
       const parameter = spec.parameters.find((item) => item.name === name);
       if (!parameter || !Number.isInteger(value) || value < parameter.min || value > parameter.max) {
-        return "Valeur invalide pour " + node.id + " · " + name + ".";
+        return tr("Valeur invalide pour {0} · {1}.", node.id, name);
       }
       if (node.type === "Osc" && name === "FM" && node.id !== firstOscillator(patch)?.id)
-        return "FM se règle sur le premier Osc uniquement.";
+        return tr("FM se règle sur le premier Osc uniquement.");
       if (catalog.legacyOctave && node.type === "Osc" && name === "Pitch" &&
           value % semitonesPerOctave !== 0) {
-        return "Cette version du firmware accepte uniquement les multiples de 12 demi-tons pour Pitch.";
+        return tr("Cette version du firmware accepte uniquement les multiples de 12 demi-tons pour Pitch.");
       }
       if (node.type === "Osc" && name === "Wave" && value >= builtinWaves.length + waves.length) {
-        return "L’oscillateur utilise une forme d’onde absente du patch.";
+        return tr("L’oscillateur utilise une forme d’onde absente du patch.");
       }
     }
   }
   const incoming = new Map();
   const oscillators = patch.modules.filter(n=>n.type==="Osc");
-  if ((oscillators[0]?.parameters?.FM??0) > 0 && oscillators.length < 2) return "Ajoute le deuxième Osc pour activer FM.";
+  if ((oscillators[0]?.parameters?.FM??0) > 0 && oscillators.length < 2) return tr("Ajoute le deuxième Osc pour activer FM.");
   const learned = new Set();
   for (const [id, name, cc] of patch.midiLearn ?? []) {
     const spec = id === "$settings" ? catalog.settings : moduleSpec(catalog, nodes.get(id)?.type);
     const key = id + "/" + name;
     if (!catalog.midiLearn || learned.has(key) || !Number.isInteger(cc) || cc < 0 || cc >= 120 ||
         !spec?.parameters.some((parameter) => parameter.name === name)) {
-      return "Affectation MIDI Learn incompatible.";
+      return tr("Affectation MIDI Learn incompatible.");
     }
     learned.add(key);
   }
@@ -472,11 +473,11 @@ export function validatePatch(patch, catalog, { allowIncomplete = false } = {}) 
     const error = connectionError(patch, catalog, from, to, input);
     if (error) return error;
     const ports = incoming.get(to) ?? new Map();
-    if (ports.has(input)) return "Une entrée ne peut recevoir qu’un câble.";
+    if (ports.has(input)) return tr("Une entrée ne peut recevoir qu’un câble.");
     ports.set(input, from);
     incoming.set(to, ports);
   }
-  if (!allowIncomplete && !incoming.has("out")) return "Relie un module à la Sortie.";
+  if (!allowIncomplete && !incoming.has("out")) return tr("Relie un module à la Sortie.");
   const used = new Set();
   function visit(id) {
     for (const from of incoming.get(id)?.values() ?? []) {
@@ -495,40 +496,40 @@ export function validatePatch(patch, catalog, { allowIncomplete = false } = {}) 
     if (error) return error;
     const destination = to + "/" + (midiPort === undefined ? parameter : "MIDI/" +
       (["Gate", "Trigger"].includes(parameter) && nodes.get(to)?.type === "Env" ? "Gate" : parameter));
-    if (modulationTargets.has(destination)) return "Une entrée de modulation accepte un seul câble.";
+    if (modulationTargets.has(destination)) return tr("Une entrée de modulation accepte un seul câble.");
     modulationTargets.add(destination);
     modulationSources.add(from);
   }
   const routingTargets = new Set();
   for (const edge of patch.routings ?? []) {
-    if (!Array.isArray(edge) || edge.length !== 4) return "Routage invalide.";
+    if (!Array.isArray(edge) || edge.length !== 4) return tr("Routage invalide.");
     const [from, to, input, output] = edge;
     const error = routingError(patch, catalog, from, to, input, output);
     if (error) return error;
     const key = to + "/" + input;
-    if (routingTargets.has(key)) return "Une entrée de contrôle accepte un seul câble.";
+    if (routingTargets.has(key)) return tr("Une entrée de contrôle accepte un seul câble.");
     routingTargets.add(key);
     modulationSources.add(from);
     modulationSources.add(to);
   }
   const shared = sharedAudioNodes(patch, catalog);
   for (const node of patch.modules) if (shared.has(node.id) && node.type === "ADSR")
-    return "Place l’ADSR avant les effets communs.";
+    return tr("Place l’ADSR avant les effets communs.");
   for (const [from, to] of patch.modulations ?? []) {
     if ((nodes.get(to)?.type === "Disto" || shared.has(to)) && perVoiceSource(patch, from)) {
-      return "Les effets communs demandent une modulation globale.";
+      return tr("Les effets communs demandent une modulation globale.");
     }
   }
   for (const node of nodes.values()) {
     if (moduleSpec(catalog, node.type).controlOutput) {
-      if (!allowIncomplete && !modulationSources.has(node.id)) return "Relie la sortie de " + node.id + ".";
+      if (!allowIncomplete && !modulationSources.has(node.id)) return tr("Relie la sortie de {0}.", node.id);
       continue;
     }
-    if (!allowIncomplete && !used.has(node.id)) return node.id + " n’est pas relié à la Sortie.";
+    if (!allowIncomplete && !used.has(node.id)) return tr("{0} n’est pas relié à la Sortie.", node.id);
     if (!allowIncomplete && moduleSpec(catalog, node.type).inputs && !incoming.has(node.id)) {
-      return "Branche une entrée de " + node.id + ".";
+      return tr("Branche une entrée de {0}.", node.id);
     }
-    if (!allowIncomplete && node.type === "Ring Mod" && incoming.get(node.id)?.size !== 2) return "Branche les deux entrées audio du Ring Mod.";
+    if (!allowIncomplete && node.type === tr("Ring Mod") && incoming.get(node.id)?.size !== 2) return tr("Branche les deux entrées audio du Ring Mod.");
   }
-  return allowIncomplete || ["Osc", "Noise", "Sub", "FM4", ...sampleModuleTypes].some((type) => counts.get(type)) ? "" : "Ajoute une source audio.";
+  return allowIncomplete || ["Osc", "Noise", "Sub", "FM4", ...sampleModuleTypes].some((type) => counts.get(type)) ? "" : tr("Ajoute une source audio.");
 }
