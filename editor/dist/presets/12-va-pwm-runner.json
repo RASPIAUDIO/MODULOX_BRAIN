@@ -1,0 +1,222 @@
+{
+  "version": 3,
+  "name": "VA PWM Runner",
+  "settings": {
+    "Voices": 3,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "osc1",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 1,
+        "PWM": 32,
+        "Unison": 1,
+        "Pitch": 0,
+        "Fine": -3,
+        "Level": 80
+      }
+    },
+    {
+      "id": "osc2",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 1,
+        "PWM": 62,
+        "Unison": 1,
+        "Pitch": 0,
+        "Fine": 3,
+        "Level": 65
+      }
+    },
+    {
+      "id": "osc3",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 2,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 12,
+        "Fine": 0,
+        "Level": 38
+      }
+    },
+    {
+      "id": "mix1",
+      "type": "Mix",
+      "parameters": {
+        "In 1": 100,
+        "In 2": 100,
+        "In 3": 100
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 1,
+        "Cutoff": 3800,
+        "Reso": 16
+      }
+    },
+    {
+      "id": "env1",
+      "type": "Env",
+      "parameters": {
+        "Attack": 3,
+        "Decay": 260,
+        "Sustain": 12,
+        "Release": 140,
+        "Depth": 34
+      }
+    },
+    {
+      "id": "lfo1",
+      "type": "LFO",
+      "parameters": {
+        "Wave": 0,
+        "Rate": 11,
+        "Depth": 30,
+        "Level": 0
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 3,
+        "Decay": 180,
+        "Sustain": 55,
+        "Release": 140
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 300,
+        "Time R": 450,
+        "Feedback": 25,
+        "Mix": 22,
+        "Mode": 2,
+        "Link": 0,
+        "Sync": 1,
+        "Division": 3,
+        "Division R": 4
+      }
+    }
+  ],
+  "connections": [
+    [
+      "osc1",
+      "mix1",
+      0
+    ],
+    [
+      "osc2",
+      "mix1",
+      1
+    ],
+    [
+      "osc3",
+      "mix1",
+      2
+    ],
+    [
+      "mix1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "modulations": [
+    [
+      "env1",
+      "filter1",
+      "Cutoff"
+    ],
+    [
+      "lfo1",
+      "osc1",
+      "PWM"
+    ]
+  ],
+  "layout": {
+    "osc1": {
+      "x": 24,
+      "y": 24
+    },
+    "osc2": {
+      "x": 204,
+      "y": 24
+    },
+    "osc3": {
+      "x": 384,
+      "y": 24
+    },
+    "mix1": {
+      "x": 24,
+      "y": 164
+    },
+    "filter1": {
+      "x": 24,
+      "y": 304
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 444
+    },
+    "pan1": {
+      "x": 24,
+      "y": 584
+    },
+    "delay1": {
+      "x": 24,
+      "y": 724
+    },
+    "out": {
+      "x": 24,
+      "y": 864
+    },
+    "env1": {
+      "x": 620,
+      "y": 24
+    },
+    "lfo1": {
+      "x": 800,
+      "y": 24
+    }
+  },
+  "category": "lead"
+}

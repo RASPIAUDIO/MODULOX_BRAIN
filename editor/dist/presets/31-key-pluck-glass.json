@@ -1,0 +1,106 @@
+{
+  "version": 3,
+  "name": "KEY Pluck Glass",
+  "settings": {
+    "Voices": 4,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "fm41",
+      "type": "FM4",
+      "parameters": {
+        "Algorithm": 0,
+        "Depth": 12,
+        "Feedback": 0,
+        "Level": 75,
+        "Pitch": 0,
+        "1 Ratio": 2,
+        "1 Level": 30,
+        "1 Attack": 0,
+        "1 Decay": 75,
+        "1 Sustain": 0,
+        "1 Release": 60,
+        "2 Ratio": 3,
+        "2 Level": 38,
+        "2 Attack": 0,
+        "2 Decay": 180,
+        "2 Sustain": 0,
+        "2 Release": 90,
+        "3 Ratio": 1,
+        "3 Level": 35,
+        "3 Attack": 0,
+        "3 Decay": 220,
+        "3 Sustain": 0,
+        "3 Release": 100,
+        "4 Ratio": 1,
+        "4 Level": 90,
+        "4 Attack": 1,
+        "4 Decay": 700,
+        "4 Sustain": 0,
+        "4 Release": 250
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 300,
+        "Time R": 450,
+        "Feedback": 30,
+        "Mix": 25,
+        "Mode": 2,
+        "Link": 0,
+        "Sync": 1,
+        "Division": 4,
+        "Division R": 3
+      }
+    }
+  ],
+  "connections": [
+    [
+      "fm41",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "layout": {
+    "fm41": {
+      "x": 24,
+      "y": 24
+    },
+    "pan1": {
+      "x": 24,
+      "y": 164
+    },
+    "delay1": {
+      "x": 24,
+      "y": 304
+    },
+    "out": {
+      "x": 24,
+      "y": 444
+    }
+  },
+  "category": "keys"
+}

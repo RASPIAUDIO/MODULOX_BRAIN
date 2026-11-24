@@ -1,0 +1,143 @@
+{
+  "version": 3,
+  "name": "FX Grain Storm",
+  "settings": {
+    "Voices": 2,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "granulizer1",
+      "type": "Granulizer",
+      "parameters": {
+        "Start": 5,
+        "End": 95,
+        "Size": 85,
+        "Density": 55,
+        "Speed": 75,
+        "Spray": 80,
+        "Window": 0,
+        "Pitch": 0,
+        "Level": 65
+      },
+      "sample": "d58ac504c0e7d6"
+    },
+    {
+      "id": "lfo1",
+      "type": "LFO",
+      "parameters": {
+        "Wave": 0,
+        "Rate": 4,
+        "Depth": 12,
+        "Level": 0
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 0,
+        "Cutoff": 5500,
+        "Reso": 10
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 350,
+        "Decay": 600,
+        "Sustain": 90,
+        "Release": 1100
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 300,
+        "Time R": 450,
+        "Feedback": 38,
+        "Mix": 30,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "granulizer1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "modulations": [
+    [
+      "lfo1",
+      "granulizer1",
+      "Pitch"
+    ]
+  ],
+  "layout": {
+    "granulizer1": {
+      "x": 24,
+      "y": 24
+    },
+    "filter1": {
+      "x": 24,
+      "y": 164
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 304
+    },
+    "pan1": {
+      "x": 24,
+      "y": 444
+    },
+    "delay1": {
+      "x": 24,
+      "y": 584
+    },
+    "out": {
+      "x": 24,
+      "y": 724
+    },
+    "lfo1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "fx"
+}

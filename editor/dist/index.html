@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modulox · Éditeur de patches</title>
+  <link rel="stylesheet" href="./style.css?v=20">
+</head>
+<body>
+  <header class="bar">
+    <div class="brand"><span class="mark" aria-hidden="true">M</span><strong>MODULOX</strong></div>
+    <nav class="main-nav" aria-label="Navigation principale">
+      <button id="nav-patches" aria-current="page">Patches</button>
+      <button id="nav-editor" disabled>Éditeur</button>
+      <button id="nav-waveforms">Waveforms</button>
+      <button id="nav-samples">Samples</button>
+    </nav>
+    <div class="usb">
+      <span id="status" role="status">USB déconnecté</span>
+      <button id="connect">Connecter en USB</button>
+    </div>
+  </header>
+  <p id="error" role="alert" hidden></p>
+  <main id="patch-home" class="screen library-screen" aria-labelledby="library-title">
+    <header class="screen-heading">
+      <h1 id="library-title">Gestion des patches</h1>
+      <div class="actions">
+        <button id="load-factory">Presets d’usine</button>
+        <button id="load-local">Mes patches</button>
+        <button id="import-patch">Importer un fichier</button>
+        <input id="patch-file" type="file" accept=".json,application/json" hidden>
+        <button id="new-patch" class="primary">+ Nouveau patch</button>
+      </div>
+    </header>
+    <div class="library-grid">
+      <section class="panel bank" aria-labelledby="bank-title">
+        <header class="panel-heading"><h2 id="bank-title">Patches de démonstration</h2><span id="source"></span></header>
+        <nav id="patches" aria-label="Banque de patches"></nav>
+        <button id="refresh" disabled>Relire le Modulox</button>
+        <section id="draft-section" hidden>
+          <h3>En cours d’édition</h3>
+          <nav id="drafts" aria-label="Patch en cours d’édition"></nav>
+        </section>
+      </section>
+      <div class="library-detail">
+        <section class="panel selection-panel" aria-labelledby="home-name">
+          <div id="home-source" class="patch-origin"></div>
+          <h2 id="home-name">Aucun patch sélectionné</h2>
+          <p id="home-summary"></p>
+          <div class="actions">
+            <button id="copy" class="primary" hidden>Configurer</button>
+            <button id="save-home" hidden>Enregistrer dans mon dossier</button>
+            <button id="export-home" hidden>Exporter un fichier</button>
+            <button id="delete-patch" class="danger" hidden>Supprimer</button>
+          </div>
+          <p id="home-message" role="status"></p>
+        </section>
+        <section class="panel firmware-panel" aria-labelledby="firmware-title">
+          <h2 id="firmware-title">Firmware</h2>
+          <div class="firmware-versions">
+            <p id="firmware-current">Connecte le Modulox pour lire sa version.</p>
+            <p id="firmware-latest">Recherche de la version disponible…</p>
+          </div>
+          <div class="actions firmware-actions">
+            <button id="firmware-check">Vérifier les mises à jour</button>
+            <button id="firmware-file-button">Choisir un fichier</button>
+            <button id="firmware" class="primary" disabled>Mettre à jour</button>
+            <button id="firmware-rollback" disabled>Version précédente</button>
+            <button id="firmware-recovery">Récupération USB (BOOT)</button>
+            <button id="firmware-cancel" hidden>Annuler le transfert</button>
+          </div>
+          <input id="firmware-file" type="file" accept=".json,application/json" hidden>
+          <progress id="firmware-progress" max="100" value="0" hidden aria-label="Transfert du firmware"></progress>
+          <p id="firmware-message" role="status"></p>
+          <div class="firmware-factory-action">
+            <button id="firmware-factory" class="danger">Installation firmware usine…</button>
+            <p>Réinitialisation complète du Modulox depuis une image usine.</p>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <main id="patch-editor" class="editor-screen" aria-label="Édition du patch" hidden>
+    <header class="patch-header">
+      <div class="patch-identity">
+        <button id="back-patches">← Patches</button>
+        <div>
+          <input id="name" type="text" maxlength="31" aria-label="Nom du patch">
+          <p id="summary"></p>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="discard-draft">Fermer l’édition</button>
+        <button id="save-local">Enregistrer dans mon dossier</button>
+        <button id="export-patch">Exporter un fichier</button>
+        <button id="wave-library">Waveforms du patch</button>
+        <button id="upload" class="primary">Envoyer au Modulox</button>
+      </div>
+    </header>
+    <nav class="editor-tabs" aria-label="Vues de l’éditeur">
+      <button id="tab-graph" aria-pressed="true">Câblage</button>
+      <button id="tab-parameters" aria-pressed="false">Paramètres</button>
+    </nav>
+    <div id="graph-view" class="graph-view">
+    <section class="workspace" aria-label="Édition du patch">
+      <div class="editor-tools"><button id="modules-toggle" aria-expanded="true" aria-controls="module-panel">+ Modules</button>
+        <button id="arrange">Ranger le graphe</button>
+        <button id="settings">Réglages du patch</button>
+        <div class="cable-legend"><span>Mono</span><span>Modulation</span><span>MIDI</span><span>Horloge</span><span>Stéréo L/R</span></div>
+      </div>
+      <section id="module-panel" aria-label="Ajouter un module"><div id="palette" class="palette"></div></section>
+      <div class="viewport" id="viewport">
+        <div id="graph" class="graph" aria-label="Graphe du patch"><canvas id="wires" aria-hidden="true"></canvas></div>
+      </div>
+    </section>
+    <aside class="inspector" aria-labelledby="inspector-title">
+      <div class="rail-title"><h2 id="inspector-title">Inspecteur</h2></div>
+      <div id="details"></div>
+    </aside>
+    </div>
+    <section id="parameter-view" aria-label="Paramètres des modules" hidden></section>
+    <footer><span id="hint" role="status"></span></footer>
+  </main>
+  <main id="wave-screen" class="screen" aria-labelledby="wave-title" hidden>
+    <header class="screen-heading">
+      <div><h1 id="wave-title">Waveforms</h1><p id="wave-count" role="status"></p></div>
+      <button id="back-editor" hidden>← Retour à l’éditeur</button>
+    </header>
+    <section class="panel wave-panel" aria-label="Formes d’onde des oscillateurs">
+    <div class="wave-toolbar">
+      <button id="wave-import">Importer des WAV</button>
+      <input id="wave-files" type="file" accept=".wav,audio/wav" multiple hidden>
+      <input id="wave-search" type="search" placeholder="Rechercher" aria-label="Rechercher une forme d’onde">
+      <select id="wave-scope" aria-label="Afficher les formes d’onde">
+        <option value="library">Bibliothèque</option>
+        <option value="patch">Dans ce patch</option>
+      </select>
+      <button id="wave-add" hidden>Ajouter les résultats au patch</button>
+    </div>
+    <p id="wave-message" role="status"></p>
+    <div class="wave-content">
+      <div id="wave-list"></div>
+      <div class="wave-detail">
+        <h3 id="wave-name">Aperçu</h3>
+        <canvas id="wave-preview" aria-label="Courbe de la forme d’onde" role="img" width="360" height="150"></canvas>
+        <p id="wave-caption"></p>
+        <button id="wave-fetch" hidden>Lire depuis le Modulox</button>
+      </div>
+    </div>
+    </section>
+  </main>
+  <main id="sample-screen" class="screen" aria-labelledby="sample-title" hidden>
+    <header class="screen-heading">
+      <div><h1 id="sample-title">Samples</h1><p id="sample-count"></p></div>
+      <button id="sample-back" hidden>← Retour à l’éditeur</button>
+    </header>
+    <section class="panel wave-panel" aria-label="Bibliothèque de samples">
+      <div class="wave-toolbar">
+        <button id="sample-import" class="primary">Importer des WAV</button>
+        <input id="sample-files" type="file" accept=".wav,audio/wav" multiple hidden>
+        <button id="sample-demos">Importer les démos Sampbrain2</button>
+        <button id="sample-refresh" disabled>Actualiser les samples du Modulox</button>
+      </div>
+      <p id="sample-message" role="status"></p>
+      <div class="wave-content">
+        <div id="sample-list"></div>
+        <div class="wave-detail">
+          <h3 id="sample-name">Aperçu</h3>
+          <canvas id="sample-preview" role="img" aria-label="Courbe du sample" width="640" height="170"></canvas>
+          <p id="sample-info"></p>
+          <div class="sample-rename">
+            <label for="sample-label">Nom du sample</label>
+            <input id="sample-label" maxlength="31" disabled>
+            <button id="sample-rename" disabled>Renommer</button>
+          </div>
+          <div class="actions">
+            <button id="sample-play" disabled>Écouter</button>
+            <button id="sample-send" disabled>Stocker sur le Modulox</button>
+            <button id="sample-fetch" hidden>Lire depuis le Modulox</button>
+            <button id="sample-export" disabled>Exporter en WAV</button>
+            <button id="sample-delete-device" disabled>Supprimer du Modulox</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <dialog id="local-dialog" aria-labelledby="local-title">
+    <header class="wave-header"><div><h2 id="local-title">Mes patches</h2><p id="local-description">Fichiers personnels sur cet ordinateur</p></div><form method="dialog"><button>Fermer</button></form></header>
+    <section id="factory-bank" class="local-bank" hidden>
+      <div class="factory-bulk">
+        <div class="actions">
+          <button id="factory-upload-all" class="primary" disabled>Charger tous les presets sur le Modulox</button>
+          <button id="factory-upload-stop" hidden>Arrêter après ce patch</button>
+        </div>
+        <p id="factory-upload-status" role="status">Connecte le Modulox pour envoyer toute la banque.</p>
+        <progress id="factory-upload-progress" max="40" value="0" hidden aria-label="Envoi des presets d’usine"></progress>
+      </div>
+      <div id="server-patch-list"></div>
+    </section>
+    <section id="personal-bank" class="local-bank">
+      <div class="actions"><button id="choose-folder">Choisir mon dossier de patches</button><button id="refresh-folder">Actualiser</button></div>
+      <p id="folder-status" role="status">Choisis un dossier pour retrouver tes fichiers de patches.</p>
+      <div id="folder-list"></div>
+      <section id="legacy-patches" hidden><h3>Anciennes sauvegardes du navigateur</h3><p>Ouvre un patch puis enregistre-le dans ton dossier pour le conserver sous forme de fichier.</p><div id="local-list"></div></section>
+    </section>
+  </dialog>
+  <dialog id="factory-install-dialog" aria-labelledby="factory-install-title">
+    <header class="wave-header">
+      <h2 id="factory-install-title">Installation firmware usine</h2>
+      <button id="factory-install-close">Fermer</button>
+    </header>
+    <section class="local-bank factory-install-content">
+      <div class="factory-warning">
+        <h3>Tout le contenu du Modulox sera remplacé</h3>
+        <ul>
+          <li>Tous les patches, samples et formes d’onde enregistrés sur cette carte.</li>
+          <li>Tous ses réglages et ses versions de firmware.</li>
+        </ul>
+        <p>Ils seront remplacés par le contenu de l’image usine fournie. Le retour arrière A/B ne restaure pas les données effacées.</p>
+        <p>Sauvegarde d’abord les patches à conserver sur ton ordinateur. Tes fichiers sur l’ordinateur restent disponibles.</p>
+      </div>
+      <p id="factory-install-release">Recherche de l’image usine complète…</p>
+      <ol class="factory-boot-steps">
+        <li>Maintiens BOOT, appuie sur RESET, puis relâche BOOT.</li>
+        <li>Identifie le Modulox et sélectionne son port USB de programmation.</li>
+        <li>Vérifie la carte ci-dessous, puis confirme l’effacement.</li>
+      </ol>
+      <button id="factory-install-prepare" disabled>Identifier le Modulox en BOOT</button>
+      <p id="factory-install-device">Aucune carte identifiée. Aucune écriture effectuée.</p>
+      <fieldset id="factory-install-consent" disabled>
+        <label class="factory-acknowledgement"><input id="factory-install-ack" type="checkbox">J’accepte le remplacement complet des données de ce Modulox.</label>
+        <label class="factory-confirmation-label" for="factory-install-phrase">Pour confirmer, saisis EFFACER</label>
+        <input id="factory-install-phrase" type="text" placeholder="EFFACER" autocomplete="off" spellcheck="false">
+      </fieldset>
+      <button id="factory-install-start" class="danger" disabled>Effacer et installer l’image usine</button>
+      <p class="factory-no-cancel">Une fois lancée, l’installation ne peut pas être annulée. Laisse le câble USB branché jusqu’à la fin.</p>
+      <progress id="factory-install-progress" max="100" value="0" hidden aria-label="Installation complète du firmware usine"></progress>
+      <p id="factory-install-status" role="status"></p>
+    </section>
+  </dialog>
+  <script type="module" src="./app.mjs?v=21"></script>
+</body>
+</html>

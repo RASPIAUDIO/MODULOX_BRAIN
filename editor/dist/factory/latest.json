@@ -1,0 +1,17 @@
+{
+  "format": "modulox.full-flash",
+  "version": 1,
+  "model": "modulox-brain-s3",
+  "chip": "esp32s3",
+  "layout": "ab-1.5m-v1",
+  "file": "modulox-usine-1.2.0.bin",
+  "offset": 0,
+  "size": 16777216,
+  "flashBytes": 16777216,
+  "psramBytes": 8388608,
+  "sha256": "e79712be348546fe6044a5d8407fa486734ce07f333cf1d8ca707851ba157039",
+  "md5": "e86c45116cfa15bfb4b5f48538b9ce2a",
+  "firmwareVersion": "1.2.0",
+  "bootSlot": "ota_0",
+  "buildId": "42d94afd1ae204661c579b354919ea5cf3ada12525634ebde4aab14d8ef3739f"
+}

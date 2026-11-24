@@ -1,0 +1,177 @@
+{
+  "version": 3,
+  "name": "FX Radio Steps",
+  "settings": {
+    "Voices": 1,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "osc1",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 3,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 0,
+        "Fine": 0,
+        "Level": 65
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 3,
+        "Order": 0,
+        "Cutoff": 1500,
+        "Reso": 40
+      }
+    },
+    {
+      "id": "clock1",
+      "type": "Clock",
+      "parameters": {
+        "Division": 4
+      }
+    },
+    {
+      "id": "random1",
+      "type": "Random",
+      "parameters": {
+        "Depth": 70,
+        "Offset": 0
+      }
+    },
+    {
+      "id": "slew1",
+      "type": "Slew",
+      "parameters": {
+        "Rise": 40,
+        "Fall": 70
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 80,
+        "Decay": 300,
+        "Sustain": 85,
+        "Release": 500
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 250,
+        "Time R": 375,
+        "Feedback": 38,
+        "Mix": 28,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "osc1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "waves": [
+    "de670bd596076b"
+  ],
+  "routings": [
+    [
+      "clock1",
+      "random1",
+      "Trigger",
+      "Trigger"
+    ],
+    [
+      "random1",
+      "slew1",
+      "Value",
+      "CV"
+    ]
+  ],
+  "modulations": [
+    [
+      "slew1",
+      "filter1",
+      "Cutoff"
+    ]
+  ],
+  "layout": {
+    "osc1": {
+      "x": 24,
+      "y": 24
+    },
+    "filter1": {
+      "x": 24,
+      "y": 164
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 304
+    },
+    "pan1": {
+      "x": 24,
+      "y": 444
+    },
+    "delay1": {
+      "x": 24,
+      "y": 584
+    },
+    "out": {
+      "x": 24,
+      "y": 724
+    },
+    "clock1": {
+      "x": 620,
+      "y": 24
+    },
+    "random1": {
+      "x": 800,
+      "y": 24
+    },
+    "slew1": {
+      "x": 620,
+      "y": 184
+    }
+  },
+  "category": "fx"
+}

@@ -1,0 +1,89 @@
+import { ESPError } from "../types/error.js";
+import { bstrToUi8 } from "../util.js";
+import { ESP_IMAGE_MAGIC } from "./base.js";
+import { ESP32FirmwareImage } from "./esp32.js";
+import { ESP8266ROMFirmwareImage, ESP8266V2FirmwareImage } from "./esp8266.js";
+import { ESP32C2FirmwareImage, ESP32C3FirmwareImage, ESP32C5FirmwareImage, ESP32C61FirmwareImage, ESP32C6FirmwareImage, ESP32E22FirmwareImage, ESP32H2FirmwareImage, ESP32H21FirmwareImage, ESP32H4FirmwareImage, ESP32P4FirmwareImage, ESP32S2FirmwareImage, ESP32S3FirmwareImage, ESP32S31FirmwareImage, } from "./others.js";
+/**
+ * Function to load a firmware image from a Uint8Array or string
+ * @param {ROM} rom - The ROM object representing the target device
+ * @param {Uint8Array | string} imageData Image data as a Uint8Array or string
+ * @returns {Promise<BaseFirmwareImage>} - A promise that resolves to the loaded firmware image
+ */
+export async function loadFirmwareImage(rom, imageData) {
+    // Convert the string data to a Uint8Array if needed
+    const binaryData = imageData instanceof Uint8Array ? imageData : bstrToUi8(imageData);
+    // Select the appropriate image class based on the chip
+    const chipName = rom.CHIP_NAME.toLowerCase().replace(/[-()]/g, "");
+    let firmwareImageClass;
+    if (chipName !== "esp8266") {
+        switch (chipName) {
+            case "esp32":
+                firmwareImageClass = ESP32FirmwareImage;
+                break;
+            case "esp32s2":
+                firmwareImageClass = ESP32S2FirmwareImage;
+                break;
+            case "esp32s3":
+                firmwareImageClass = ESP32S3FirmwareImage;
+                break;
+            case "esp32s31":
+                firmwareImageClass = ESP32S31FirmwareImage;
+                break;
+            case "esp32c3":
+                firmwareImageClass = ESP32C3FirmwareImage;
+                break;
+            case "esp32c2":
+                firmwareImageClass = ESP32C2FirmwareImage;
+                break;
+            case "esp32c6":
+                firmwareImageClass = ESP32C6FirmwareImage;
+                break;
+            case "esp32c61":
+                firmwareImageClass = ESP32C61FirmwareImage;
+                break;
+            case "esp32c5":
+                firmwareImageClass = ESP32C5FirmwareImage;
+                break;
+            case "esp32e22":
+                firmwareImageClass = ESP32E22FirmwareImage;
+                break;
+            case "esp32h2":
+                firmwareImageClass = ESP32H2FirmwareImage;
+                break;
+            case "esp32h21":
+                firmwareImageClass = ESP32H21FirmwareImage;
+                break;
+            case "esp32h4":
+                firmwareImageClass = ESP32H4FirmwareImage;
+                break;
+            case "esp32p4":
+                firmwareImageClass = ESP32P4FirmwareImage;
+                break;
+            default:
+                throw new ESPError(`Unsupported chip name: ${chipName}`);
+        }
+    }
+    else {
+        const magic = binaryData[0];
+        if (magic === ESP_IMAGE_MAGIC) {
+            firmwareImageClass = ESP8266ROMFirmwareImage;
+        }
+        else if (magic === ESP8266V2FirmwareImage.IMAGE_V2_MAGIC) {
+            firmwareImageClass = ESP8266V2FirmwareImage;
+        }
+        else {
+            throw new ESPError(`Invalid image magic number: ${magic}`);
+        }
+    }
+    // Create an instance of the selected image class
+    const image = new firmwareImageClass(rom);
+    const imageWithLoad = image;
+    if (typeof imageWithLoad.loadFromFile === "function") {
+        const loadResult = imageWithLoad.loadFromFile(binaryData);
+        if (loadResult instanceof Promise) {
+            await loadResult;
+        }
+    }
+    return image;
+}

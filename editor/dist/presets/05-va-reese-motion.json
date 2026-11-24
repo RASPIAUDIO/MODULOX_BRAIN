@@ -1,0 +1,225 @@
+{
+  "version": 3,
+  "name": "VA Reese Motion",
+  "settings": {
+    "Voices": 1,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120,
+    "Play mode": 1,
+    "Glide": 2,
+    "Glide time": 65,
+    "Retrigger": 0
+  },
+  "modules": [
+    {
+      "id": "osc1",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 3,
+        "PWM": 50,
+        "Unison": 2,
+        "Pitch": 0,
+        "Fine": -12,
+        "Level": 72,
+        "Detune": 10,
+        "Mix": 55
+      }
+    },
+    {
+      "id": "osc2",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 3,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 0,
+        "Fine": 12,
+        "Level": 72
+      }
+    },
+    {
+      "id": "osc3",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 0,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": -12,
+        "Fine": 0,
+        "Level": 90
+      }
+    },
+    {
+      "id": "mix1",
+      "type": "Mix",
+      "parameters": {
+        "In 1": 100,
+        "In 2": 100,
+        "In 3": 100
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 1,
+        "Cutoff": 1900,
+        "Reso": 16
+      }
+    },
+    {
+      "id": "lfo1",
+      "type": "LFO",
+      "parameters": {
+        "Wave": 0,
+        "Rate": 4,
+        "Depth": 14,
+        "Level": 0,
+        "Sync": 1,
+        "Division": 9
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 4,
+        "Decay": 180,
+        "Sustain": 80,
+        "Release": 100
+      }
+    },
+    {
+      "id": "disto1",
+      "type": "Disto",
+      "parameters": {
+        "Mode": 0,
+        "Drive": 26,
+        "Mix": 35
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "chorus1",
+      "type": "Chorus",
+      "parameters": {
+        "Rate": 24,
+        "Depth": 18,
+        "Mix": 12
+      }
+    }
+  ],
+  "connections": [
+    [
+      "osc1",
+      "mix1",
+      0
+    ],
+    [
+      "osc2",
+      "mix1",
+      1
+    ],
+    [
+      "osc3",
+      "mix1",
+      2
+    ],
+    [
+      "mix1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "disto1",
+      0
+    ],
+    [
+      "disto1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "chorus1",
+      0
+    ],
+    [
+      "chorus1",
+      "out",
+      0
+    ]
+  ],
+  "waves": [
+    "572b77b1fda282"
+  ],
+  "modulations": [
+    [
+      "lfo1",
+      "filter1",
+      "Cutoff"
+    ]
+  ],
+  "layout": {
+    "osc1": {
+      "x": 24,
+      "y": 24
+    },
+    "osc2": {
+      "x": 204,
+      "y": 24
+    },
+    "osc3": {
+      "x": 384,
+      "y": 24
+    },
+    "mix1": {
+      "x": 24,
+      "y": 164
+    },
+    "filter1": {
+      "x": 24,
+      "y": 304
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 444
+    },
+    "disto1": {
+      "x": 24,
+      "y": 584
+    },
+    "pan1": {
+      "x": 24,
+      "y": 724
+    },
+    "chorus1": {
+      "x": 24,
+      "y": 864
+    },
+    "out": {
+      "x": 24,
+      "y": 1004
+    },
+    "lfo1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "bass"
+}

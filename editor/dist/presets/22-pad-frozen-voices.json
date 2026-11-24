@@ -1,0 +1,221 @@
+{
+  "version": 3,
+  "name": "PAD Frozen Voices",
+  "settings": {
+    "Voices": 3,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "osc1",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 3,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 0,
+        "Fine": -4,
+        "Level": 70
+      }
+    },
+    {
+      "id": "osc2",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 3,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 12,
+        "Fine": 4,
+        "Level": 36
+      }
+    },
+    {
+      "id": "osc3",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 0,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": -12,
+        "Fine": 0,
+        "Level": 50
+      }
+    },
+    {
+      "id": "mix1",
+      "type": "Mix",
+      "parameters": {
+        "In 1": 100,
+        "In 2": 100,
+        "In 3": 100
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 1,
+        "Cutoff": 2000,
+        "Reso": 16
+      }
+    },
+    {
+      "id": "env1",
+      "type": "Env",
+      "parameters": {
+        "Attack": 1800,
+        "Decay": 1600,
+        "Sustain": 80,
+        "Release": 3000,
+        "Depth": 25
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 1600,
+        "Decay": 1600,
+        "Sustain": 90,
+        "Release": 3000
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "chorus1",
+      "type": "Chorus",
+      "parameters": {
+        "Rate": 16,
+        "Depth": 45,
+        "Mix": 33
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 650,
+        "Time R": 890,
+        "Feedback": 38,
+        "Mix": 26,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "osc1",
+      "mix1",
+      0
+    ],
+    [
+      "osc2",
+      "mix1",
+      1
+    ],
+    [
+      "osc3",
+      "mix1",
+      2
+    ],
+    [
+      "mix1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "chorus1",
+      0
+    ],
+    [
+      "chorus1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "waves": [
+    "4e1eb237ebe2fe"
+  ],
+  "modulations": [
+    [
+      "env1",
+      "filter1",
+      "Cutoff"
+    ]
+  ],
+  "layout": {
+    "osc1": {
+      "x": 24,
+      "y": 24
+    },
+    "osc2": {
+      "x": 204,
+      "y": 24
+    },
+    "osc3": {
+      "x": 384,
+      "y": 24
+    },
+    "mix1": {
+      "x": 24,
+      "y": 164
+    },
+    "filter1": {
+      "x": 24,
+      "y": 304
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 444
+    },
+    "pan1": {
+      "x": 24,
+      "y": 584
+    },
+    "chorus1": {
+      "x": 24,
+      "y": 724
+    },
+    "delay1": {
+      "x": 24,
+      "y": 864
+    },
+    "out": {
+      "x": 24,
+      "y": 1004
+    },
+    "env1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "pad"
+}

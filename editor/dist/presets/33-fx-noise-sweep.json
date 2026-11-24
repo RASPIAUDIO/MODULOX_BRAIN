@@ -1,0 +1,135 @@
+{
+  "version": 3,
+  "name": "FX Noise Sweep",
+  "settings": {
+    "Voices": 1,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "noise1",
+      "type": "Noise",
+      "parameters": {
+        "Level": 58
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 3,
+        "Order": 0,
+        "Cutoff": 1000,
+        "Reso": 25
+      }
+    },
+    {
+      "id": "env1",
+      "type": "Env",
+      "parameters": {
+        "Attack": 1800,
+        "Decay": 1600,
+        "Sustain": 80,
+        "Release": 2000,
+        "Depth": 80
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 900,
+        "Decay": 800,
+        "Sustain": 85,
+        "Release": 1800
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 450,
+        "Time R": 675,
+        "Feedback": 38,
+        "Mix": 30,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "noise1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "modulations": [
+    [
+      "env1",
+      "filter1",
+      "Cutoff"
+    ]
+  ],
+  "layout": {
+    "noise1": {
+      "x": 24,
+      "y": 24
+    },
+    "filter1": {
+      "x": 24,
+      "y": 164
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 304
+    },
+    "pan1": {
+      "x": 24,
+      "y": 444
+    },
+    "delay1": {
+      "x": 24,
+      "y": 584
+    },
+    "out": {
+      "x": 24,
+      "y": 724
+    },
+    "env1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "fx"
+}

@@ -1,0 +1,158 @@
+{
+  "version": 3,
+  "name": "FX Reverse Dust",
+  "settings": {
+    "Voices": 2,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "granulizer1",
+      "type": "Granulizer",
+      "parameters": {
+        "Start": 5,
+        "End": 95,
+        "Size": 220,
+        "Density": 18,
+        "Speed": -55,
+        "Spray": 35,
+        "Window": 0,
+        "Pitch": -12,
+        "Level": 90
+      },
+      "sample": "0f682fa78d186a"
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 2,
+        "Order": 0,
+        "Cutoff": 120,
+        "Reso": 10
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 600,
+        "Decay": 800,
+        "Sustain": 80,
+        "Release": 1500
+      }
+    },
+    {
+      "id": "disto1",
+      "type": "Disto",
+      "parameters": {
+        "Mode": 0,
+        "Drive": 28,
+        "Mix": 40
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "chorus1",
+      "type": "Chorus",
+      "parameters": {
+        "Rate": 40,
+        "Depth": 45,
+        "Mix": 25
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 550,
+        "Time R": 730,
+        "Feedback": 42,
+        "Mix": 32,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "granulizer1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "disto1",
+      0
+    ],
+    [
+      "disto1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "chorus1",
+      0
+    ],
+    [
+      "chorus1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "layout": {
+    "granulizer1": {
+      "x": 24,
+      "y": 24
+    },
+    "filter1": {
+      "x": 24,
+      "y": 164
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 304
+    },
+    "disto1": {
+      "x": 24,
+      "y": 444
+    },
+    "pan1": {
+      "x": 24,
+      "y": 584
+    },
+    "chorus1": {
+      "x": 24,
+      "y": 724
+    },
+    "delay1": {
+      "x": 24,
+      "y": 864
+    },
+    "out": {
+      "x": 24,
+      "y": 1004
+    }
+  },
+  "category": "fx"
+}

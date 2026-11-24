@@ -1,0 +1,11 @@
+/build/
+/build-s3-*/
+/sdkconfig.s3-*
+/build-audio-test/
+/managed_components/
+/sdkconfig
+/sdkconfig.old
+/.vscode/settings.json
+/backups/
+/releases/
+/tools/__pycache__/

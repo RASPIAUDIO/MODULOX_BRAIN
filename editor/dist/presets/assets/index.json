@@ -1,0 +1,50 @@
+{
+  "waves": [
+    {
+      "id": "572b77b1fda282",
+      "name": "AKWF Saw 1",
+      "source": "AKWF/AKWF_bw_saw/AKWF_saw_0001.wav"
+    },
+    {
+      "id": "a71798fb3f5e2c",
+      "name": "AKWF Stringbox Cheeze 1",
+      "source": "AKWF/AKWF_stringbox/AKWF_cheeze_0001.wav"
+    },
+    {
+      "id": "4e1eb237ebe2fe",
+      "name": "AKWF Hvoice 1",
+      "source": "AKWF/AKWF_hvoice/AKWF_hvoice_0001.wav"
+    },
+    {
+      "id": "de670bd596076b",
+      "name": "AKWF Granular 1",
+      "source": "AKWF/AKWF_granular/AKWF_granular_0001.wav"
+    }
+  ],
+  "samples": [
+    {
+      "id": "184872023ab6fb",
+      "name": "Choir C4 Texture",
+      "bytes": 264600,
+      "sampleRate": 44100,
+      "root": 60,
+      "source": "Synthese originale deterministe, build-presets.mjs"
+    },
+    {
+      "id": "d58ac504c0e7d6",
+      "name": "Bowed Metal C4",
+      "bytes": 264600,
+      "sampleRate": 44100,
+      "root": 60,
+      "source": "Synthese originale deterministe, build-presets.mjs"
+    },
+    {
+      "id": "0f682fa78d186a",
+      "name": "Pulsed Dust C4",
+      "bytes": 264600,
+      "sampleRate": 44100,
+      "root": 60,
+      "source": "Synthese originale deterministe, build-presets.mjs"
+    }
+  ]
+}

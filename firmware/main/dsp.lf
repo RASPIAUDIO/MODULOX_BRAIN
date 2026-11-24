@@ -1,0 +1,9 @@
+[mapping:filter_dsp]
+archive: libespressif__esp-dsp.a
+entries:
+    dsps_biquad_f32_aes3 (noflash)
+
+[mapping:synth_render]
+archive: libmain.a
+entries:
+    synth_voice (noflash)

@@ -1,0 +1,103 @@
+{
+  "version": 3,
+  "name": "KEY Tine Bell",
+  "settings": {
+    "Voices": 4,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "fm41",
+      "type": "FM4",
+      "parameters": {
+        "Algorithm": 4,
+        "Depth": 13,
+        "Feedback": 0,
+        "Level": 75,
+        "Pitch": 0,
+        "1 Ratio": 5,
+        "1 Level": 44,
+        "1 Attack": 0,
+        "1 Decay": 1300,
+        "1 Sustain": 0,
+        "1 Release": 500,
+        "2 Ratio": 1,
+        "2 Level": 90,
+        "2 Attack": 2,
+        "2 Decay": 2000,
+        "2 Sustain": 0,
+        "2 Release": 900,
+        "3 Ratio": 7,
+        "3 Level": 23,
+        "3 Attack": 0,
+        "3 Decay": 900,
+        "3 Sustain": 0,
+        "3 Release": 400,
+        "4 Ratio": 2,
+        "4 Level": 55,
+        "4 Attack": 2,
+        "4 Decay": 1800,
+        "4 Sustain": 0,
+        "4 Release": 700
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 400,
+        "Time R": 600,
+        "Feedback": 32,
+        "Mix": 24,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "fm41",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "layout": {
+    "fm41": {
+      "x": 24,
+      "y": 24
+    },
+    "pan1": {
+      "x": 24,
+      "y": 164
+    },
+    "delay1": {
+      "x": 24,
+      "y": 304
+    },
+    "out": {
+      "x": 24,
+      "y": 444
+    }
+  },
+  "category": "keys"
+}

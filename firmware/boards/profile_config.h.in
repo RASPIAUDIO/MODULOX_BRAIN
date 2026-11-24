@@ -1,0 +1,10 @@
+#pragma once
+#define MODULOX_BOARD_ID "@MODULOX_MODEL@"
+#define MODULOX_BOARD_MODEL "@BOARD_model@"
+#define MODULOX_BOARD_LAYOUT "@BOARD_layout@"
+#define MODULOX_FLASH_BYTES @BOARD_flashBytes@u
+#define MODULOX_PSRAM_BYTES @BOARD_psramBytes@u
+#define MODULOX_SLOT_BYTES @BOARD_slotBytes@u
+#define MODULOX_OTA0 @BOARD_ota0@u
+#define MODULOX_OTA1 @BOARD_ota1@u
+#define MODULOX_SAMPLE_BYTES @BOARD_sampleBytes@u

@@ -1,0 +1,49 @@
+MODULOX - VERSION WINDOWS HORS LIGNE
+
+1. Extraire tout le ZIP dans un dossier de votre ordinateur.
+2. Double-cliquer sur lancer.cmd.
+3. Chrome s'ouvre automatiquement dans une fenetre d'application.
+   Si Chrome n'est pas installe, le lanceur utilise Microsoft Edge.
+4. Connecter le Modulox en USB depuis l'application si besoin.
+
+Cette version utilise Windows PowerShell et le navigateur deja installe.
+Elle ne demande ni Python, ni Node.js, ni Electron, ni installation d'un service.
+Tout le contenu necessaire est inclus : application, 40 presets, formes
+d'onde et samples. Aucune connexion Internet n'est necessaire pour l'editeur.
+
+Les patches personnels se sauvegardent avec "Enregistrer dans mon dossier".
+Choisir son dossier depuis "Mes patches". Les fichiers .modulox.json
+contiennent aussi les formes d'onde et samples necessaires.
+Les presets d'usine restent separes des creations personnelles.
+
+Le panneau Firmware affiche la version du Modulox et celle incluse dans cette
+copie de l'editeur. Un fichier .modulox-fw.json permet une mise a jour sans
+Internet sur un Modulox deja prepare pour le systeme A/B. Pendant le transfert,
+laisser l'USB branche. L'editeur controle le fichier et le redemarrage.
+Le mode Recuperation USB (BOOT) propose une restauration par le port ROM,
+pour les cartes deja migrees. Les anciens appareils necessitent d'abord une
+migration initiale preparee par le fabricant. Voir MISES-A-JOUR.md.
+
+Pour fermer : fermer la fenetre Chrome/Edge, puis double-cliquer sur
+arreter.cmd pour arreter le petit serveur local en arriere-plan.
+Relancer lancer.cmd reutilise le serveur deja ouvert ; il ne le duplique pas.
+Ne pas lancer simultanement un ancien serveur Python/Node sur le port 8765.
+
+Le serveur ecoute uniquement sur 127.0.0.1:8765, donc sur cet ordinateur.
+Il ne publie pas le dossier de patches personnels et ne recoit pas d'uploads.
+Windows 10/11 avec Chrome ou Edge est requis. Aucun droit administrateur
+n'est necessaire. Le navigateur peut demander l'acces USB et l'acces au
+dossier choisi ; ces autorisations restent a donner par l'utilisateur.
+
+Les preferences du navigateur sont propres au profil et a l'adresse du site.
+Une utilisation precedente depuis un site Internet peut demander de choisir
+de nouveau le dossier ; les fichiers deja enregistres sur disque restent intacts.
+Le navigateur lui-meme peut avoir ses activites habituelles (mise a jour, compte),
+independantes de l'editeur. Le lanceur ne le telecharge ni ne le met a jour.
+
+Installation firmware usine : action distincte du panneau Firmware, en mode BOOT.
+Elle remplace toute la flash du Modulox (patches, samples, waves, reglages et
+firmwares). Les avertissements, l'identification de la carte, une case a cocher
+et le texte EFFACER precedent l'ecriture. Image et outils sont inclus hors ligne.
+Voir INSTALLATION-USINE.md avant utilisation. Pour installer une nouvelle version
+de l'editeur avec ses nouvelles routes, arreter.cmd puis lancer.cmd.

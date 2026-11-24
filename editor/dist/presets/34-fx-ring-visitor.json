@@ -1,0 +1,194 @@
+{
+  "version": 3,
+  "name": "FX Ring Visitor",
+  "settings": {
+    "Voices": 2,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "osc1",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 2,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 0,
+        "Fine": 0,
+        "Level": 80
+      }
+    },
+    {
+      "id": "osc2",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 2,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 7,
+        "Fine": 11,
+        "Level": 80
+      }
+    },
+    {
+      "id": "ringmod1",
+      "type": "Ring Mod",
+      "parameters": {
+        "Mix": 85
+      }
+    },
+    {
+      "id": "lfo1",
+      "type": "LFO",
+      "parameters": {
+        "Wave": 0,
+        "Rate": 8,
+        "Depth": 10,
+        "Level": 0
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 0,
+        "Cutoff": 6000,
+        "Reso": 12
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 150,
+        "Decay": 700,
+        "Sustain": 65,
+        "Release": 1100
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "chorus1",
+      "type": "Chorus",
+      "parameters": {
+        "Rate": 28,
+        "Depth": 35,
+        "Mix": 25
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 300,
+        "Time R": 450,
+        "Feedback": 38,
+        "Mix": 28,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "osc1",
+      "ringmod1",
+      0
+    ],
+    [
+      "osc2",
+      "ringmod1",
+      1
+    ],
+    [
+      "ringmod1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "chorus1",
+      0
+    ],
+    [
+      "chorus1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "modulations": [
+    [
+      "lfo1",
+      "osc2",
+      "Pitch"
+    ]
+  ],
+  "layout": {
+    "osc1": {
+      "x": 24,
+      "y": 24
+    },
+    "osc2": {
+      "x": 204,
+      "y": 24
+    },
+    "ringmod1": {
+      "x": 24,
+      "y": 164
+    },
+    "filter1": {
+      "x": 24,
+      "y": 304
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 444
+    },
+    "pan1": {
+      "x": 24,
+      "y": 584
+    },
+    "chorus1": {
+      "x": 24,
+      "y": 724
+    },
+    "delay1": {
+      "x": 24,
+      "y": 864
+    },
+    "out": {
+      "x": 24,
+      "y": 1004
+    },
+    "lfo1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "fx"
+}

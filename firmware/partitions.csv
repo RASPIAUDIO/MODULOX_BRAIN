@@ -1,0 +1,11 @@
+# Name, Type, SubType, Offset, Size
+nvs, data, nvs, 0x9000, 0x6000
+phy_init, data, phy, 0xf000, 0x1000
+factory, app, factory, 0x10000, 1M
+patches, data, spiffs, 0x110000, 128K
+userpatches, data, nvs, 0x130000, 128K
+waves, data, nvs, 0x150000, 640K
+otadata, data, ota, 0x1f0000, 8K
+samples, data, spiffs, 0x200000, 10M
+ota_0, app, ota_0, 0xc00000, 0x180000
+ota_1, app, ota_1, 0xd80000, 0x180000

@@ -1,0 +1,34 @@
+import { ESP32ROM } from "./esp32.js";
+import { ESP32C2ROM } from "./esp32c2.js";
+import { ESP32C3ROM } from "./esp32c3.js";
+import { ESP32C5ROM } from "./esp32c5.js";
+import { ESP32C6ROM } from "./esp32c6.js";
+import { ESP32C61ROM } from "./esp32c61.js";
+import { ESP32E22ROM } from "./esp32e22.js";
+import { ESP32H2ROM } from "./esp32h2.js";
+import { ESP32H21ROM } from "./esp32h21.js";
+import { ESP32H4ROM } from "./esp32h4.js";
+import { ESP32P4ROM } from "./esp32p4.js";
+import { ESP32S2ROM } from "./esp32s2.js";
+import { ESP32S3ROM } from "./esp32s3.js";
+import { ESP32S31ROM } from "./esp32s31.js";
+import { ESP8266ROM } from "./esp8266.js";
+export const CHIP_DEFS = {
+    esp8266: new ESP8266ROM(),
+    esp32: new ESP32ROM(),
+    esp32s2: new ESP32S2ROM(),
+    esp32s3: new ESP32S3ROM(),
+    esp32s31: new ESP32S31ROM(),
+    esp32c3: new ESP32C3ROM(),
+    esp32c2: new ESP32C2ROM(),
+    esp32c6: new ESP32C6ROM(),
+    esp32c61: new ESP32C61ROM(),
+    esp32c5: new ESP32C5ROM(),
+    esp32e22: new ESP32E22ROM(),
+    esp32h2: new ESP32H2ROM(),
+    esp32h21: new ESP32H21ROM(),
+    esp32p4: new ESP32P4ROM(),
+    esp32h4: new ESP32H4ROM(),
+};
+export const CHIP_LIST = Object.keys(CHIP_DEFS);
+export const ROM_LIST = Object.values(CHIP_DEFS);

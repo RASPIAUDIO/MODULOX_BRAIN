@@ -1,0 +1,142 @@
+{
+  "version": 3,
+  "name": "PAD Glass Choir",
+  "settings": {
+    "Voices": 4,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "fm41",
+      "type": "FM4",
+      "parameters": {
+        "Algorithm": 4,
+        "Depth": 10,
+        "Feedback": 0,
+        "Level": 75,
+        "Pitch": 0,
+        "1 Ratio": 2,
+        "1 Level": 32,
+        "1 Attack": 1600,
+        "1 Decay": 1200,
+        "1 Sustain": 65,
+        "1 Release": 2400,
+        "2 Ratio": 1,
+        "2 Level": 85,
+        "2 Attack": 1300,
+        "2 Decay": 1600,
+        "2 Sustain": 85,
+        "2 Release": 2800,
+        "3 Ratio": 3,
+        "3 Level": 20,
+        "3 Attack": 2000,
+        "3 Decay": 1200,
+        "3 Sustain": 55,
+        "3 Release": 2600,
+        "4 Ratio": 1,
+        "4 Level": 85,
+        "4 Attack": 1500,
+        "4 Decay": 1800,
+        "4 Sustain": 85,
+        "4 Release": 3000
+      }
+    },
+    {
+      "id": "lfo1",
+      "type": "LFO",
+      "parameters": {
+        "Wave": 0,
+        "Rate": 3,
+        "Depth": 2,
+        "Level": 0
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "chorus1",
+      "type": "Chorus",
+      "parameters": {
+        "Rate": 20,
+        "Depth": 50,
+        "Mix": 32
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 300,
+        "Time R": 450,
+        "Feedback": 35,
+        "Mix": 21,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "fm41",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "chorus1",
+      0
+    ],
+    [
+      "chorus1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "modulations": [
+    [
+      "lfo1",
+      "fm41",
+      "Depth"
+    ]
+  ],
+  "layout": {
+    "fm41": {
+      "x": 24,
+      "y": 24
+    },
+    "pan1": {
+      "x": 24,
+      "y": 164
+    },
+    "chorus1": {
+      "x": 24,
+      "y": 304
+    },
+    "delay1": {
+      "x": 24,
+      "y": 444
+    },
+    "out": {
+      "x": 24,
+      "y": 584
+    },
+    "lfo1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "pad"
+}

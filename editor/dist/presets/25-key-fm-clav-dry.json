@@ -1,0 +1,119 @@
+{
+  "version": 3,
+  "name": "KEY FM Clav Dry",
+  "settings": {
+    "Voices": 4,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "fm41",
+      "type": "FM4",
+      "parameters": {
+        "Algorithm": 4,
+        "Depth": 20,
+        "Feedback": 8,
+        "Level": 75,
+        "Pitch": 0,
+        "1 Ratio": 3,
+        "1 Level": 62,
+        "1 Attack": 0,
+        "1 Decay": 100,
+        "1 Sustain": 0,
+        "1 Release": 60,
+        "2 Ratio": 1,
+        "2 Level": 90,
+        "2 Attack": 1,
+        "2 Decay": 350,
+        "2 Sustain": 0,
+        "2 Release": 70,
+        "3 Ratio": 2,
+        "3 Level": 38,
+        "3 Attack": 0,
+        "3 Decay": 80,
+        "3 Sustain": 0,
+        "3 Release": 50,
+        "4 Ratio": 1,
+        "4 Level": 75,
+        "4 Attack": 1,
+        "4 Decay": 260,
+        "4 Sustain": 0,
+        "4 Release": 60
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 0,
+        "Cutoff": 6500,
+        "Reso": 5
+      }
+    },
+    {
+      "id": "disto1",
+      "type": "Disto",
+      "parameters": {
+        "Mode": 0,
+        "Drive": 12,
+        "Mix": 18
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    }
+  ],
+  "connections": [
+    [
+      "fm41",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "disto1",
+      0
+    ],
+    [
+      "disto1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "out",
+      0
+    ]
+  ],
+  "layout": {
+    "fm41": {
+      "x": 24,
+      "y": 24
+    },
+    "filter1": {
+      "x": 24,
+      "y": 164
+    },
+    "disto1": {
+      "x": 24,
+      "y": 304
+    },
+    "pan1": {
+      "x": 24,
+      "y": 444
+    },
+    "out": {
+      "x": 24,
+      "y": 584
+    }
+  },
+  "category": "keys"
+}

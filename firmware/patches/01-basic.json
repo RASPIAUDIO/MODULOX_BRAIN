@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "Basic",
+  "modules": [
+    {"id": "osc", "type": "Osc"},
+    {"id": "filter", "type": "Filter"},
+    {"id": "env", "type": "ADSR"}
+  ],
+  "connections": [["osc", "filter"], ["filter", "env"], ["env", "out"]]
+}

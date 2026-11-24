@@ -1,0 +1,142 @@
+{
+  "version": 3,
+  "name": "KEY FM Clav Funk",
+  "settings": {
+    "Voices": 4,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "fm41",
+      "type": "FM4",
+      "parameters": {
+        "Algorithm": 4,
+        "Depth": 24,
+        "Feedback": 10,
+        "Level": 75,
+        "Pitch": 0,
+        "1 Ratio": 4,
+        "1 Level": 60,
+        "1 Attack": 0,
+        "1 Decay": 120,
+        "1 Sustain": 0,
+        "1 Release": 70,
+        "2 Ratio": 1,
+        "2 Level": 90,
+        "2 Attack": 1,
+        "2 Decay": 420,
+        "2 Sustain": 0,
+        "2 Release": 90,
+        "3 Ratio": 2,
+        "3 Level": 40,
+        "3 Attack": 0,
+        "3 Decay": 90,
+        "3 Sustain": 0,
+        "3 Release": 60,
+        "4 Ratio": 1,
+        "4 Level": 80,
+        "4 Attack": 1,
+        "4 Decay": 310,
+        "4 Sustain": 0,
+        "4 Release": 75
+      }
+    },
+    {
+      "id": "disto1",
+      "type": "Disto",
+      "parameters": {
+        "Mode": 0,
+        "Drive": 20,
+        "Mix": 25
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "rotary1",
+      "type": "Rotary",
+      "parameters": {
+        "Speed": 1,
+        "Slow": 70,
+        "Fast": 620,
+        "Transition": 900,
+        "Depth": 40,
+        "Mix": 45
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 90,
+        "Time R": 125,
+        "Feedback": 8,
+        "Mix": 10,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "fm41",
+      "disto1",
+      0
+    ],
+    [
+      "disto1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "rotary1",
+      0
+    ],
+    [
+      "rotary1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "layout": {
+    "fm41": {
+      "x": 24,
+      "y": 24
+    },
+    "disto1": {
+      "x": 24,
+      "y": 164
+    },
+    "pan1": {
+      "x": 24,
+      "y": 304
+    },
+    "rotary1": {
+      "x": 24,
+      "y": 444
+    },
+    "delay1": {
+      "x": 24,
+      "y": 584
+    },
+    "out": {
+      "x": 24,
+      "y": 724
+    }
+  },
+  "category": "keys"
+}

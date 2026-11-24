@@ -1,0 +1,142 @@
+{
+  "version": 3,
+  "name": "PAD Grain Aurora",
+  "settings": {
+    "Voices": 2,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "granulizer1",
+      "type": "Granulizer",
+      "parameters": {
+        "Start": 5,
+        "End": 95,
+        "Size": 160,
+        "Density": 24,
+        "Speed": 25,
+        "Spray": 25,
+        "Window": 0,
+        "Pitch": 0,
+        "Level": 75
+      },
+      "sample": "184872023ab6fb"
+    },
+    {
+      "id": "lfo1",
+      "type": "LFO",
+      "parameters": {
+        "Wave": 0,
+        "Rate": 2,
+        "Depth": 8,
+        "Level": 0
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 1200,
+        "Decay": 800,
+        "Sustain": 100,
+        "Release": 2000
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "chorus1",
+      "type": "Chorus",
+      "parameters": {
+        "Rate": 18,
+        "Depth": 48,
+        "Mix": 30
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 300,
+        "Time R": 450,
+        "Feedback": 38,
+        "Mix": 25,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "granulizer1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "chorus1",
+      0
+    ],
+    [
+      "chorus1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "modulations": [
+    [
+      "lfo1",
+      "granulizer1",
+      "Start"
+    ]
+  ],
+  "layout": {
+    "granulizer1": {
+      "x": 24,
+      "y": 24
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 164
+    },
+    "pan1": {
+      "x": 24,
+      "y": 304
+    },
+    "chorus1": {
+      "x": 24,
+      "y": 444
+    },
+    "delay1": {
+      "x": 24,
+      "y": 584
+    },
+    "out": {
+      "x": 24,
+      "y": 724
+    },
+    "lfo1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "pad"
+}

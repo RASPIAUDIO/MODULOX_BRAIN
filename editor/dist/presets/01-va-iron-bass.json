@@ -1,0 +1,200 @@
+{
+  "version": 3,
+  "name": "VA Iron Bass",
+  "settings": {
+    "Voices": 1,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "Play mode": 1,
+    "Glide": 2,
+    "Glide time": 65,
+    "Retrigger": 1
+  },
+  "modules": [
+    {
+      "id": "osc1",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 1,
+        "PWM": 46,
+        "Pitch": 0,
+        "Fine": -5,
+        "Level": 85,
+        "Unison": 1,
+        "FM": 0
+      }
+    },
+    {
+      "id": "osc2",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 1,
+        "PWM": 64,
+        "Pitch": 0,
+        "Fine": 5,
+        "Level": 75,
+        "Unison": 1
+      }
+    },
+    {
+      "id": "osc3",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 2,
+        "Pitch": -12,
+        "Fine": 0,
+        "Level": 95,
+        "Unison": 1
+      }
+    },
+    {
+      "id": "mix",
+      "type": "Mix",
+      "parameters": {
+        "In 1": 100,
+        "In 2": 100,
+        "In 3": 100
+      }
+    },
+    {
+      "id": "filter",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 1,
+        "Cutoff": 420,
+        "Reso": 24
+      }
+    },
+    {
+      "id": "bite",
+      "type": "Env",
+      "parameters": {
+        "Attack": 2,
+        "Decay": 230,
+        "Sustain": 16,
+        "Release": 95,
+        "Depth": 60
+      }
+    },
+    {
+      "id": "amp",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 3,
+        "Decay": 160,
+        "Sustain": 78,
+        "Release": 95
+      }
+    },
+    {
+      "id": "disto",
+      "type": "Disto",
+      "parameters": {
+        "Mode": 0,
+        "Drive": 48,
+        "Mix": 60
+      }
+    },
+    {
+      "id": "pan",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    }
+  ],
+  "connections": [
+    [
+      "osc1",
+      "mix",
+      0
+    ],
+    [
+      "osc2",
+      "mix",
+      1
+    ],
+    [
+      "osc3",
+      "mix",
+      2
+    ],
+    [
+      "mix",
+      "filter",
+      0
+    ],
+    [
+      "filter",
+      "amp",
+      0
+    ],
+    [
+      "amp",
+      "disto",
+      0
+    ],
+    [
+      "disto",
+      "pan",
+      0
+    ],
+    [
+      "pan",
+      "out",
+      0
+    ]
+  ],
+  "modulations": [
+    [
+      "bite",
+      "filter",
+      "Cutoff"
+    ]
+  ],
+  "layout": {
+    "osc1": {
+      "x": 24,
+      "y": 24
+    },
+    "osc2": {
+      "x": 24,
+      "y": 160
+    },
+    "osc3": {
+      "x": 24,
+      "y": 296
+    },
+    "mix": {
+      "x": 200,
+      "y": 160
+    },
+    "bite": {
+      "x": 376,
+      "y": 24
+    },
+    "filter": {
+      "x": 376,
+      "y": 160
+    },
+    "amp": {
+      "x": 552,
+      "y": 160
+    },
+    "disto": {
+      "x": 728,
+      "y": 160
+    },
+    "pan": {
+      "x": 904,
+      "y": 160
+    },
+    "out": {
+      "x": 1080,
+      "y": 160
+    }
+  },
+  "category": "bass"
+}

@@ -1,0 +1,224 @@
+{
+  "version": 3,
+  "name": "FX Cosmic Rise",
+  "settings": {
+    "Voices": 2,
+    "Volume": 85,
+    "MIDI Ch": 0,
+    "BPM": 120
+  },
+  "modules": [
+    {
+      "id": "osc1",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 3,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 0,
+        "Fine": -7,
+        "Level": 65
+      }
+    },
+    {
+      "id": "osc2",
+      "type": "Osc",
+      "parameters": {
+        "Wave": 4,
+        "PWM": 50,
+        "Unison": 1,
+        "Pitch": 12,
+        "Fine": 7,
+        "Level": 45
+      }
+    },
+    {
+      "id": "mix1",
+      "type": "Mix",
+      "parameters": {
+        "In 1": 100,
+        "In 2": 100,
+        "In 3": 0
+      }
+    },
+    {
+      "id": "env1",
+      "type": "Env",
+      "parameters": {
+        "Attack": 2000,
+        "Decay": 1000,
+        "Sustain": 100,
+        "Release": 1800,
+        "Depth": 80
+      }
+    },
+    {
+      "id": "wavefolder1",
+      "type": "Wavefolder",
+      "parameters": {
+        "Drive": 10,
+        "Symmetry": 0,
+        "Mix": 25
+      }
+    },
+    {
+      "id": "filter1",
+      "type": "Filter",
+      "parameters": {
+        "Mode": 1,
+        "Order": 0,
+        "Cutoff": 5000,
+        "Reso": 12
+      }
+    },
+    {
+      "id": "adsr1",
+      "type": "ADSR",
+      "parameters": {
+        "Attack": 1600,
+        "Decay": 1000,
+        "Sustain": 100,
+        "Release": 2200
+      }
+    },
+    {
+      "id": "pan1",
+      "type": "Pan",
+      "parameters": {
+        "Pan": 0,
+        "Level": 85
+      }
+    },
+    {
+      "id": "chorus1",
+      "type": "Chorus",
+      "parameters": {
+        "Rate": 30,
+        "Depth": 50,
+        "Mix": 30
+      }
+    },
+    {
+      "id": "delay1",
+      "type": "Delay",
+      "parameters": {
+        "Time": 500,
+        "Time R": 750,
+        "Feedback": 40,
+        "Mix": 30,
+        "Mode": 2,
+        "Link": 0
+      }
+    }
+  ],
+  "connections": [
+    [
+      "osc1",
+      "mix1",
+      0
+    ],
+    [
+      "osc2",
+      "mix1",
+      1
+    ],
+    [
+      "mix1",
+      "wavefolder1",
+      0
+    ],
+    [
+      "wavefolder1",
+      "filter1",
+      0
+    ],
+    [
+      "filter1",
+      "adsr1",
+      0
+    ],
+    [
+      "adsr1",
+      "pan1",
+      0
+    ],
+    [
+      "pan1",
+      "chorus1",
+      0
+    ],
+    [
+      "chorus1",
+      "delay1",
+      0
+    ],
+    [
+      "delay1",
+      "out",
+      0
+    ]
+  ],
+  "waves": [
+    "de670bd596076b",
+    "4e1eb237ebe2fe"
+  ],
+  "modulations": [
+    [
+      "env1",
+      "osc1",
+      "Pitch"
+    ],
+    [
+      "env1",
+      "osc2",
+      "Pitch"
+    ]
+  ],
+  "layout": {
+    "osc1": {
+      "x": 24,
+      "y": 24
+    },
+    "osc2": {
+      "x": 204,
+      "y": 24
+    },
+    "mix1": {
+      "x": 24,
+      "y": 164
+    },
+    "wavefolder1": {
+      "x": 24,
+      "y": 304
+    },
+    "filter1": {
+      "x": 24,
+      "y": 444
+    },
+    "adsr1": {
+      "x": 24,
+      "y": 584
+    },
+    "pan1": {
+      "x": 24,
+      "y": 724
+    },
+    "chorus1": {
+      "x": 24,
+      "y": 864
+    },
+    "delay1": {
+      "x": 24,
+      "y": 1004
+    },
+    "out": {
+      "x": 24,
+      "y": 1144
+    },
+    "env1": {
+      "x": 620,
+      "y": 24
+    }
+  },
+  "category": "fx"
+}
