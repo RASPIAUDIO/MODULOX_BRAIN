@@ -84,6 +84,7 @@ def main():
     release = {"model": board['model'], "hardwareProfile": args.model, "chip": "esp32s3", "layout": board['layout'], "protocol": 1,
         "version": version, "size": len(image), "sha256": sha(image), "buildId": image[176:208].hex(),
         "file": filename, "notes": (ROOT / "RELEASE-NOTES.txt").read_text(encoding="utf-8").strip()}
+    release["thirdPartyLicenses"] = {"Open303": (ROOT / "third_party/open303/LICENSE").read_text(encoding="utf-8")}
     destination = ROOT / "releases" / version
     if args.model != DEFAULT: destination /= args.model
     destination.mkdir(parents=True, exist_ok=True)

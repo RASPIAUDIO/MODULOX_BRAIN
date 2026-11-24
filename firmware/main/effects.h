@@ -49,6 +49,7 @@ public:
     static constexpr unsigned capacity = 88200;
     ModuleParameters controls() { return {"Delay", params_}; }
     bool stereo_mode() const { return params_[5].get() != 0; }
+    unsigned allocated_bytes() const { return (bool(buffer_) + bool(right_)) * capacity * sizeof(int16_t); }
     bool prepare()
     {
         if (!buffer_) {

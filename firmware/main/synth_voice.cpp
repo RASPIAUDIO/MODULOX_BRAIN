@@ -29,6 +29,7 @@ void SynthVoice::reset(Voice& voice)
     voice.pitch.reset();
     voice.noise_level = voice.vca_gain = 0;
     voice.folder = {};
+    voice.decimator = {}; voice.crusher = {}; voice.acid = {};
     voice.pans = {};
     voice.fm.reset();
     voice.osc_fm_amount = voice.osc_fm_step = voice.osc_fm_target = 0;
@@ -72,6 +73,8 @@ void SynthVoice::select_plan(const AudioPlan& plan)
     delay_.reset();
     chorus_.reset();
     rotary_.reset();
+    reverb_.reset();
+    compressor_.reset();
     output_gain_ = 1.0f;
     for (auto& voice : voices_) {
         reset(voice);
@@ -475,7 +478,7 @@ void IRAM_ATTR SynthVoice::render(int16_t* stereo)
     if (plan_.modulation || plan_.control_count) update_lfos();
     update_controls();
     const bool has_delay = plan_.has(delay);
-    const bool tails = has_delay || plan_.has(chorus) || plan_.has(rotary);
+    const bool tails = has_delay || plan_.has(chorus) || plan_.has(rotary) || plan_.has(reverb) || plan_.has(compressor);
     if (!sounding && !tails && !sample_preview_.active()) {
         midi_trigger_ = false;
         std::fill_n(stereo, 2 * block_frames, int16_t{0});
@@ -687,11 +690,14 @@ void SynthVoice::render_graph(Voice& voice, float gain)
         float* samples = signals_[slot].data();
         const auto& inputs = plan_.inputs[slot];
         const float* first = signal(inputs[0]);
-        if (slot >= pan && slot < fm4) {
+        if ((slot >= pan && slot < fm4) || slot == reverb) {
             const float* first_right = inputs[0] < 0 ? silence_ : right_signal(inputs[0]);
             if (render_stereo_node(slot, voice, samples, right_signal(slot), first, first_right, false)) continue;
         }
         switch (slot) {
+        case decimator: case bitcrusher: case tb303:
+            render_insert(slot, voice, first, samples, false);
+            break;
         case fm4:
             for (unsigned frame = 0; frame < block_frames; ++frame) samples[frame] = voice.fm.next();
             break;
@@ -825,6 +831,19 @@ void SynthVoice::collect_voice(float gain, bool add)
     }
 }
 
+void SynthVoice::render_insert(int slot, Voice& voice, const float* input, float* output, bool shared)
+{
+    const auto* env = shared ? nullptr : &env_values_;
+    const float scale = shared ? 32767.f : 1.f;
+    if (slot == decimator) Decimator::process(input, output, block_frames,
+        decimator_.settings(modulation(decimator_rate, env)), voice.decimator, scale);
+    else if (slot == bitcrusher) Bitcrusher::process(input, output, block_frames,
+        bitcrusher_.settings(modulation(crusher_bits, env)), voice.crusher, scale);
+    else Tb303Filter::process(input, output, block_frames,
+        tb303_.settings(modulation(tb303_cutoff, env), modulation(tb303_resonance, env)), voice.acid, scale);
+    output[block_frames] = output[block_frames - 1];
+}
+
 bool SynthVoice::render_stereo_node(int slot, Voice& voice, float* left, float* right,
                                   const float* input, const float* input_right, bool shared)
 {
@@ -855,10 +874,17 @@ bool SynthVoice::render_stereo_node(int slot, Voice& voice, float* left, float* 
             right[i] = stereo_mixer_.sum(input_right[i], signal(in[1], true)[i], signal(in[2], true)[i]);
         }
         break;
-    case chorus: case rotary: case delay:
+    case compressor:
+        std::copy_n(input, block_frames, left);
+        std::copy_n(input_right, block_frames, right);
+        compressor_.process(left, right, block_frames, modulation(compressor_threshold));
+        break;
+    case chorus: case rotary: case delay: case reverb:
         std::copy_n(input, block_frames, left);
         if (right != left) std::copy_n(input_right, block_frames, right);
         if (slot == chorus) chorus_.process(left, right, block_frames, modulation(chorus_rate), modulation(chorus_depth), modulation(chorus_mix));
+        else if (slot == reverb) reverb_.process(left, right, block_frames, modulation(reverb_decay), modulation(reverb_damping),
+            modulation(reverb_predelay), modulation(reverb_width), modulation(reverb_mix));
         else if (slot == rotary) rotary_.process(left, right, block_frames, modulation(rotary_speed), modulation(rotary_depth), modulation(rotary_mix));
         else if (plan_.stereo_graph || delay_.stereo_mode()) delay_.process_stereo(left, right, block_frames, modulation(delay_time), modulation(delay_time_r),
             modulation(delay_feedback), modulation(delay_mix), transport_.bpm());
@@ -892,6 +918,9 @@ void SynthVoice::render_shared()
         const float* r = in[0] < 0 ? silence_ : right_signal(in[0]);
         if (render_stereo_node(slot, post_voice_, output, right_signal(slot), input, r, true)) continue;
         switch (slot) {
+        case decimator: case bitcrusher: case tb303:
+            render_insert(slot, post_voice_, input, output, true);
+            break;
         case mixer:
             for (unsigned i = 0; i < block_frames; ++i) output[i] = mixer_.sum(input[i], signal(in[1])[i], signal(in[2])[i]);
             break;

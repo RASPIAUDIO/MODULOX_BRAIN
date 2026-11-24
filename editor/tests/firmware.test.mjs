@@ -5,7 +5,11 @@ import { fetchFirmwareInfo, uploadFirmware } from "../dist/protocol.mjs";
 const root = new URL("../dist/firmware/", import.meta.url);
 const release = JSON.parse(await readFile(new URL("latest.json", root)));
 const image = new Uint8Array(await readFile(new URL(release.file, root)));
-const device = { ...release, slotBytes: 0x180000, usbUpdate: true, pendingVerify: false };
+// FWINFO describes the running device, without release notes or license texts.
+const { model, hardwareProfile, chip, layout, protocol, version, buildId } = release;
+const device = { model, hardwareProfile, chip, layout, protocol, version, buildId,
+  slotBytes: 0x180000, usbUpdate: true, pendingVerify: false };
+assert.ok(new TextEncoder().encode(JSON.stringify(device)).length < 2048);
 assert.equal(compareVersions("1.10.0", "1.2.9"), 1);
 assert.equal(compareVersions("2.0.0-rc.10", "2.0.0-rc.2"), 1);
 assert.equal(compareVersions("2.0.0", "2.0.0-rc.2"), 1);

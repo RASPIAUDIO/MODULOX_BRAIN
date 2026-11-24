@@ -5,35 +5,35 @@
 
 using ModuleMask = uint64_t;
 inline constexpr ModuleMask module_bit(unsigned slot) { return ModuleMask{1} << slot; }
-inline constexpr unsigned max_patch_modules = 41;
+inline constexpr unsigned max_patch_modules = 46;
 inline constexpr unsigned fm4_parameter_count = 30;
 inline constexpr unsigned max_patch_inputs = 3;
 inline constexpr unsigned max_mix_buses = 12;
-inline constexpr unsigned stereo_buffer_count = 8;
+inline constexpr unsigned stereo_buffer_count = 10;
 
 enum PatchModule : int8_t { oscillator, envelope, filter, oscillator2, oscillator3, mixer, lfo,
                            lfo2, lfo3, env1, env2, midi, disto, delay, sampler, sampler2, sampler3, granulizer,
                            clock1, clock2, arp, sample_hold, sample_hold2, random1, random2, gain_offset, slew,
                            noise, sub, vca, ring_mod, wavefolder,
-                           pan, pan2, pan3, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4 };
+                           pan, pan2, pan3, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303 };
 inline constexpr int8_t no_module = -1;
 inline constexpr const char* patch_module_types[] = {
     "Osc", "ADSR", "Filter", "Osc", "Osc", "Mix", "LFO", "LFO", "LFO",
     "Env", "Env", "MIDI", "Disto", "Delay", "Sampler", "Sampler", "Sampler", "Granulizer",
     "Clock", "Clock", "Arpeggiator", "S&H", "S&H", "Random", "Random", "Gain/Offset", "Slew",
     "Noise", "Sub", "VCA", "Ring Mod", "Wavefolder",
-    "Pan", "Pan", "Pan", "Chorus", "Rotary", "Stereo", "Mono", "Stereo Mix", "FM4"};
+    "Pan", "Pan", "Pan", "Chorus", "Rotary", "Stereo", "Mono", "Stereo Mix", "FM4", "Reverb", "Decimator", "Bitcrusher", "Compressor", "TB-303"};
 inline constexpr unsigned patch_module_inputs[] = {0, 1, 1, 0, 0, 3, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 1,
-                                                  1, 1, 1, 1, 1, 2, 1, 3, 0};
-inline constexpr std::array stereo_slots{delay, pan, pan2, pan3, chorus, rotary, stereo_join, stereo_mix};
+                                                  1, 1, 1, 1, 1, 2, 1, 3, 0, 1, 1, 1, 1, 1};
+inline constexpr std::array stereo_slots{delay, pan, pan2, pan3, chorus, rotary, stereo_join, stereo_mix, reverb, compressor};
 inline constexpr int stereo_buffer(int slot)
 {
     for (unsigned i = 0; i < stereo_slots.size(); ++i) if (stereo_slots[i] == slot) return i;
     return -1;
 }
 inline constexpr bool stereo_output(int slot) { return stereo_buffer(slot) >= 0; }
-inline constexpr bool stereo_input(int slot) { return slot == delay || slot == chorus || slot == rotary || slot == mono_down || slot == stereo_mix; }
-inline constexpr bool shared_effect(int slot) { return slot == delay || slot == chorus || slot == rotary; }
+inline constexpr bool stereo_input(int slot) { return slot == delay || slot == chorus || slot == rotary || slot == mono_down || slot == stereo_mix || slot == reverb || slot == compressor; }
+inline constexpr bool shared_effect(int slot) { return slot == delay || slot == chorus || slot == rotary || slot == reverb || slot == compressor; }
 inline constexpr std::array oscillator_slots{oscillator, oscillator2, oscillator3};
 inline constexpr std::array sampler_slots{sampler, sampler2, sampler3};
 inline constexpr std::array sample_slots{sampler, sampler2, sampler3, granulizer};
@@ -71,7 +71,9 @@ enum ModulationPort {
     noise_level, sub_pitch, sub_level, vca_gain, ring_mix, fold_drive, fold_symmetry, fold_mix,
     pan_position, pan_level, pan2_position, pan2_level, pan3_position, pan3_level,
     chorus_rate, chorus_depth, chorus_mix, delay_time_r, rotary_speed, rotary_depth, rotary_mix,
-    osc_fm, fm4_pitch, fm4_depth, fm4_feedback, fm4_level
+    osc_fm, fm4_pitch, fm4_depth, fm4_feedback, fm4_level,
+    reverb_decay, reverb_damping, reverb_predelay, reverb_width, reverb_mix,
+    decimator_rate, crusher_bits, compressor_threshold, tb303_cutoff, tb303_resonance
 };
 inline constexpr ModulationInput modulation_inputs[] = {
     {output_slot, "Pitch"}, {output_slot, "Level"},
@@ -90,8 +92,10 @@ inline constexpr ModulationInput modulation_inputs[] = {
     {chorus, "Rate"}, {chorus, "Depth"}, {chorus, "Mix"}, {delay, "Time R"},
     {rotary, "Speed"}, {rotary, "Depth"}, {rotary, "Mix"},
     {oscillator, "FM"}, {fm4, "Pitch"}, {fm4, "Depth"}, {fm4, "Feedback"}, {fm4, "Level"},
+    {reverb, "Decay"}, {reverb, "Damping"}, {reverb, "Pre-delay"}, {reverb, "Width"}, {reverb, "Mix"},
+    {decimator, "Rate"}, {bitcrusher, "Bits"}, {compressor, "Threshold"}, {tb303, "Cutoff"}, {tb303, "Reso"},
 };
-static_assert(std::size(modulation_inputs) == fm4_level + 1 && std::size(modulation_inputs) <= 64);
+static_assert(std::size(modulation_inputs) == tb303_resonance + 1 && std::size(modulation_inputs) <= 64);
 static_assert(max_patch_modules <= 64 && stereo_slots.size() == stereo_buffer_count);
 enum MidiPort { midi_pitch, midi_velocity, midi_gate, midi_trigger };
 inline constexpr const char* midi_ports[] = {"Pitch", "Velocity", "Gate", "Trigger"};

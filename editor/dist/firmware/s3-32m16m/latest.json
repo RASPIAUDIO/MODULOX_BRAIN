@@ -4,10 +4,13 @@
   "chip": "esp32s3",
   "layout": "ab-1.5m-32m-v1",
   "protocol": 1,
-  "version": "1.3.3",
-  "size": 679856,
-  "sha256": "f8b315c2f1b45edbdf250d8533c8ce1f80f830330d58108e11810f6dfa17121c",
-  "buildId": "0562f1dfa235d206dd7c9a16dbf2c6931daf75e22688b98b0be0f19a673e8bcd",
-  "file": "modulox-1.3.3.bin",
-  "notes": "Le firmware 1.3.3 permet d\u2019afficher l\u2019\u00e9cran du Modulox en direct et de naviguer avec les boutons et l\u2019encodeur virtuels depuis le configurateur USB. Disponible pour les profils 16/8 Mio et 32/16 Mio avec mise \u00e0 jour A/B."
+  "version": "1.6.0",
+  "size": 689040,
+  "sha256": "e7a124e9bd7b3e2d6daf5e2e232da5fc18e52ec8f3054222b8451382933fd465",
+  "buildId": "473eb02b336f5128f1a617f7d901356756cab877564dabde798816d9fc335b23",
+  "file": "modulox-1.6.0.bin",
+  "notes": "1.6.0 : modules Decimator (r\u00e9duction de fr\u00e9quence), Bitcrusher (r\u00e9duction de bits), Compressor st\u00e9r\u00e9o et TB-303 (adaptation float du noyau MIT Open303 TeeBee, sur\u00e9chantillonnage x4). Param\u00e8tres, MIDI Learn et cinq nouvelles entr\u00e9es CV ; 64 ports de modulation. Aucun buffer PSRAM suppl\u00e9mentaire pour ces modules. Profils 8/16 Mio et partitions A/B conserv\u00e9s. L\u2019\u00e9cran du Modulox et ses commandes restent accessibles en direct par USB depuis le configurateur.",
+  "thirdPartyLicenses": {
+    "Open303": "The Open303 source code is released under the terms of the MIT license:\n\nThe MIT License\n\nCopyright (c) 2009 Robin Schmidt (www.rs-met.com)\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in\nall copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN\nTHE SOFTWARE."
+  }
 }

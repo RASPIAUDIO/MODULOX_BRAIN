@@ -4,6 +4,7 @@
 #include "patch_usb.h"
 #include "sample_store.h"
 #include "runtime_diagnostics.h"
+#include "resource_info.h"
 #include "recording.h"
 #include "synth_voice.h"
 #include "firmware_update.h"
@@ -46,7 +47,8 @@ constexpr unsigned load_window_blocks = SynthVoice::sample_rate / block_frames;
 constexpr uint32_t cycles_per_tenth_percent =
     CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * 1'000'000ULL * load_window_blocks * block_frames /
     (1000 * SynthVoice::sample_rate);
-std::atomic<unsigned> audio_load_tenths{0};
+std::atomic<unsigned> audio_load_tenths{0}, audio_peak_tenths{0}, audio_overruns{0};
+std::atomic<bool> audio_load_valid{false};
 std::atomic<bool> input_overflow{false};
 PatchSettings settings;
 SynthVoice voice{settings};  // Static, writable data in internal DRAM.
@@ -135,7 +137,8 @@ const std::array<ModuleParameters, max_patch_modules>& patch_modules()
           voice.pan_controls(0), voice.pan_controls(1), voice.pan_controls(2),
           voice.chorus_controls(), voice.rotary_controls(), {"Stereo", {}}, {"Mono", {}},
           voice.stereo_mix_controls(),
-          voice.fm4_controls(),
+          voice.fm4_controls(), voice.reverb_controls(),
+          voice.decimator_controls(), voice.bitcrusher_controls(), voice.compressor_controls(), voice.tb303_controls(),
     };
     return modules;
 }
@@ -594,7 +597,7 @@ void audio_task(void* startup_task)
     ESP_ERROR_CHECK(i2s_channel_register_event_callback(rx, &callbacks, nullptr));
     int16_t stereo[block_frames * 2];
     uint64_t busy_cycles = 0;
-    unsigned measured_blocks = 0;
+    unsigned measured_blocks = 0, active_blocks = 0, peak_cycles = 0, overruns = 0;
     bool paused = false;
     bool patch_loading = false;
     bool updating = false;
@@ -696,12 +699,21 @@ void audio_task(void* startup_task)
             voice.set_time(esp_timer_get_time());
             voice.render(stereo);
         }
-        if (!paused && !recording.busy()) busy_cycles += uint32_t(esp_cpu_get_cycle_count() - start_cycles);
+        if (!paused && !recording.busy() && !updating) {
+            const unsigned elapsed = uint32_t(esp_cpu_get_cycle_count() - start_cycles);
+            busy_cycles += elapsed; peak_cycles = std::max(peak_cycles, elapsed); ++active_blocks;
+            constexpr unsigned deadline = CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * 1'000'000ULL * block_frames / SynthVoice::sample_rate;
+            overruns += elapsed > deadline;
+        }
         if (++measured_blocks == load_window_blocks) {
             const auto load = (busy_cycles + cycles_per_tenth_percent / 2) /
                               cycles_per_tenth_percent;
             audio_load_tenths.store(std::min(load, uint64_t{9999}), std::memory_order_relaxed);
-            busy_cycles = 0;
+            audio_peak_tenths.store(std::min(uint64_t{9999}, uint64_t{peak_cycles} * 1000 * SynthVoice::sample_rate /
+                (CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ * 1'000'000ULL * block_frames)), std::memory_order_relaxed);
+            audio_overruns.store(overruns, std::memory_order_relaxed);
+            audio_load_valid.store(active_blocks == measured_blocks, std::memory_order_relaxed);
+            busy_cycles = 0; peak_cycles = overruns = active_blocks = 0;
             measured_blocks = 0;
         }
 
@@ -880,6 +892,28 @@ void usb_midi_task(void*)
 }
 
 }  // namespace
+
+bool resource_info(cJSON* object)
+{
+    const std::lock_guard guard(wave_mutex);
+    constexpr auto external = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+    constexpr auto internal = MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT;
+    auto* allocated = cJSON_AddObjectToObject(object, "allocatedEffects");
+    if (!allocated) return false;
+    for (const int slot : {delay, chorus, rotary, reverb})
+        if (!cJSON_AddNumberToObject(allocated, patch_module_types[slot], voice.effect_allocated_bytes(slot))) return false;
+    return cJSON_AddNumberToObject(object, "version", 1) &&
+        cJSON_AddNumberToObject(object, "timestampMs", esp_timer_get_time() / 1000) &&
+        cJSON_AddNumberToObject(object, "psramTotal", heap_caps_get_total_size(external)) &&
+        cJSON_AddNumberToObject(object, "psramFree", heap_caps_get_free_size(external)) &&
+        cJSON_AddNumberToObject(object, "psramLargest", heap_caps_get_largest_free_block(external)) &&
+        cJSON_AddNumberToObject(object, "internalFree", heap_caps_get_free_size(internal)) &&
+        cJSON_AddNumberToObject(object, "internalLargest", heap_caps_get_largest_free_block(internal)) &&
+        cJSON_AddNumberToObject(object, "cpuAverage", audio_load_tenths.load(std::memory_order_relaxed) * 0.1) &&
+        cJSON_AddNumberToObject(object, "cpuPeak", audio_peak_tenths.load(std::memory_order_relaxed) * 0.1) &&
+        cJSON_AddNumberToObject(object, "overBudgetBlocks", audio_overruns.load(std::memory_order_relaxed)) &&
+        cJSON_AddBoolToObject(object, "cpuValid", audio_load_valid.load(std::memory_order_relaxed) && !recording.busy() && !firmware_update_active());
+}
 
 extern "C" void app_main()
 {

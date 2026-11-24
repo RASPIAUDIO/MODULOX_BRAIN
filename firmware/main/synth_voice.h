@@ -15,6 +15,9 @@
 #include "note_play.h"
 #include "stereo_effects.h"
 #include "fm4.h"
+#include "reverb.h"
+#include "simple_effects.h"
+#include "tb303_filter.h"
 
 class SynthVoice {
 public:
@@ -77,6 +80,16 @@ public:
     ModuleParameters chorus_controls() { return chorus_.controls(); }
     ModuleParameters rotary_controls() { return rotary_.controls(); }
     ModuleParameters stereo_mix_controls() { return stereo_mixer_.controls("Stereo Mix"); }
+    ModuleParameters decimator_controls() { return decimator_.controls(); }
+    ModuleParameters bitcrusher_controls() { return bitcrusher_.controls(); }
+    ModuleParameters compressor_controls() { return compressor_.controls(); }
+    ModuleParameters tb303_controls() { return tb303_.controls(); }
+    ModuleParameters reverb_controls() { return reverb_.controls(); }
+    unsigned effect_allocated_bytes(int slot) const
+    {
+        return slot == delay ? delay_.allocated_bytes() : slot == chorus ? chorus_.allocated_bytes() :
+            slot == rotary ? rotary_.allocated_bytes() : slot == reverb ? reverb_.allocated_bytes() : 0;
+    }
     ModuleParameters fm4_controls() { return fm4_.controls(); }
     void receive_clock(const ClockEvent& event);
     void set_time(uint64_t now) { now_ = now; }
@@ -93,7 +106,7 @@ public:
     bool prepare_patch(const AudioPlan& plan)
     {
         return (!plan.has(delay) || delay_.prepare()) && (!plan.has(chorus) || chorus_.prepare()) &&
-               (!plan.has(rotary) || rotary_.prepare());
+               (!plan.has(rotary) || rotary_.prepare()) && (!plan.has(reverb) || reverb_.prepare());
     }
     void select_plan(const AudioPlan& plan);
     void note_on(uint8_t source, uint8_t channel, uint8_t note, uint8_t velocity);
@@ -113,6 +126,9 @@ private:
         float noise_level = 0, vca_gain = 0;
         float glide_start = 1, glide_end = 1;
         Wavefolder::State folder;
+        Decimator::State decimator;
+        Bitcrusher::State crusher;
+        Tb303Filter::State acid;
         std::array<Pan::Gains, 3> pans{};
         std::array<Sampler::Voice, sampler_slots.size()> samplers;
         Granulizer::Voice grains;
@@ -152,6 +168,7 @@ private:
     bool render_stereo_node(int slot, Voice& voice, float* left, float* right,
                             const float* in_left, const float* in_right, bool shared);
     void collect_voice(float gain, bool add);
+    void render_insert(int slot, Voice& voice, const float* input, float* output, bool shared);
     std::array<float, block_frames> voice_gains_{};
     float* right_signal(int slot);
     static uint32_t oscillator_fm(Voice& voice, float signal)
@@ -199,6 +216,11 @@ private:
     std::array<Pan, 3> pans_;
     Chorus chorus_;
     Rotary rotary_;
+    Reverb reverb_;
+    Decimator decimator_;
+    Bitcrusher bitcrusher_;
+    Compressor compressor_;
+    Tb303Filter tb303_;
     Mixer stereo_mixer_;
     Voice post_voice_;
     HeldNotes held_notes_;

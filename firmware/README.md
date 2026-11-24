@@ -315,6 +315,34 @@ insérant des convertisseurs visibles. Le limiteur final applique un gain
 commun aux deux canaux, déterminé par la plus grande crête, pour préserver
 la position stéréo. L’aperçu des samples est ajouté aux deux canaux en sortie.
 
+## Reverb (1.4.0)
+
+Le module **Reverb** est un effet stéréo commun, limité à une instance par
+patch version 3. Placer Pan ou Stereo avant lui pour une source mono ;
+il peut être suivi de Delay, Chorus, Rotary, Stereo Mix ou Mono. Ses cinq
+paramètres acceptent un LFO/utilitaire global et MIDI Learn : **Decay**
+(200–10 000 ms, décroissance nominale sans damping), **Damping** (0–100 %, amortissement des aigus),
+**Pre-delay** (0–100 ms), **Width** (0–100 %, largeur de la réverbération)
+et **Mix** (0–100 %, 0 conserve exactement le signal sec).
+
+Le réseau de huit délais à matrice orthogonale, ses diffuseurs d'entrée et
+le prédélai stéréo utilisent 99 792 octets de buffers float en PSRAM,
+alloués uniquement à la préparation d'un patch qui utilise Reverb. Les états
+et paramètres restent en SRAM interne. Les buffers sont conservés pour les
+chargements suivants ; un échec d'allocation refuse le nouveau patch.
+Le rendu ne fait ni allocation ni effacement de buffer. Le reset masque
+les données précédentes par des compteurs. Les réglages sont lissés sur un
+bloc ; les gains de feedback sont recalculés seulement si Decay change.
+La queue continue après Note Off et se réinitialise au changement de patch.
+
+Les profils 8/16 Mio de PSRAM partagent cet algorithme et les partitions
+restent identiques. Le catalogue annonce `reverb: true` ; l'éditeur permet
+la préparation hors ligne et bloque l'envoi vers un firmware sans Reverb.
+`tests/run-reverb-test.cmd` vérifie les réponses impulsionnelles, la décroissance,
+le damping, le prédélai, la largeur, le signal sec, le reset, les bornes CV,
+la stabilité et les queues dans un graphe à huit voix. La charge temps réel
+et la qualité sonore doivent encore être vérifiées sur les cartes physiques.
+
 ## FM4
 
 Le slot 40 ajoute une source mono FM4, à quatre opérateurs sinusoïdaux et
@@ -336,7 +364,7 @@ FM4 expose trente paramètres. Les lignes des autres modules restent à
 douze éléments : seuls FM4 et sa ligne MIDI Learn disposent du stockage
 étendu. Les pages de paramètres sont décrites par le module, et les
 masques de présence des paramètres passent sur 64 bits. Le buffer de
-réponse du catalogue USB passe à 20 Kio, avec la même limite dans l’éditeur.
+réponse du catalogue USB passe à 20 Kio (24 Kio depuis 1.6.0), avec la même limite dans l’éditeur.
 
 FM est ajouté en fin de liste des paramètres du premier Osc uniquement.
 Osc 2 est une dépendance audio implicite d’Osc 1 lorsqu’ils sont tous deux
@@ -435,3 +463,87 @@ Windows du composant demande au ramasse-miettes de GCC de travailler plus
 souvent pour réduire sa mémoire de pointe, sans changer l’optimisation du
 code produit ; sur un PC chargé, construire avec un seul job (`ninja -j1`).
 
+
+## Télémétrie de ressources (1.5.0)
+
+`resourceTelemetry: true` annonce la commande USB **RESOURCES**. Sa réponse
+JSON version 1 contient `psramTotal`, `psramFree`, `psramLargest`,
+`internalFree`, `internalLargest` (octets), les buffers déjà alloués dans
+`allocatedEffects` (Delay/Chorus/Rotary/Reverb), et `timestampMs`.
+`cpuAverage` et `cpuPeak` sont des pourcentages du budget de rendu du cœur
+audio, sur la dernière seconde ; `overBudgetBlocks` compte les blocs dont
+le traitement a dépassé 32/44100 seconde. Il ne s'agit pas d'un compteur de
+pertes I2S. `cpuValid` est faux au démarrage et pour une fenêtre contenant
+une pause, un enregistrement ou une mise à jour. Les mesures heap et les
+allocations JSON restent sur le cœur de contrôle. Le cœur audio publie
+seulement des compteurs atomiques ; aucune lecture de heap n'y est ajoutée.
+
+La reverb 1.5.0 évite les additions de rampes à paramètres constants et
+partage le calcul du prédélai entre L/R avec un bouclage borné. Une comparaison
+PC temporaire à la version 1.4.0 a vérifié 320 000 frames stéréo identiques
+bit à bit, avec balayage des paramètres. Le benchmark PC alterné (médiane de
+cinq essais de 80 000 blocs) a donné environ 195 ms avant et 154 ms après.
+Ces temps ne mesurent pas la charge ni le gain sur l'ESP32-S3/PSRAM ; l'écoute
+et les nouvelles mesures CPU sur carte restent nécessaires.
+
+## Decimator, Bitcrusher, Compressor et TB-303 (1.6.0)
+
+Quatre modules sont ajoutés en fin de catalogue, sans déplacer les slots
+historiques : Decimator (42), Bitcrusher (43), Compressor (44), TB-303 (45).
+Le catalogue annonce `simpleEffects: true` et `tb303: true`. Les cinq nouvelles
+entrées de modulation occupent les ports 59–63 : Rate, Bits, Threshold,
+Cutoff et Reso. Les masques restent sur 64 bits, avec contrôle du bit 63.
+Tous les paramètres acceptent MIDI Learn. Les patches sont en version 3.
+
+- **Decimator** : entrée/sortie mono, Rate de 100 à 44 100 Hz et Mix. Maintien
+  fractionnaire à la fréquence choisie, sans anti-repliement intentionnel.
+  Rate=44 100 conserve le signal ; Mix=0 donne le signal sec. L'état est
+  indépendant par voix et conserve la cadence entre les blocs.
+- **Bitcrusher** : mono, Bits de 2 à 16 et Mix. Quantification signée à
+  exactement 2^Bits niveaux pour Bits<16 ; Bits=16 est un bypass explicite.
+  Le plein niveau positif est inférieur d'un pas au plein niveau négatif.
+- **Compressor** : effet stéréo commun aux voix, gain lié L/R, Threshold
+  (-60 à 0 dB), Ratio (1:1 à 20:1), Attack (1–100 ms), Release (10–1000 ms),
+  Makeup (0–24 dB), Mix. Un détecteur de crête calcule la cible sur le bloc
+  de 32 frames ; le gain est lissé par échantillon. Il n'y a aucun buffer
+  de lookahead ni de latence de bloc supplémentaire, pas de logarithme ou
+  de puissance par échantillon. Ce n'est pas un limiteur brickwall : les
+  transitoires passent selon Attack. Le limiteur de sortie existant reste actif.
+- **TB-303** : mono, Cutoff (200–20 000 Hz), Reso (0–95 %), Drive (0–24 dB),
+  Mix. Noyau adapté du mode TB_303 d'Open303 TeeBee, en float à 176,4 kHz,
+  avec quatre étages couplés et retour passe-haut de 150 Hz. L'entrée est
+  interpolée quatre fois et un passe-bas Butterworth d'ordre 4 à 18 kHz
+  précède la décimation. Les coefficients sont lissés sur le bloc ; ils ne
+  sont recalculés que lorsque cutoff/résonance changent. Drive ajoute une
+  saturation d'entrée indépendante du noyau d'origine. La résonance est
+  bornée sous l'auto-oscillation ; des gardes d'état/sortie évitent les valeurs
+  non finies et emballements. Ce port n'est pas une émulation exacte de toute
+  la voix JC303 : oscillateur, accent, slide et réseau de sortie sont exclus.
+
+Pour une chaîne : Osc → TB-303 → Decimator → Bitcrusher → ADSR → Stereo →
+Compressor → Sortie. Les trois inserts mono peuvent aussi suivre une partie
+commune via Mono ; revenir ensuite en stéréo via Pan ou Stereo. Une
+modulation Env par voix est refusée après un effet commun ; utiliser un LFO
+ou un utilitaire global dans cette partie.
+
+Les nouveaux états sont statiques en SRAM interne (60 octets par état TB-303,
+soit 540 octets pour huit voix et l'état commun), sans buffer PSRAM ni
+allocation dans le rendu. Ils sont disponibles sur les deux cartes ; passer
+à 16 Mio de PSRAM ne réduit pas leur coût CPU. La charge réelle, en particulier
+TB-303 x4 à huit voix et sous modulation, reste à mesurer sur le Modulox.
+L'éditeur affiche les coûts CPU nouveaux comme non calibrés. La référence
+utilisateur 16 Mio/1.5.0 des anciens modules est conservée comme extrapolation
+explicitement provisoire en 1.6.0, avec les marges existantes.
+
+Les fichiers MIT de référence et leur attribution sont dans
+`third_party/open303`. Révision amont :
+`305ad279cf864e7954c6db47612645befb36956c`. Les fichiers dfl AGPL ne sont pas
+utilisés. `tests/run-insert-effects-test.cmd` compare le noyau float aux
+fichiers amont double inchangés avec une cale mathématique de test, vérifie
+la réponse du filtre, ses extrêmes, les effets, la liaison stéréo et les
+chemins par voix/communs. Cette validation sur PC ne remplace pas l'écoute
+ni la mesure du budget temps réel de la carte.
+
+Depuis 1.6.0, le catalogue USB est sérialisé un type à la fois et utilise
+un buffer de réponse borné à 24 Kio ; la limite est également relevée dans
+l’éditeur. Cette sérialisation réduit le pic de heap interne pendant CATALOG.

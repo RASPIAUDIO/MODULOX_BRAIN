@@ -406,7 +406,7 @@ bool compile(const char* json, PatchStore::Modules modules, ModuleParameters set
         if (plan.shared[slot] && plan.midi_inputs[slot]) return false;
     if (plan.has(ring_mod) && (plan.inputs[ring_mod][0] == no_module || plan.inputs[ring_mod][1] == no_module)) return false;
     for (const int8_t slot : {filter, envelope, mixer, disto, delay, vca, wavefolder, pan, pan2, pan3, chorus,
-                              rotary, stereo_join, mono_down, stereo_mix}) {
+                              rotary, stereo_join, mono_down, stereo_mix, reverb, decimator, bitcrusher, compressor, tb303}) {
         if (ids[slot] && std::all_of(plan.inputs[slot].begin(), plan.inputs[slot].end(),
                                     [](int8_t input) { return input == no_module; })) {
             return false;

@@ -9,6 +9,7 @@ const assets = new Map([
   ["/midi-keyboard.mjs", ["./dist/midi-keyboard.mjs", "text/javascript"]],
   ["/device-screen.mjs", ["./dist/device-screen.mjs", "text/javascript"]],
   ["/protocol.mjs", ["./dist/protocol.mjs", "text/javascript"]],
+  ["/resources.mjs", ["./dist/resources.mjs", "text/javascript"]],
   ["/patch.mjs", ["./dist/patch.mjs", "text/javascript"]],
   ["/waves.mjs", ["./dist/waves.mjs", "text/javascript"]],
   ["/samples.mjs", ["./dist/samples.mjs", "text/javascript"]],

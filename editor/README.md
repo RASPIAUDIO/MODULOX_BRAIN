@@ -88,7 +88,14 @@ restent disponibles ; ils n’ouvrent pas automatiquement le navigateur.
    firmware avec la capacité USB `patchManagement`. Après une suppression,
    recharger un patch sur le synthé avant d’utiliser sa sauvegarde physique.
 
-**Modules** ouvre ou replie la palette au-dessus du graphe. La vue
+**Modules** ouvre ou replie la palette, fermée par défaut pour garder de la place
+au graphe. Six familles permettent de choisir les modules : **Generators**
+(Osc, Sampler, FM4, Granulizer, Noise, Sub), **Effects** (Filter, TB-303, Disto, Decimator, Bitcrusher, Compressor,
+Ring Mod, Wavefolder), **Time effects** (Delay, Reverb, Chorus, Rotary),
+**Modulation** (ADSR, Env, LFO et utilitaires CV), **MIDI & Clock** (MIDI,
+Clock, Arpeggiator) et **Routing** (Mix, VCA, Pan et conversions stéréo).
+Seule la famille sélectionnée est affichée ; le clic, le glisser-déposer et
+les compteurs d'instances restent disponibles. La vue
 **Paramètres** rassemble les réglages dans des panneaux par module.
 Le panneau **Firmware** de l’accueil lit la version du Modulox, compare la
 version disponible et permet la mise à jour USB A/B, avec confirmation et
@@ -490,3 +497,120 @@ Ces commandes demandent le nouveau firmware. Un transfert USB déjà en
 cours empêche le démarrage d’une prise ; pendant la capture/sauvegarde,
 les nouvelles commandes USB demandent d’attendre. Actualiser les samples
 ne remplace pas le patch en cours d’édition.
+
+## Reverb
+
+Le firmware 1.4.0 ajoute Reverb dans la palette : une entrée et une sortie
+stéréo, avec Decay, Damping, Pre-delay, Width et Mix. Pour une source mono,
+insérer Stereo ou Pan avant Reverb. Le module est commun aux voix ; les
+enveloppes Env par voix ne peuvent pas le moduler. Les cinq paramètres
+acceptent une modulation globale et MIDI Learn. Sur un ancien firmware,
+le patch reste éditable mais son envoi demande une mise à jour.
+
+## Budget RAM et CPU (firmware 1.5.0)
+
+La barre **RAM / CPU** suit le Modulox connecté. **Ressources…** détaille les
+coûts du projet. Hors ligne, choisir 8 ou 16 Mio permet une simulation ;
+la RAM libre simulée n'est pas une mesure de l'appareil. Avec le firmware
+1.5.0, les mesures sont actualisées toutes les deux secondes pendant l'édition.
+La SRAM interne est indiquée séparément de la PSRAM.
+
+Le calcul soustrait au heap PSRAM libre les nouveaux samples uniques et
+les buffers d'effets qui ne sont pas déjà réservés. Les samples identiques
+entre Sampler/Granulizer ne sont comptés qu'une fois dans le nouveau patch.
+Les buffers de l'ancien patch restent déjà inclus dans la mémoire occupée :
+on ne les déduit pas avant le chargement des nouveaux. La marge ajoute
+1 Kio par module et 10 % des nouvelles allocations, avec une réserve globale
+de 256 Kio. Les samples choisis dont la taille est inconnue réservent le maximum
+par sample annoncé par le catalogue. Un Sampler vide ne réserve que sa marge ;
+le choix du sample est contrôlé avant affectation et un patch sans sample ne
+peut pas être envoyé. La taille du plus grand bloc libre
+permet aussi de détecter une fragmentation évidente. Les états DSP statiques
+et les tables d'oscillateur sont déjà alloués en SRAM au démarrage.
+
+Un dépassement du budget RAM bloque le clic ou le dépôt d'un module et
+l'envoi du patch. Le changement de sample ou d'un paramètre est refusé s'il
+aggrave un dépassement ; la réduction et la suppression restent possibles.
+Une mesure RAM fraîche est exigée juste avant l'envoi sur un firmware qui
+annonce `resourceTelemetry`. Cette estimation avec marge ne garantit pas
+contre toute fragmentation ou modification de l'appareil après la mesure.
+
+**CPU joué** affiche la charge réelle du patch actuellement chargé sur le
+synthé, qui peut différer du brouillon. Le détail donne la moyenne, le pic
+par bloc et les blocs dépassant le budget audio sur la dernière seconde.
+Une période d'enregistrement, de chargement ou de mise à jour invalide la
+mesure CPU. Le pilote I2S n'est pas inclus dans le temps de rendu.
+
+**Calibrer l'estimation CPU** accepte des mesures manuelles : moteur seul,
+puis surcoût par module et par voix (Unison=1), ou coût total pour un effet
+commun. Les mesures sont locales à ce navigateur et séparées par modèle et
+version de firmware. Le calcul suit la polyphonie et prend le pire nombre de
+copies pour l'unisson ; les effets communs ne sont comptés qu'une fois. Il
+ajoute 10 % sur les coûts et interdit les augmentations au-delà de 85 %.
+Sans mesures, le coût reste « À mesurer » : aucun pourcentage arbitraire n'est
+utilisé. Un coût connu dépassant déjà la limite suffit toutefois à bloquer,
+même si d'autres coûts restent inconnus. Ce modèle additif reste une estimation,
+notamment pour les chemins de graphe, la bande passante PSRAM et les modulations.
+
+Pour transmettre des mesures : utiliser un même patch de référence et une
+note tenue, attendre cinq secondes, noter moyenne et pic, puis ajouter un
+module à la fois. Préciser modèle, firmware, Voices, Unison et paramètres.
+Pour le Filter, mesurer quatre pôles avec modulation ; pour le Granulizer,
+viser huit grains simultanés par voix. Mesurer les effets communs sur la même
+source, à niveau constant, avec/sans effet. La différence donne un premier
+surcoût ; garder le plus grand résultat sur plusieurs essais et vérifier
+ensuite les combinaisons avant de considérer la calibration comme fiable.
+
+### Première référence CPU : 16 Mio / firmware 1.5.0
+
+L'éditeur utilise automatiquement les mesures utilisateur suivantes, uniquement
+pour le modèle `modulox-brain-s3-32m16m` en version `1.5.0` :
+
+| Notes | Osc seul | Chaîne avec reverb |
+|---:|---:|---:|
+| 0 | 1,7 % | 37 % |
+| 1 | 10 % | 40 % |
+| 8 | 40 % | 65 % |
+
+Ces observations sont des charges moyennes rapportées ; les formes d'onde,
+l'unisson, les paramètres de reverb et les pics ne sont pas entièrement décrits.
+La calibration reste provisoire. Osc est estimé par interpolation entre
+les observations à une et huit voix, après retrait des 1,7 points à vide.
+Cette courbe inclut le chemin de rendu des voix : ce n'est pas une mesure
+isolée de toutes les opérations de l'oscillateur. Une reverb est provisionnée
+à 36 points, soit l'écart maximal observé arrondi vers le haut ; le filtre
+reçoit une provision globale de 1 point, conformément au retour utilisateur.
+La marge de 10 % s'applique ensuite aux coûts des modules. Osc + Filter +
+Reverb à huit voix est ainsi estimé à 84,53 %, pour une limite de 85 %.
+Les voix intermédiaires, plusieurs Osc, l'unisson et les combinaisons restent
+des extrapolations à vérifier, et les autres modules restent à mesurer.
+
+Les mesures locales saisies dans le navigateur sont prioritaires. Un nombre
+pour Osc remplace sa courbe par un coût par voix ; un champ vide conserve la
+courbe intégrée. Le filtre de référence est libellé « % total ». Les anciennes
+calibrations manuelles par voix conservent leur interprétation. Aucune de ces
+références n'est appliquée à la carte 8 Mio, à une autre version de firmware
+ou hors ligne sans version connue. Aucune mise à jour du firmware n'est
+nécessaire pour ce changement de calibration de l'éditeur.
+
+## Nouveaux effets (firmware 1.6.0)
+
+La famille **Effects** propose Decimator (Rate/Mix), Bitcrusher (Bits/Mix),
+Compressor (Threshold/Ratio/Attack/Release/Makeup/Mix) et TB-303
+(Cutoff/Reso/Drive/Mix). Compressor est stéréo et commun aux voix ; les trois
+autres sont mono. Utiliser Stereo ou Pan avant Compressor, et Mono avant
+un insert mono placé après une chaîne stéréo.
+
+Rate, Bits, Threshold, Cutoff et Reso exposent chacun une entrée CV ; les
+réglages restants acceptent MIDI Learn. L'envoi à un ancien firmware est
+bloqué avec un message de mise à jour, mais la préparation hors ligne reste
+possible. Ces modules ne réservent aucun buffer PSRAM et gardent leur marge
+RAM par module. Les coûts CPU restent à mesurer, sans pourcentage inventé.
+La référence utilisateur 16 Mio/1.5.0 est réutilisée provisoirement en 1.6.0
+pour les seuls anciens modules, avec un avertissement explicite.
+
+Le filtre TB-303 adapte uniquement le noyau MIT Open303 TeeBee, en float
+et avec suréchantillonnage x4. Le signal sec est conservé à Mix=0. Il ne
+reproduit pas la voix complète de JC303 et ses réglages de résonance/drive
+sont bornés pour le moteur embarqué. Voir les précisions du firmware et
+`firmware/third_party/open303/README.md` pour la source et les adaptations.

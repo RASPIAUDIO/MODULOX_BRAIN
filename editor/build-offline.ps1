@@ -45,6 +45,7 @@ try {
         Copy-Item -LiteralPath $example -Destination (Join-Path $package 'dist/examples')
     }
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../LICENSE') -Destination $package
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../firmware/third_party/open303/LICENSE') -Destination (Join-Path $package 'OPEN303-LICENSE.txt')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'PRESETS.md') -Destination $package
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../firmware/UPDATES.md') -Destination (Join-Path $package 'MISES-A-JOUR.md')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../firmware/RELEASE-1.1.md') -Destination (Join-Path $package 'NOUVEAUTES-1.1.md')

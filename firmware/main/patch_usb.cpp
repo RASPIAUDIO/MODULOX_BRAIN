@@ -4,6 +4,8 @@
 #include "runtime_diagnostics.h"
 #include "sample_store.h"
 #include "firmware_update.h"
+#include "resource_info.h"
+#include "catalog_writer.h"
 
 #include <charconv>
 #include <cstdio>
@@ -23,7 +25,7 @@ char command[160];
 unsigned command_length = 0;
 bool command_overflow = false;
 constexpr unsigned header_space = 16;
-alignas(4) char response[header_space + 20480 + 1];
+alignas(4) char response[header_space + 24576 + 1];
 unsigned response_length = 0;
 unsigned sent = 0;
 char upload_key[user_key_length + 1];
@@ -175,6 +177,10 @@ bool build_catalog(PatchStore::Modules modules, ModuleParameters settings, const
           !cJSON_AddBoolToObject(root.get(), "vaExpansion", true) ||
         !cJSON_AddBoolToObject(root.get(), "stereoGraph", true) ||
         !cJSON_AddBoolToObject(root.get(), "fm4", true) ||
+        !cJSON_AddBoolToObject(root.get(), "reverb", true) ||
+        !cJSON_AddBoolToObject(root.get(), "resourceTelemetry", true) ||
+        !cJSON_AddBoolToObject(root.get(), "simpleEffects", true) ||
+        !cJSON_AddBoolToObject(root.get(), "tb303", true) ||
         !cJSON_AddNumberToObject(output, "inputChannels", 2) ||
         !cJSON_AddNumberToObject(root.get(), "maxPatches", max_patches) ||
         !cJSON_AddNumberToObject(root.get(), "maxBytes", max_patch_bytes) ||
@@ -189,9 +195,10 @@ bool build_catalog(PatchStore::Modules modules, ModuleParameters settings, const
         !cJSON_AddBoolToObject(root.get(), "audioRecording", true) ||
         !cJSON_AddNumberToObject(root.get(), "maxRecordingSeconds", 5) ||
         (samples.available() && !cJSON_AddNumberToObject(root.get(), "maxSampleBytes", max_sample_bytes))) return false;
+    CatalogWriter writer(response + header_space, sizeof(response) - header_space);
     for (const auto slot : {oscillator, filter, envelope, mixer, lfo, env1, midi, disto, delay, sampler, granulizer,
                              clock1, arp, sample_hold, random1, gain_offset, slew, noise, sub, vca, ring_mod, wavefolder,
-                             pan, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4}) {
+                             pan, chorus, rotary, stereo_join, mono_down, stereo_mix, fm4, reverb, decimator, bitcrusher, compressor, tb303}) {
         cJSON* type = cJSON_CreateObject();
         if (!cJSON_AddItemToArray(types, type)) {
             cJSON_Delete(type);
@@ -216,12 +223,12 @@ bool build_catalog(PatchStore::Modules modules, ModuleParameters settings, const
                 if (!cJSON_AddItemToArray(labels, label)) { cJSON_Delete(label); return false; }
             }
         }
+        if (!writer.append(type)) return false;
+        cJSON_Delete(cJSON_DetachItemFromArray(types, 0));
     }
-    char* body = response + header_space;
-    if (!cJSON_PrintPreallocated(root.get(), body, sizeof(response) - header_space, false)) {
-        return false;
-    }
-    send_body(std::strlen(body));
+    cJSON_DeleteItemFromObjectCaseSensitive(root.get(), "modules");
+    if (!writer.finish(root.get())) return false;
+    send_body(writer.size());
     return true;
 }
 
@@ -245,6 +252,12 @@ void make_response(PatchStore& patches, PatchStore::Modules modules, const WaveS
     if (line == "FWINFO") {
         const std::unique_ptr<cJSON, decltype(&cJSON_Delete)> info(cJSON_CreateObject(), cJSON_Delete);
         if (!info || !firmware_info(info.get()) || !cJSON_PrintPreallocated(info.get(), response + header_space, sizeof(response) - header_space, false)) reply("ERR firmware-storage\n");
+        else send_body(std::strlen(response + header_space));
+        return;
+    }
+    if (line == "RESOURCES") {
+        const std::unique_ptr<cJSON, decltype(&cJSON_Delete)> info(cJSON_CreateObject(), cJSON_Delete);
+        if (!info || !resource_info(info.get()) || !cJSON_PrintPreallocated(info.get(), response + header_space, sizeof(response) - header_space, false)) reply("ERR storage\n");
         else send_body(std::strlen(response + header_space));
         return;
     }

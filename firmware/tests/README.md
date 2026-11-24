@@ -39,3 +39,26 @@ PCM, le cache, les erreurs de chargement, les limites de taille et les trois
 oscillateurs des basses/leads sont vérifiés. Le rendu doit être non silencieux
 et ne contenir aucun échantillon à pleine échelle. Les fixtures C++ sont
 générées depuis les fichiers JSON exacts de la banque dans `build`.
+
+`cmd /c firmware\tests\run-reverb-test.cmd` vérifie le DSP Reverb et son
+intégration au moteur (huit voix, chaîne stéréo et queues après Note Off).
+`node editor/tests/reverb.test.mjs` valide le graphe, les limites mono/stéréo,
+les paramètres/CV/MIDI Learn et les exports/imports. Les tests DSP sur PC
+ne mesurent pas la charge audio ni la bande passante PSRAM de la carte.
+
+`node editor/tests/resources.test.mjs` vérifie les budgets RAM 8/16 Mio,
+les buffers partagés et conservés, les marges et pics de chargement, la
+fragmentation, les coûts CPU calibrés, la polyphonie/unisson, les refus
+d’ajout et la sérialisation des échanges USB avec la télémétrie.
+
+`cmd /c firmware\tests\run-insert-effects-test.cmd` vérifie Decimator,
+Bitcrusher, Compressor et TB-303 : cadence entre blocs, niveaux signés,
+bypass exact, compression liée L/R et release, comparaison au noyau MIT
+Open303 original, stabilité/atténuation, huit voix, effets communs et bit
+CV 63. Le script compile les deux fichiers amont de référence uniquement
+sur PC. `node editor/tests/insert-effects.test.mjs` vérifie les paramètres,
+les formats de ports, les modulations et le transport des patches.
+
+`cmd /c firmware\tests\run-catalog-writer-test.cmd` vérifie la sérialisation
+progressive du catalogue avec cJSON réel, la fusion des métadonnées, le
+catalogue vide et le refus de dépassement du buffer.

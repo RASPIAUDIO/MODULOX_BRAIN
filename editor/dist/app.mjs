@@ -1,23 +1,25 @@
 import { initializeLanguage, tr } from "./i18n.mjs";
-import { deleteDeviceSample, deletePatch, fetchPatches, fetchSample, fetchSampleLibrary, fetchSamplePreview, fetchWave, renameSample, uploadPatch, uploadSample, fetchFirmwareInfo, uploadFirmware, rollbackFirmware } from "./protocol.mjs?v=19";
+import { fetchResources, deleteDeviceSample, deletePatch, fetchPatches, fetchSample, fetchSampleLibrary, fetchSamplePreview, fetchWave, renameSample, uploadPatch, uploadSample, fetchFirmwareInfo, uploadFirmware, rollbackFirmware } from "./protocol.mjs?v=20";
 import { builtinWaves, deleteWave, drawWave, maxPatchWaves, readLibrary, readWave, saveWaves } from "./waves.mjs?v=4";
 import {
   connectionError, firstOscillator, fm4Topologies, modulationError, moduleSpec, nodeSpec, normalizePatch, offlineCatalog, outputModule,
   patchForDevice, pitchCatalog, playSettings, routingError, sampleModuleTypes, timingModuleTypes, usesVaExpansion,
-  stereoModuleTypes, usesFm4, vaModuleTypes, validatePatch, patchCategories,
-} from "./patch.mjs?v=15";
+  modulePaletteGroups, simpleEffectTypes, stereoModuleTypes, usesFm4, vaModuleTypes, validatePatch, patchCategories,
+} from "./patch.mjs?v=17";
 import { deleteSample, drawSample, readSample, readSamples, sampleRate, sampleWav, saveSample } from "./samples.mjs?v=7";
 import { loadPresetAssets } from "./preset-assets.mjs";
 import { loadFactoryBank, planFactoryUpload, uploadFactoryBank } from "./factory-bank.mjs";
 import { packPatch, readPatchFile, writePatchFile, folderPreference } from "./patch-files.mjs";
 import { compareVersions, fetchFirmwareRelease, fetchFirmwareImage, readFirmwareFile, validateFirmware } from "./firmware.mjs";
-import { boardForModel, defaultBoard } from "./hardware.mjs";
+import { boardForModel, defaultBoard, boardProfiles } from "./hardware.mjs";
 import { recoverFirmware } from "./firmware-recovery.mjs";
 import { factoryConsentValid, prepareFactoryInstaller } from "./factory-install.mjs";
 import { initializeMidiKeyboard } from "./midi-keyboard.mjs";
 import { initializeDeviceScreen } from "./device-screen.mjs";
 
 await initializeLanguage();
+
+import { cpuCalibrationFor, estimateResources, validResourceSnapshot, validCpuValue, cpuLimit, internalReserve, KiB, MiB } from "./resources.mjs";
 
 const $ = (id) => document.getElementById(id);
 const midiKeyboard = initializeMidiKeyboard($("midi-keyboard"));
@@ -47,6 +49,9 @@ let busy = "";
 let hasRead = false;
 let canUpload = false;
 let deviceCatalog;
+let resourceSnapshot, resourceReadAt = 0, resourceReading = false, resourceReadError = "", resourcePending;
+let resourceTarget = "s3-16m8m";
+const cpuCalibrations = new Map();
 let currentFirmware, firmwareRelease, firmwareImage, expectedFirmware, firmwareAbort;
 let firmwareManual = false;
 let factoryAbort;
@@ -70,6 +75,7 @@ let audioContext;
 let samplePlayback;
 let screen = "patches";
 let editorView = "graph";
+let selectedModuleCategory = "generators";
 let samplesForPatch = false;
 const waveLibraryReady = readLibrary().then((waves) => {
   for (const wave of waves) waveLibrary.set(wave.id, wave);
@@ -346,8 +352,9 @@ function renderActions() {
   const item = current();
   const draft = activeDraft();
   renderFirmware();
+  renderResources();
   viewport.inert = Boolean(busy);
-  $("palette").inert = Boolean(busy);
+  $("module-panel").inert = Boolean(busy);
   $("details").inert = Boolean(busy);
   $("name").disabled = Boolean(busy);
   $("patches").inert = $("drafts").inert = Boolean(busy);
@@ -379,6 +386,7 @@ function renderActions() {
   $("copy").hidden = !item;
   $("copy").textContent = draft ? tr("Reprendre l’édition") : tr("Configurer");
   $("upload").hidden = !draft;
+  const budgetError = draft ? resourceError(draft.patch) : "";
   const samplerError = draft ? patchSampleError(draft.patch) : "";
   const timingError = draft && port && !deviceCatalog?.clockRouting &&
     (draft.patch.modules.some((node) => timingModuleTypes.includes(node.type)) || draft.patch.routings?.length)
@@ -387,9 +395,14 @@ function renderActions() {
     ? tr("Ces fonctions demandent le nouveau firmware VA : unisson, glide et nouveaux modules.") : "";
   const stereoError = draft && port && !deviceCatalog?.stereoGraph
     ? tr("Ce graphe demande le nouveau firmware stéréo.") : "";
+  const reverbError = draft && port && !deviceCatalog?.reverb && draft.patch.modules.some(node => node.type === "Reverb")
+    ? tr("La reverb demande le nouveau firmware avec Reverb.") : "";
+  const insertError = draft && port && ((!deviceCatalog?.simpleEffects && draft.patch.modules.some(node => simpleEffectTypes.includes(node.type))) ||
+    (!deviceCatalog?.tb303 && draft.patch.modules.some(node => node.type === "TB-303")))
+    ? tr("Decimator, Bitcrusher, Compressor et TB-303 demandent le firmware 1.6.0.") : "";
   const fmError = draft && port && !deviceCatalog?.fm4 && usesFm4(draft.patch)
     ? tr("FM4 et le couplage des Osc demandent le nouveau firmware FM.") : "";
-  $("upload").disabled = !port || !canUpload || Boolean(busy) || Boolean(samplerError || timingError || vaError || stereoError || fmError) ||
+  $("upload").disabled = !port || !canUpload || Boolean(busy) || Boolean(budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || fmError) ||
     Boolean(draft?.key.startsWith("f") && !catalog.patchManagement);
   $("upload").textContent = draft?.targetFile ? tr("Remplacer sur le Modulox") : tr("Envoyer au Modulox");
   $("delete-patch").hidden = selection?.kind !== "usb";
@@ -408,7 +421,7 @@ function renderActions() {
   $("modules-toggle").disabled = !draft;
   $("parameter-view").inert = Boolean(busy);
   if (screen === "samples") renderSampleDetail();
-  $("upload").title = samplerError || timingError || vaError || stereoError || fmError || (draft?.key.startsWith("f") && !catalog.patchManagement
+  $("upload").title = budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || fmError || (draft?.key.startsWith("f") && !catalog.patchManagement
     ? tr("Le remplacement d’un patch d’usine nécessite le nouveau firmware.")
     : canUpload ? "" : tr("Connecte un Modulox avec le firmware compatible."));
   $("arrange").hidden = !draft;
@@ -418,7 +431,7 @@ function renderActions() {
     : isModulationSource(cableSource)
     ? tr("Choisis une entrée de modulation bleue. Échap annule le câble.")
     : tr("Choisis une entrée audio. Échap annule le câble."))
-    : samplerError || timingError || vaError || stereoError || fmError || (draft ? (editorView === "graph" ? tr("Dépose des modules mono ou stéréo. Pan ou Stereo convertissent une source mono.") : "")
+    : budgetError || samplerError || timingError || vaError || stereoError || reverbError || insertError || fmError || (draft ? (editorView === "graph" ? tr("Dépose des modules mono ou stéréo. Pan ou Stereo convertissent une source mono.") : "")
       : item ? tr("Sélectionne un module pour voir ses paramètres.") : "");
 }
 
@@ -440,16 +453,138 @@ function patchSampleError(patch) {
     ? tr("Le Granulizer nécessite le nouveau firmware.") : "");
 }
 
+function resourceBoard() {
+  return Object.values(boardProfiles).find(board => board.model === currentFirmware?.model) ?? boardProfiles[resourceTarget];
+}
+function cpuCalibrationKey() { return "modulox.cpu.v1:" + (currentFirmware?.model ?? resourceBoard().model) + ":" + (currentFirmware?.version ?? "offline"); }
+function cpuCalibration() {
+  const key = cpuCalibrationKey();
+  if (!cpuCalibrations.has(key)) {
+    let value = {};
+    try { value = JSON.parse(localStorage.getItem(key)) ?? {}; } catch {}
+    cpuCalibrations.set(key, value && typeof value === "object" ? value : {});
+  }
+  return cpuCalibrationFor(currentFirmware?.model, currentFirmware?.version, cpuCalibrations.get(key));
+}
+function resourceBudget(patch = activeDraft()?.patch ?? current()?.patch ?? { modules: [], connections: [] }) {
+  const snapshot = port && Date.now() - resourceReadAt < 10000 ? resourceSnapshot : undefined;
+  return estimateResources(patch, catalog, { snapshot, totalBytes: currentFirmware?.psramBytes ?? resourceBoard().psramBytes,
+    samples: new Map([...remoteSamples, ...sampleLibrary]), calibration: cpuCalibration() });
+}
+function resourceError(patch) { return resourceBudget(patch).errors[0] ?? ""; }
+function bytesLabel(value) { return Math.abs(value) >= MiB ? (value / MiB).toFixed(2) + " Mio" : Math.ceil(value / KiB) + " Kio"; }
+function renderResources() {
+  const budget = resourceBudget();
+  const live = budget.measured ? resourceSnapshot : undefined;
+  $("resource-ram-label").textContent = "RAM " + Math.round(budget.total / MiB) + " Mio";
+  $("resource-ram").value = budget.total ? Math.min(100, budget.projectedUsed / budget.total * 100) : 100;
+  $("resource-ram-text").textContent = (budget.measured ? "Après charge ≈ " : "Simulation ≈ ") + bytesLabel(Math.max(0, budget.remaining)) + " restants";
+  $("resource-ram-text").dataset.over = String(budget.remaining < 0);
+  $("resource-ram").title = `Libre maintenant : ${bytesLabel(budget.free)} ; chargement + marge : ${bytesLabel(budget.needed)}.`;
+  const measuredCpu = live?.cpuValid;
+  const cpu = measuredCpu ? live.cpuAverage : budget.cpu;
+  $("resource-cpu").value = Math.min(100, cpu);
+  $("resource-cpu").hidden = !measuredCpu && !budget.cpuComplete;
+  $("resource-cpu").setAttribute("aria-label", measuredCpu ? "CPU mesuré du patch joué sur le Modulox" : "Estimation CPU du projet");
+  $("resource-cpu-text").textContent = measuredCpu ? `${live.cpuAverage.toFixed(1)} % joué · pic ${live.cpuPeak.toFixed(1)} %` :
+    budget.cpuComplete ? `Projet ≈ ${budget.cpu.toFixed(1)} %` : budget.cpu > 0 ? `Projet ≥ ${budget.cpu.toFixed(1)} % · incomplet` : "Projet : à calibrer";
+  $("resource-cpu-text").dataset.over = String(cpu > cpuLimit || (live?.overBudgetBlocks ?? 0) > 0);
+  $("resources-refresh").disabled = !port || !deviceCatalog?.resourceTelemetry || Boolean(busy) || resourceReading;
+  if (!$("resources-dialog").open) return;
+  $("resource-target").value = resourceBoard().id;
+  $("resource-target").disabled = Boolean(port);
+  $("resource-context").textContent = port ? budget.measured ?
+    `${resourceBoard().label} · firmware ${currentFirmware?.version ?? "?"} · mesures de l’appareil. Le CPU mesuré concerne le patch joué, pas nécessairement le projet.` :
+    "Mesure RAM indisponible ou ancienne : simulation de capacité. Le firmware 1.5.0 permet de lire la RAM libre et le CPU." :
+    "Hors ligne : simulation de capacité, avec 1 Mio réservé à l’usage existant. Connecte le Modulox pour mesurer la RAM réellement disponible.";
+  $("resource-memory-detail").textContent = `${budget.measured ? "PSRAM libre maintenant" : "PSRAM libre simulée"} : ${bytesLabel(budget.free)}. Nouveau chargement : ${bytesLabel(budget.extra)}, marge modules : ${bytesLabel(budget.margin)}, réserve : ${bytesLabel(budget.reserve)}.` +
+    (live ? ` Plus grand bloc : ${bytesLabel(live.psramLargest)}. SRAM interne libre : ${bytesLabel(live.internalFree)} (réserve visée ${bytesLabel(internalReserve)}).` : "") +
+    (live?.cpuValid ? ` CPU moyen ${live.cpuAverage.toFixed(1)} %, pic ${live.cpuPeak.toFixed(1)} %, ${live.overBudgetBlocks} blocs hors budget sur la dernière seconde.` : "") +
+    ` CPU projet : ${budget.cpuComplete ? "≈" : "au moins"} ${budget.cpu.toFixed(1)} %.`;
+  $("resource-warning").textContent = [...budget.errors, resourceReadError, cpuCalibration().note,
+    ...(live && live.internalFree < internalReserve ? ["La SRAM interne est basse ; ajouter de la PSRAM ne résout pas cette limite."] : []),
+    ...(budget.unknownSamples.length ? ["Sample à choisir ou taille inconnue : le PCM sera compté dès le choix ; une taille inconnue est réservée au maximum."] : []),
+    ...(!budget.cpuComplete ? ["CPU incomplet : mesures manquantes pour " + (!validCpuValue(cpuCalibration().base) ? "le moteur, " : "") + budget.unknownCpu.join(", ") + "."] : []),
+  ].filter(Boolean).join(" ");
+  $("resource-rows").replaceChildren();
+  for (const row of budget.rows) {
+    const tr = element("tr");
+    for (const value of [row.id + " · " + row.type, bytesLabel(row.bytes), bytesLabel(row.margin), row.cpu === null ? "À mesurer" : row.cpu.toFixed(1) + " %"])
+      tr.append(element("td", value));
+    $("resource-rows").append(tr);
+  }
+}
+function refreshResources() {
+  if (!port || !deviceCatalog?.resourceTelemetry) return Promise.resolve();
+  if (resourcePending?.connection === port) return resourcePending.promise;
+  const connection = port, request = { connection };
+  resourcePending = request; resourceReading = true;
+  request.promise = (async () => {
+    try {
+      const snapshot = await fetchResources(connection);
+      if (connection !== port) return;
+      if (!validResourceSnapshot(snapshot)) throw new Error("Mesure de ressources invalide.");
+      resourceSnapshot = snapshot; resourceReadAt = Date.now(); resourceReadError = "";
+    } catch (error) {
+      if (connection === port) { resourceSnapshot = undefined; resourceReadError = error.message; }
+    } finally {
+      if (resourcePending === request) {
+        resourcePending = undefined; resourceReading = false;
+        renderActions();
+        if (screen === "editor" && editorView === "graph") renderPalette();
+      }
+    }
+  })();
+  return request.promise;
+}
+function renderCpuCalibration() {
+  const fields = $("cpu-calibration-fields"), calibration = cpuCalibration(); fields.replaceChildren();
+  for (const type of ["$base", ...catalog.modules.map(spec => spec.type)]) {
+    const label = element("label", "", "cpu-calibration-field");
+    label.append(element("span", type === "$base" ? "Moteur seul (%)" : type + (calibration.totalCostModules?.includes(type) ? " (% total)" : " (%)")));
+    const input = element("input"); input.type = "number"; input.min = 0; input.max = 100; input.step = 0.1;
+    input.dataset.cpuType = type; input.placeholder = calibration.voiceCurves?.[type] ? "Courbe mesurée" : "Non mesuré";
+    if (calibration.voiceCurves?.[type]) input.title = "Référence à 1 et 8 voix. Laisser vide conserve la courbe ; un nombre la remplace par un coût par voix.";
+    input.disabled = !port || !currentFirmware;
+    const value = type === "$base" ? calibration.base : calibration.modules?.[type];
+    input.value = validCpuValue(value) ? value : "";
+    label.append(input); fields.append(label);
+  }
+  $("cpu-calibration-save").disabled = !port || !currentFirmware;
+}
+
 function renderPalette() {
   const patch = activeDraft()?.patch;
   const palette = $("palette");
+  const categories = $("module-categories");
+  const groups = modulePaletteGroups(catalog);
+  const active = groups.find(group => group.id === selectedModuleCategory) ?? groups[0];
+  selectedModuleCategory = active?.id;
+  categories.replaceChildren();
+  for (const group of groups) {
+    const button = element("button", tr(group.label), "module-category");
+    button.type = "button";
+    button.dataset.category = group.id;
+    button.setAttribute("aria-pressed", String(group === active));
+    button.setAttribute("aria-controls", "palette");
+    button.onclick = () => {
+      selectedModuleCategory = group.id;
+      renderPalette();
+      categories.querySelector(`[data-category="${group.id}"]`).focus({ preventScroll: true });
+    };
+    categories.append(button);
+  }
+  palette.setAttribute("aria-label", "Modules : " + tr(active?.label ?? ""));
   palette.replaceChildren();
-  for (const spec of catalog.modules) {
+  for (const spec of active?.modules ?? []) {
     const count = patch?.modules.filter((node) => node.type === spec.type).length ?? 0;
     const button = element("button", tr(spec.type), "palette-module");
     button.append(element("small", count + "/" + spec.limit));
-    button.disabled = !patch || count >= spec.limit;
-    if (spec.type === "Sampler") button.title = samplerUnavailable();
+    const budgetError = patch ? resourceError({ ...patch, modules: [...patch.modules, { id: "$candidate", type: spec.type }] }) : "";
+    button.disabled = !patch || count >= spec.limit || Boolean(budgetError);
+    const cost = resourceBudget({ ...patch, modules: [{ id: "$candidate", type: spec.type }], connections: [] }).rows[0];
+    button.title = budgetError || (spec.type === "Sampler" ? samplerUnavailable() : "") ||
+      `RAM à allouer : ${bytesLabel(cost.bytes)} + ${bytesLabel(cost.margin)} de marge ; CPU : ${cost.cpu === null ? "à mesurer" : cost.cpu.toFixed(1) + " %"}.`;
     button.draggable = !button.disabled;
     button.onclick = () => addModule(spec.type);
     button.ondragstart = (event) => {
@@ -639,13 +774,16 @@ function connectCable(to, input, modulation = false, midiPort = false, routing =
   const error = cableError(patch, to, input, modulation, midiPort, routing);
   if (error) return showError(error);
   const key = routing ? "routings" : modulation ? "modulations" : "connections";
-  patch[key] = (patch[key] ?? []).filter(([, target, port, midiOutput]) =>
+  const links = (patch[key] ?? []).filter(([, target, port, midiOutput]) =>
     routing ? target !== to || port !== input : target !== to || Boolean(midiOutput) !== midiPort || (port !== input &&
       !(midiPort && ["Gate", "Trigger"].includes(port) && ["Gate", "Trigger"].includes(input))));
   const edge = [cableSource, to, input];
   if (routing) edge.push(cableEventPort ?? cableMidiPort ?? "CV");
   else if (midiPort) edge.push(cableMidiPort);
-  patch[key].push(edge);
+  links.push(edge);
+  const candidate = { ...patch, [key]: links }, budget = resourceBudget(candidate);
+  if (budget.blocked && budget.cpu > resourceBudget(patch).cpu) return showError(budget.errors[0]);
+  patch[key] = links;
   cableSource = undefined;
   cableMidiPort = undefined;
   cableEventPort = undefined;
@@ -850,6 +988,8 @@ function addModule(type, position) {
   const patch = activeDraft()?.patch;
   const spec = moduleSpec(catalog, type);
   if (!patch || !spec?.limit || patch.modules.filter((node) => node.type === type).length >= spec.limit) return;
+  const budgetError = resourceError({ ...patch, modules: [...patch.modules, { id: "$candidate", type }] });
+  if (budgetError) return showError(budgetError);
   const used = new Set(patch.modules.map((node) => node.id));
   const occupied = [...positions.values()];
   const base = type.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -912,6 +1052,17 @@ function parameterControl(owner, parameter, patch, key = "parameters", onValue, 
   if (disabledReason) control.title = disabledReason;
   let range;
   function saveValue(next) {
+    if (activeDraft()?.patch === patch) {
+      const candidate = structuredClone(patch);
+      const target = key === "settings" ? candidate : candidate.modules.find(node => node.id === owner.id);
+      if (target) (target[key] ??= {})[parameter.name] = next;
+      const error = resourceError(candidate), before = resourceBudget(patch), after = resourceBudget(candidate);
+      if (error && (after.needed > before.needed || after.cpu > before.cpu)) {
+        control.value = owner[key]?.[parameter.name] ?? parameter.initial;
+        if (range) range.value = control.value;
+        showError(error); return;
+      }
+    }
     if (range) range.value = next;
     if (next === parameter.initial) delete owner[key]?.[parameter.name];
     else (owner[key] ??= {})[parameter.name] = next;
@@ -1069,6 +1220,16 @@ function renderNodeControls(details, node, patch, sliders = false) {
     details.append(element("p", tr("Mono : répétitions communes ; Stereo : canaux indépendants ; Ping-pong : répétitions alternées gauche/droite. Link lie Time L/R et les divisions. Désactive-le pour les régler séparément. Maximum 2 secondes par canal.")));
   } else if (node.type === "Pan") {
     details.append(element("p", tr("Convertit une source mono en stéréo. Pan déplace le son de gauche à droite à puissance constante ; le centre vaut −3 dB par canal.")));
+  } else if (node.type === "Decimator") {
+    details.append(element("p", tr("Réduit la fréquence d’échantillonnage par maintien du signal. Rate=44100 Hz conserve le signal ; les fréquences basses créent volontairement du repliement spectral. Mix dose l’effet.")));
+  } else if (node.type === "Bitcrusher") {
+    details.append(element("p", tr("Réduit la résolution de 16 à 2 bits. Bits=16 conserve le signal ; Mix dose l’effet.")));
+  } else if (node.type === "Compressor") {
+    details.append(element("p", tr("Compresseur stéréo commun aux voix, à détection de crête par bloc. Threshold et Ratio règlent la compression ; Attack, Release, Makeup et Mix règlent sa réponse. Les deux canaux partagent le même gain. Placer Stereo ou Pan avant une source mono.")));
+  } else if (node.type === "TB-303") {
+    details.append(element("p", tr("Filtre mono adapté du mode TB_303 d’Open303 TeeBee : quatre étages couplés, retour passe-haut 150 Hz et suréchantillonnage x4. Cutoff et Reso acceptent une modulation. Drive ajoute une saturation d’entrée ; Mix=0 conserve le signal sec. Ce module ne reproduit pas à lui seul l’accent, le slide ou la voix complète d’une TB-303.")));
+  } else if (node.type === "Reverb") {
+    details.append(element("p", tr("Reverb stéréo : Decay règle la décroissance, Damping atténue les aigus, Pre-delay retarde les réflexions, Width règle la largeur et Mix le dosage.")));
   } else if (node.type === "Chorus") {
     details.append(element("p", tr("Chorus stéréo : Rate règle la vitesse, Depth la profondeur et Mix le dosage. Une valeur de Rate de 100 correspond à 1 Hz.")));
   } else if (node.type === "Rotary") {
@@ -1077,7 +1238,7 @@ function renderNodeControls(details, node, patch, sliders = false) {
     details.append(element("p", tr("Conversion mono → stéréo sans atténuation. L / Mono seul est envoyé aux deux canaux ; branche R pour assembler deux sources mono distinctes.")));
   } else if (node.type === "Mono") {
     details.append(element("p", tr("Conversion stéréo → mono : moyenne de L et R. Permet de rejoindre une chaîne mono.")));
-  } else if (node.type === tr("Stereo Mix")) {
+  } else if (node.type === "Stereo Mix") {
     details.append(element("p", tr("Somme jusqu’à trois signaux stéréo. Les réglages In 1–3 agissent sur les deux canaux ; même marge de niveau que Mix.")));
   } else if (node.type === "Osc") {
     details.append(element("p", tr("Unison superpose jusqu’à quatre oscillations désaccordées. Mix dose cette couche avec le son simple ; Level règle l’ensemble.")));
@@ -1089,7 +1250,7 @@ function renderNodeControls(details, node, patch, sliders = false) {
     details.append(element("p", tr("Bruit blanc par voix, avec contrôle du niveau et de la vélocité.")));
   } else if (node.type === "Sub") {
     details.append(element("p", tr("Suit la note et le glide, une ou deux octaves plus bas. Avec un module MIDI ou Arpeggiator, câble son entrée Pitch.")));
-  } else if (node.type === tr("Ring Mod")) {
+  } else if (node.type === "Ring Mod") {
     details.append(element("p", tr("Multiplie les deux entrées audio. Mix dose le résultat avec la première entrée.")));
   } else if (node.type === "Wavefolder") {
     details.append(element("p", tr("Drive replie le signal, Symmetry décale le repliement et Mix dose le résultat. Les trois paramètres sont modulables.")));
@@ -1171,6 +1332,13 @@ function renderSampleControl(panel, node) {
   }
   select.value = node.sample ?? "";
   select.onchange = () => {
+    const candidate = structuredClone(activeDraft().patch);
+    const proposed = candidate.modules.find(item => item.id === node.id);
+    if (select.value) proposed.sample = select.value; else delete proposed.sample;
+    const error = resourceError(candidate);
+    if (error && resourceBudget(candidate).needed > resourceBudget(activeDraft().patch).needed) {
+      select.value = node.sample ?? ""; return showError(error);
+    }
     if (select.value) {
       node.sample = select.value;
       node.sampleName = select.selectedOptions[0].textContent;
@@ -1284,6 +1452,7 @@ function changed(redraw = true) {
   else {
     renderLibrary();
     renderActions();
+    if (screen === "editor" && editorView === "graph") renderPalette();
   }
 }
 
@@ -1291,6 +1460,7 @@ async function disconnect() {
   const currentPort = port;
   port = undefined;
   deviceCatalog = undefined;
+  resourceSnapshot = undefined; resourceReadAt = 0; resourceReadError = ""; resourceReading = false;
   currentFirmware = undefined;
   deviceScreen.update(undefined, undefined, screen === "device", Boolean(busy));
   remoteSamples.clear();
@@ -1350,6 +1520,8 @@ async function readDevice() {
   const latest = withKeys(result.entries);
   deviceCatalog = result.catalog;
   currentFirmware = result.catalog?.firmware;
+  resourceSnapshot = undefined; resourceReadAt = 0;
+  if (deviceCatalog?.resourceTelemetry) await refreshResources();
   // A connected unit determines the release channel. Never retain the other
   // model's cached file after changing devices.
   if (currentFirmware && firmwareRelease?.model !== currentFirmware.model) {
@@ -1366,7 +1538,7 @@ async function readDevice() {
     for (const sample of await fetchSampleLibrary(port)) remoteSamples.set(sample.id, sample);
   }
   const received = pitchCatalog(result.catalog ?? offlineCatalog);
-  const missing = [...sampleModuleTypes, ...timingModuleTypes, ...vaModuleTypes, ...stereoModuleTypes, "FM4"].filter((type) => !moduleSpec(received, type));
+  const missing = [...sampleModuleTypes, ...timingModuleTypes, ...vaModuleTypes, ...stereoModuleTypes, ...simpleEffectTypes, "TB-303", "FM4"].filter((type) => !moduleSpec(received, type));
   catalog = { ...received, modules: [...received.modules, ...missing.map((type) => moduleSpec(offlineCatalog, type))] };
   if (!received.vaExpansion) {
     catalog.modules = catalog.modules.map(spec => spec.type !== "Osc" ? spec : { ...spec, parameters:
@@ -1765,6 +1937,12 @@ $("upload").onclick = () => {
       }
     }
     await Promise.all([waveLibraryReady, samplesReady]);
+    if (deviceCatalog?.resourceTelemetry) {
+      await refreshResources();
+      if (!resourceSnapshot || Date.now() - resourceReadAt >= 10000) throw new Error("Impossible de vérifier la RAM disponible. Actualise les ressources avant l’envoi.");
+    }
+    const budgetError = resourceError(draft.patch);
+    if (budgetError) throw new Error(budgetError);
     const patch = { ...structuredClone(draft.patch), name: draft.patch.name.trim() };
     for (const node of patch.modules) if (remoteSamples.has(node.sample)) node.sampleName = remoteSamples.get(node.sample).name;
     const id = await uploadPatch(port, draft.key, patchForDevice(patch, catalog),
@@ -1784,6 +1962,29 @@ $("upload").onclick = () => {
     showScreen("patches");
   });
 };
+$("resources-open").onclick = () => { renderCpuCalibration(); $("cpu-calibration-status").textContent = ""; $("resources-dialog").showModal(); renderResources(); };
+$("resources-close").onclick = () => $("resources-dialog").close();
+$("resources-refresh").onclick = refreshResources;
+$("resource-target").onchange = () => { resourceTarget = $("resource-target").value; renderCpuCalibration(); renderActions(); if (screen === "editor") renderPalette(); };
+$("cpu-calibration-save").onclick = () => {
+  const reference = cpuCalibration(), calibration = { base: null, modules: {}, totalCostModules: reference.totalCostModules ?? [] };
+  for (const input of $("cpu-calibration-fields").querySelectorAll("input")) {
+    if (input.value === "") {
+      if (input.dataset.cpuType !== "$base" && !reference.voiceCurves?.[input.dataset.cpuType]) calibration.modules[input.dataset.cpuType] = null;
+      continue;
+    }
+    const value = Number(input.value);
+    if (!validCpuValue(value)) { $("cpu-calibration-status").textContent = "Entre des mesures entre 0 et 100 %."; return; }
+    if (input.dataset.cpuType === "$base") calibration.base = value; else calibration.modules[input.dataset.cpuType] = value;
+  }
+  try {
+    localStorage.setItem(cpuCalibrationKey(), JSON.stringify(calibration)); cpuCalibrations.set(cpuCalibrationKey(), calibration);
+    $("cpu-calibration-status").textContent = "Mesures enregistrées pour ce modèle et cette version de firmware.";
+    renderActions(); if (screen === "editor") renderPalette();
+  } catch { $("cpu-calibration-status").textContent = "Le navigateur ne peut pas enregistrer ces mesures."; }
+};
+setInterval(() => { if (port && !busy && screen === "editor" && !document.hidden) refreshResources(); }, 2000);
+
 $("modules-toggle").onclick = () => {
   const open = $("module-panel").hidden;
   $("module-panel").hidden = !open;

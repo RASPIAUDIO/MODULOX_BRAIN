@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Modulox · Éditeur de patches</title>
-  <link rel="stylesheet" href="./style.css?v=24">
+  <link rel="stylesheet" href="./style.css?v=25">
 </head>
 <body>
   <header class="bar">
@@ -126,18 +126,26 @@
         <button id="upload" class="primary">Envoyer au Modulox</button>
       </div>
     </header>
+    <section class="resource-strip" aria-label="Budget de ressources">
+      <div class="resource-gauge"><span id="resource-ram-label">RAM</span><meter id="resource-ram" min="0" max="100" value="0" aria-label="RAM prévue au chargement"></meter><span id="resource-ram-text"></span></div>
+      <div class="resource-gauge"><span>CPU</span><meter id="resource-cpu" min="0" max="100" value="0" aria-label="CPU du patch joué sur le Modulox"></meter><span id="resource-cpu-text"></span></div>
+      <button id="resources-open">Ressources…</button><button id="resources-refresh" aria-label="Actualiser les mesures RAM et CPU" title="Actualiser les mesures RAM et CPU">↻</button>
+    </section>
     <nav class="editor-tabs" aria-label="Vues de l’éditeur">
       <button id="tab-graph" aria-pressed="true">Câblage</button>
       <button id="tab-parameters" aria-pressed="false">Paramètres</button>
     </nav>
     <div id="graph-view" class="graph-view">
     <section class="workspace" aria-label="Édition du patch">
-      <div class="editor-tools"><button id="modules-toggle" aria-expanded="true" aria-controls="module-panel">+ Modules</button>
+      <div class="editor-tools"><button id="modules-toggle" aria-expanded="false" aria-controls="module-panel">+ Modules</button>
         <button id="arrange">Ranger le graphe</button>
         <button id="settings">Réglages du patch</button>
         <div class="cable-legend"><span>Mono</span><span>Modulation</span><span>MIDI</span><span>Horloge</span><span>Stéréo L/R</span></div>
       </div>
-      <section id="module-panel" aria-label="Ajouter un module"><div id="palette" class="palette"></div></section>
+      <section id="module-panel" aria-label="Ajouter un module" hidden>
+        <div id="module-categories" class="module-categories" role="group" aria-label="Familles de modules"></div>
+        <div id="palette" class="palette" role="group" aria-label="Modules"></div>
+      </section>
       <div class="viewport" id="viewport">
         <div id="graph" class="graph" aria-label="Graphe du patch"><canvas id="wires" aria-hidden="true"></canvas></div>
       </div>
@@ -267,6 +275,18 @@
       <p id="factory-install-status" role="status"></p>
     </section>
   </dialog>
+  <dialog id="resources-dialog" aria-labelledby="resources-title">
+    <div class="resource-heading"><h2 id="resources-title">RAM & CPU</h2><button id="resources-close" aria-label="Fermer les ressources">Fermer</button></div>
+    <label class="resource-target">Modulox cible <select id="resource-target" aria-label="Modulox cible"><option value="s3-16m8m">Ancienne génération · 8 Mio RAM</option><option value="s3-32m16m">Nouvelle génération · 16 Mio RAM</option></select></label>
+    <p id="resource-context"></p><p id="resource-memory-detail"></p><p id="resource-warning" role="status"></p>
+    <table class="resource-table"><thead><tr><th>Module / sample</th><th>RAM à allouer</th><th>Marge</th><th>CPU estimé</th></tr></thead><tbody id="resource-rows"></tbody></table>
+    <p class="resource-note">Les patches sauvegardés occupent la flash. Cette jauge concerne le chargement du patch actif, les samples uniques et les buffers d’effets. Les anciens samples restent en RAM pendant le chargement des nouveaux. Réserve : 256 Kio, plus 1 Kio par module et 10 % sur les nouveaux buffers.</p>
+    <details id="cpu-calibration"><summary>Calibrer l’estimation CPU</summary>
+      <p>Le CPU mesuré concerne le patch joué sur le Modulox, qui peut être différent du projet édité. Pour estimer le projet, renseigne le surcoût mesuré de chaque module par rapport au même patch de référence : une voix et Unison=1 pour les traitements par voix ; coût total pour les effets communs. Mesure les réglages les plus coûteux (Filter 4 pôles, Granulizer 8 grains, modulations actives). Laisse vide ce qui n’est pas mesuré.</p>
+      <p>Le calcul suit Voices et Unison, majore les coûts de 10 % et refuse les ajouts au-delà de 85 %. Une estimation incomplète reste signalée ; elle ne peut pas garantir la charge totale.</p>
+      <div id="cpu-calibration-fields"></div><button id="cpu-calibration-save">Enregistrer les mesures CPU</button><span id="cpu-calibration-status" role="status"></span>
+    </details>
+  </dialog>
   <details id="midi-keyboard" class="midi-drawer">
     <summary>Clavier</summary>
     <div class="midi-drawer-content">
@@ -284,6 +304,6 @@
       <div class="piano-scroll"><div class="midi-piano" id="midi-piano" role="group" aria-label="Touches du piano"></div></div>
     </div>
   </details>
-  <script type="module" src="./app.mjs?v=26"></script>
+  <script type="module" src="./app.mjs?v=27"></script>
 </body>
 </html>

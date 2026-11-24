@@ -39,7 +39,17 @@ class DeviceError extends Error {
   }
 }
 
-async function exchange(port, run, timeoutMs = 8000) {
+// Telemetry and user transfers share the same serial stream. Queue complete
+// exchanges so polling can never consume an upload ACK or a sample response.
+const exchanges = new WeakMap();
+function exchange(port, run, timeoutMs = 8000) {
+  const previous = exchanges.get(port) ?? Promise.resolve();
+  const operation = previous.catch(() => {}).then(() => rawExchange(port, run, timeoutMs));
+  const tail = operation.catch(() => {});
+  exchanges.set(port, tail);
+  return operation.finally(() => { if (exchanges.get(port) === tail) exchanges.delete(port); });
+}
+async function rawExchange(port, run, timeoutMs = 8000) {
   let reader;
   let writer;
   let bytes = new Uint8Array();
@@ -112,6 +122,9 @@ async function exchange(port, run, timeoutMs = 8000) {
   }
 }
 
+export const fetchResources = port => exchange(port, async ({ command, json }) => {
+  await command("RESOURCES"); return json(4096);
+});
 export const fetchFirmwareInfo = port => exchange(port, async ({ command, json }) => {
   await command("FWINFO"); return json(2048);
 });
@@ -160,7 +173,7 @@ export async function fetchPatches(port) {
     let catalog = null;
     await command("CATALOG");
     try {
-      catalog = await json(20480);
+      catalog = await json(24576);
     } catch (error) {
       if (!(error instanceof DeviceError) || error.code !== "") throw error;
     }

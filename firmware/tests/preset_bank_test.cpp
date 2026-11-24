@@ -34,6 +34,11 @@ static ModuleParameters controls(SynthVoice& s, int slot)
     case pan: case pan2: case pan3: return s.pan_controls(slot - pan);
     case chorus: return s.chorus_controls();
     case rotary: return s.rotary_controls();
+    case reverb: return s.reverb_controls();
+    case decimator: return s.decimator_controls();
+    case bitcrusher: return s.bitcrusher_controls();
+    case compressor: return s.compressor_controls();
+    case tb303: return s.tb303_controls();
     case fm4: return s.fm4_controls();
     default: assert(false); return {};
     }

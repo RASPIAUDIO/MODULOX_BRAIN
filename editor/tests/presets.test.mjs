@@ -39,7 +39,8 @@ const slots = {
   Osc: ["oscillator", "oscillator2", "oscillator3"], ADSR: ["envelope"], Filter: ["filter"], Mix: ["mixer"],
   LFO: ["lfo", "lfo2", "lfo3"], Env: ["env1", "env2"], Disto: ["disto"], Delay: ["delay"],
   Granulizer: ["granulizer"], FM4: ["fm4"], Noise: ["noise"], Pan: ["pan", "pan2", "pan3"],
-  Chorus: ["chorus"], Rotary: ["rotary"], "Ring Mod": ["ring_mod"], Wavefolder: ["wavefolder"],
+  Decimator: ["decimator"], Bitcrusher: ["bitcrusher"], Compressor: ["compressor"], "TB-303": ["tb303"],
+  Chorus: ["chorus"], Rotary: ["rotary"], Reverb: ["reverb"], "Ring Mod": ["ring_mod"], Wavefolder: ["wavefolder"],
   Clock: ["clock1", "clock2"], Random: ["random1", "random2"], Slew: ["slew"],
 };
 const fixture = [];

@@ -9,7 +9,27 @@ export const patchCategories = [
 ];
 export const timingModuleTypes = ["Clock", "Arpeggiator", "S&H", "Random", "Gain/Offset", "Slew"];
 export const vaModuleTypes = ["Noise", "Sub", "VCA", "Ring Mod", "Wavefolder"];
-export const stereoModuleTypes = ["Pan", "Chorus", "Rotary", "Stereo", "Mono", "Stereo Mix"];
+export const simpleEffectTypes = ["Decimator", "Bitcrusher", "Compressor"];
+export const stereoModuleTypes = ["Pan", "Chorus", "Rotary", "Reverb", "Compressor", "Stereo", "Mono", "Stereo Mix"];
+// Palette presentation only: patch types, limits and DSP identities stay unchanged.
+export const moduleCategories = [
+  { id: "generators", label: "Generators", types: ["Osc", "Sampler", "FM4", "Granulizer", "Noise", "Sub"] },
+  { id: "effects", label: "Effects", types: ["Filter", "TB-303", "Disto", "Decimator", "Bitcrusher", "Compressor", "Ring Mod", "Wavefolder"] },
+  { id: "time", label: "Time effects", types: ["Delay", "Reverb", "Chorus", "Rotary"] },
+  { id: "modulation", label: "Modulation", types: ["ADSR", "Env", "LFO", "S&H", "Random", "Gain/Offset", "Slew"] },
+  { id: "midi", label: "MIDI & Clock", types: ["MIDI", "Clock", "Arpeggiator"] },
+  { id: "routing", label: "Routing", types: ["Mix", "VCA", "Pan", "Stereo", "Mono", "Stereo Mix"] },
+];
+export function modulePaletteGroups(catalog) {
+  const specs = new Map(catalog.modules.map(spec => [spec.type, spec]));
+  const groups = moduleCategories.map(category => ({ ...category,
+    modules: category.types.map(type => specs.get(type)).filter(Boolean),
+  })).filter(category => category.modules.length);
+  const known = new Set(moduleCategories.flatMap(category => category.types));
+  const extra = catalog.modules.filter(spec => !known.has(spec.type));
+  if (extra.length) groups.push({ id: "other", label: "Other", modules: extra });
+  return groups;
+}
 export const fm4Algorithms = ["1>2>3>4", "(1+2)>3>4", "(1>2 + 3)>4", "(1 + 2>3)>4",
   "(1>2)+(3>4)", "1>(2+3+4)", "(1>2)+3+4", "1+2+3+4"];
 export const fm4Topologies = [ [[0,1,2,4],8], [[0,0,3,4],8], [[0,1,0,6],8], [[0,0,2,5],8],
@@ -34,6 +54,9 @@ export const offlineCatalog = {
   vaExpansion: true,
   stereoGraph: true,
   fm4: true,
+  reverb: true,
+  simpleEffects: true,
+  tb303: true,
   output: { inputChannels: 2, modulationInputs: ["Pitch", "Level"] },
   settings: { parameters: [
     { name: "Voices", min: 1, max: 8, initial: 1 },
@@ -189,6 +212,14 @@ export const offlineCatalog = {
       { name: "Pan", min: -100, max: 100, initial: 0, unit: "%" },
       { name: "Level", min: 0, max: 100, initial: 100, unit: "%" },
     ] },
+    { type: "Reverb", limit: 1, inputs: 1, inputChannels: 2, outputChannels: 2, sharedEffect: true,
+      modulationInputs: ["Decay", "Damping", "Pre-delay", "Width", "Mix"], parameters: [
+        { name: "Decay", min: 200, max: 10000, initial: 2000, step: 50, unit: "ms" },
+        { name: "Damping", min: 0, max: 100, initial: 40, unit: "%" },
+        { name: "Pre-delay", min: 0, max: 100, initial: 10, unit: "ms" },
+        { name: "Width", min: 0, max: 100, initial: 100, unit: "%" },
+        { name: "Mix", min: 0, max: 100, initial: 25, unit: "%" },
+      ] },
     { type: "Chorus", limit: 1, inputs: 1, inputChannels: 2, outputChannels: 2, sharedEffect: true,
       modulationInputs: ["Rate", "Depth", "Mix"], parameters: [
         { name: "Rate", min: 5, max: 800, initial: 80, unit: "x0.01Hz" },
@@ -210,6 +241,29 @@ export const offlineCatalog = {
       { name: "In 1", min: 0, max: 100, initial: 100, unit: "%" },
       { name: "In 2", min: 0, max: 100, initial: 100, unit: "%" },
       { name: "In 3", min: 0, max: 100, initial: 100, unit: "%" },
+    ] },
+    { type: "Decimator", limit: 1, inputs: 1, modulationInputs: ["Rate"], parameters: [
+      { name: "Rate", min: 100, max: 44100, initial: 11025, unit: "Hz" },
+      { name: "Mix", min: 0, max: 100, initial: 100, unit: "%" },
+    ] },
+    { type: "Bitcrusher", limit: 1, inputs: 1, modulationInputs: ["Bits"], parameters: [
+      { name: "Bits", min: 2, max: 16, initial: 8 },
+      { name: "Mix", min: 0, max: 100, initial: 100, unit: "%" },
+    ] },
+    { type: "Compressor", limit: 1, inputs: 1, inputChannels: 2, outputChannels: 2, sharedEffect: true,
+      modulationInputs: ["Threshold"], parameters: [
+        { name: "Threshold", min: -60, max: 0, initial: -18, unit: "dB" },
+        { name: "Ratio", min: 1, max: 20, initial: 4, unit: ":1" },
+        { name: "Attack", min: 1, max: 100, initial: 10, unit: "ms" },
+        { name: "Release", min: 10, max: 1000, initial: 100, step: 10, unit: "ms" },
+        { name: "Makeup", min: 0, max: 24, initial: 0, unit: "dB" },
+        { name: "Mix", min: 0, max: 100, initial: 100, unit: "%" },
+      ] },
+    { type: "TB-303", limit: 1, inputs: 1, modulationInputs: ["Cutoff", "Reso"], parameters: [
+      { name: "Cutoff", min: 200, max: 20000, initial: 1000, unit: "Hz" },
+      { name: "Reso", min: 0, max: 95, initial: 35, unit: "%" },
+      { name: "Drive", min: 0, max: 24, initial: 0, unit: "dB" },
+      { name: "Mix", min: 0, max: 100, initial: 100, unit: "%" },
     ] },
     { type: "FM4", limit: 1, inputs: 0, modulationInputs: ["Pitch", "Depth", "Feedback", "Level"],
       midiInputs: ["Pitch", "Velocity", "Trigger"], parameters: [

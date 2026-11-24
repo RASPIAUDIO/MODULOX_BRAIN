@@ -20,6 +20,7 @@ public:
         return bool(data_);
     }
     int16_t* get() { return data_.get(); }
+    bool allocated() const { return bool(data_); }
     static int16_t pcm(float value) { return static_cast<int16_t>(std::clamp(value, -32768.f, 32767.f)); }
     static float tap(const int16_t* data, unsigned capacity, unsigned position, unsigned filled, float distance)
     {
@@ -62,6 +63,7 @@ private:
 class Chorus {
 public:
     ModuleParameters controls() { return {"Chorus", parameters_}; }
+    unsigned allocated_bytes() const { return memory_.allocated() ? 2 * capacity * sizeof(int16_t) : 0; }
     bool prepare() { return memory_.prepare(2 * capacity); }
     void reset() { position_ = filled_ = phase_ = 0; depth_ = wet_ = 0; }
     void process(float* left, float* right, unsigned frames, const Modulation* rate, const Modulation* depth, const Modulation* mix)
@@ -96,6 +98,7 @@ private:
 class Rotary {
 public:
     ModuleParameters controls() { return {"Rotary", parameters_}; }
+    unsigned allocated_bytes() const { return memory_.allocated() ? 2 * capacity * sizeof(int16_t) : 0; }
     bool prepare() { return memory_.prepare(2 * capacity); }
     void reset() { position_ = filled_ = horn_phase_ = bass_phase_ = 0; low_ = speed_ = wet_ = 0; }
     void process(float* left, float* right, unsigned frames, const Modulation* speed, const Modulation* depth, const Modulation* mix)
