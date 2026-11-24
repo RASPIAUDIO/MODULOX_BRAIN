@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Modulox · Éditeur de patches</title>
-  <link rel="stylesheet" href="./style.css?v=22">
+  <link rel="stylesheet" href="./style.css?v=23">
 </head>
 <body>
   <header class="bar">
@@ -242,6 +242,23 @@
       <p id="factory-install-status" role="status"></p>
     </section>
   </dialog>
-  <script type="module" src="./app.mjs?v=24"></script>
+  <details id="midi-keyboard" class="midi-drawer">
+    <summary>Clavier</summary>
+    <div class="midi-drawer-content">
+      <div class="midi-toolbar">
+        <button id="midi-enable" type="button">Activer le MIDI</button>
+        <label id="midi-port-label" hidden>Sortie MIDI <select id="midi-port"></select></label>
+        <p id="midi-status" role="status">Branche le Modulox en USB et active le MIDI.</p>
+        <label class="midi-channel">Canal MIDI <select id="midi-channel"></select></label>
+        <div class="midi-octave">
+          <button id="midi-octave-down" type="button" aria-label="Octave inférieure">−</button>
+          <output id="midi-octaves" aria-label="Plage de notes"></output>
+          <button id="midi-octave-up" type="button" aria-label="Octave supérieure">+</button>
+        </div>
+      </div>
+      <div class="piano-scroll"><div class="midi-piano" id="midi-piano" role="group" aria-label="Touches du piano"></div></div>
+    </div>
+  </details>
+  <script type="module" src="./app.mjs?v=25"></script>
 </body>
 </html>

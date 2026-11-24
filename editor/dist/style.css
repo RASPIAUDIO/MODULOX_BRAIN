@@ -18,7 +18,7 @@
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; min-height: 100dvh; }
+body { margin: 0; min-height: 100dvh; padding-block-end: var(--midi-drawer-height, 38px); }
 h1, h2, h3, p { margin: 0; }
 button, input, select { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -213,7 +213,7 @@ button.patch[aria-current="true"] { background: #333349; border-color: #51516b; 
   .firmware-actions { grid-template-columns: minmax(0, 1fr); }
 }
 
-.editor-screen { display: flex; flex-direction: column; height: calc(100dvh - 66px); min-height: 435px; }
+.editor-screen { display: flex; flex-direction: column; height: calc(100dvh - 66px - var(--midi-drawer-height, 38px)); min-height: 435px; }
 .patch-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; padding: 15px 24px; background: var(--chrome); }
 .patch-identity { gap: 14px; min-width: 0; }
 #name { background: transparent; font-size: 1.08rem; font-weight: 650; width: min(270px, 52vw); }
@@ -339,6 +339,67 @@ button.remove-module { margin-top: 12px; }
 .local-row { display: flex; gap: 8px; }
 .local-row button:first-child { flex: 1; text-align: left; }
 
+.midi-drawer {
+  position: fixed;
+  z-index: 8;
+  inset: auto 0 0;
+  border-top: 1px solid var(--edge);
+  background: var(--chrome);
+}
+.midi-drawer summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 1100px;
+  min-height: 38px;
+  margin-inline: auto;
+  padding: 6px 18px;
+  color: var(--ink);
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.midi-drawer summary::-webkit-details-marker { display: none; }
+.midi-drawer summary:focus-visible { outline-offset: -4px; }
+.midi-drawer summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border: solid var(--muted);
+  border-width: 0 1px 1px 0;
+  transform: translateY(2px) rotate(225deg);
+}
+.midi-drawer[open] summary::before { transform: translateY(-2px) rotate(45deg); }
+.midi-drawer:not([open]) .midi-drawer-content { display: none; }
+.midi-drawer-content { max-width: 1100px; max-height: 53dvh; overflow-y: auto; margin-inline: auto; padding: 0 18px 12px; }
+.midi-toolbar, .midi-toolbar label, .midi-octave { display: flex; align-items: center; gap: 8px; }
+.midi-toolbar { flex-wrap: wrap; margin-block-end: 8px; color: var(--muted); font-size: .8rem; }
+#midi-status { flex: 1 1 205px; }
+.midi-toolbar select { padding-inline: 6px; }
+.midi-octave output { min-width: 42px; text-align: center; }
+.midi-octave button { padding-inline: 9px; }
+.piano-scroll { overflow-x: auto; scrollbar-width: thin; border-radius: 4px; }
+.midi-piano { position: relative; height: 89px; min-width: 424px; background: var(--field); }
+.midi-piano button.piano-key {
+  position: absolute;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  padding: 0 1px 5px;
+  border-radius: 0 0 4px 4px;
+  touch-action: pan-x;
+  user-select: none;
+  font: 600 .72rem var(--mono);
+}
+.midi-piano .white-key { width: calc(100% / 15); height: 100%; background: #eeedf2; color: #23262e; border-color: #777886; }
+.midi-piano .black-key { z-index: 1; width: 4.1%; height: 64%; transform: translateX(-50%); background: #272833; color: #fff; border-color: #16171f; }
+.midi-piano .white-key:enabled:hover { background: #d9d6e7; }
+.midi-piano .black-key:enabled:hover { background: #404355; }
+.midi-piano button.piano-key:enabled[data-held] { background: var(--accent); color: #1c1630; }
+.midi-piano button.piano-key:focus-visible { outline-offset: -3px; }
+
 @media (max-width: 970px) {
   .bar { padding-inline: 14px; column-gap: 10px; }
   .main-nav button { padding-inline: 11px; }
@@ -358,5 +419,7 @@ button.remove-module { margin-top: 12px; }
   .viewport { height: 420px; flex: auto; }
   .inspector { border-left: 0; border-top: 1px solid var(--edge); }
   .patch-header, .editor-tools, #module-panel, #parameter-view { padding-inline: 14px; }
+  .midi-drawer-content, .midi-drawer summary { padding-inline: 12px; }
+  #midi-status { order: 1; flex-basis: 100%; }
 }
 @media (max-width: 395px) { .brand strong { letter-spacing: .06em; } #status { font-size: .66rem; } .usb { gap: 5px; } }

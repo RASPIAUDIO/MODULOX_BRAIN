@@ -14,10 +14,12 @@ import { compareVersions, fetchFirmwareRelease, fetchFirmwareImage, readFirmware
 import { boardForModel, defaultBoard } from "./hardware.mjs";
 import { recoverFirmware } from "./firmware-recovery.mjs";
 import { factoryConsentValid, prepareFactoryInstaller } from "./factory-install.mjs";
+import { initializeMidiKeyboard } from "./midi-keyboard.mjs";
 
 await initializeLanguage();
 
 const $ = (id) => document.getElementById(id);
+const midiKeyboard = initializeMidiKeyboard($("midi-keyboard"));
 const graph = $("graph");
 const viewport = $("viewport");
 const canvas = $("wires");
@@ -335,6 +337,7 @@ function renderLibrary() {
 }
 
 function renderActions() {
+  midiKeyboard.setBusy(Boolean(busy));
   $("language-picker").inert = Boolean(busy);
   const item = current();
   const draft = activeDraft();

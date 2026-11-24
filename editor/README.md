@@ -12,6 +12,13 @@ défaut la langue du navigateur si elle est disponible, ou le français. Une
 langue choisie dans le menu est conservée dans le navigateur. Le ZIP hors ligne
 inclut aussi les traductions et les drapeaux.
 
+Ouvrir **Clavier** en bas de la page et cliquer sur **Activer le MIDI** pour
+jouer le patch chargé sur le Modulox. Autoriser le MIDI dans Chrome ou Edge,
+puis jouer avec les touches affichées, à la souris, au doigt ou avec le clavier
+de l’ordinateur. Le son sort du Modulox. Le canal 1 convient aux patches en
+mode Omni. Pour un patch réglé sur un canal précis, choisir ce canal dans le
+tiroir.
+
 Pour publier l’éditeur, lancer `node editor/build-web.mjs` depuis la racine,
 puis servir le contenu de `editor/dist/` en HTTPS. Ce script prépare l’index
 des presets et les deux exemples avec les fichiers déjà présents dans le
