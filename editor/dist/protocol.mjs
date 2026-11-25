@@ -129,10 +129,10 @@ export const fetchFirmwareInfo = port => exchange(port, async ({ command, json }
   await command("FWINFO"); return json(2048);
 });
 
-export function fetchScreenBands(port, revision, firstBand) {
+export function fetchScreenBands(port, revision, firstBand, maxBytes) {
   return exchange(port, async ({ command, number, take }) => {
     await command(`SCREEN ${revision} ${firstBand}`);
-    return take(await number(20480));
+    return take(await number(maxBytes));
   });
 }
 

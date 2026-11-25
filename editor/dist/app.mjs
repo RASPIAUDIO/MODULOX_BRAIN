@@ -1,5 +1,5 @@
 import { initializeLanguage, tr } from "./i18n.mjs";
-import { fetchResources, deleteDeviceSample, deletePatch, fetchPatches, fetchSample, fetchSampleLibrary, fetchSamplePreview, fetchWave, renameSample, uploadPatch, uploadSample, fetchFirmwareInfo, uploadFirmware, rollbackFirmware } from "./protocol.mjs?v=20";
+import { fetchResources, deleteDeviceSample, deletePatch, fetchPatches, fetchSample, fetchSampleLibrary, fetchSamplePreview, fetchWave, renameSample, uploadPatch, uploadSample, fetchFirmwareInfo, uploadFirmware, rollbackFirmware } from "./protocol.mjs?v=21";
 import { builtinWaves, deleteWave, drawWave, maxPatchWaves, readLibrary, readWave, saveWaves } from "./waves.mjs?v=4";
 import {
   connectionError, firstOscillator, fm4Topologies, modulationError, moduleSpec, nodeSpec, normalizePatch, offlineCatalog, outputModule,
@@ -8,14 +8,14 @@ import {
 } from "./patch.mjs?v=18";
 import { deleteSample, drawSample, readSample, readSamples, sampleRate, sampleWav, saveSample } from "./samples.mjs?v=7";
 import { loadPresetAssets } from "./preset-assets.mjs";
-import { loadFactoryBank, planFactoryUpload, uploadFactoryBank } from "./factory-bank.mjs";
+import { loadFactoryBank, planFactoryUpload, uploadFactoryBank } from "./factory-bank.mjs?v=2";
 import { packPatch, readPatchFile, writePatchFile, folderPreference } from "./patch-files.mjs";
 import { compareVersions, fetchFirmwareRelease, fetchFirmwareImage, readFirmwareFile, validateFirmware } from "./firmware.mjs";
 import { boardForModel, defaultBoard, boardProfiles } from "./hardware.mjs";
 import { recoverFirmware } from "./firmware-recovery.mjs";
 import { factoryConsentValid, prepareFactoryInstaller } from "./factory-install.mjs";
 import { initializeMidiKeyboard } from "./midi-keyboard.mjs";
-import { initializeDeviceScreen } from "./device-screen.mjs";
+import { initializeDeviceScreen } from "./device-screen.mjs?v=2";
 
 await initializeLanguage();
 

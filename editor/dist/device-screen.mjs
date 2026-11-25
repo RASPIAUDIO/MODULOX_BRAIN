@@ -1,6 +1,7 @@
 import { tr } from "./i18n.mjs";
-import { fetchScreenBands, sendScreenKey } from "./protocol.mjs?v=19";
+import { fetchScreenBands, sendScreenKey } from "./protocol.mjs?v=21";
 
+const headerBytes = 6;
 const lastBand = 255;
 const queueLimit = 16;
 
@@ -8,19 +9,19 @@ function geometry(capability) {
   const { width, height, bandHeight } = capability ?? {};
   if (![width, height, bandHeight].every(Number.isInteger) || width < 1 || width > 320 || height < 1 ||
       height > 320 || bandHeight < 1 || bandHeight > 16 || height % bandHeight || height / bandHeight >= lastBand) return;
-  return { width, height, bandHeight, bands: height / bandHeight, pixelsPerBand: width * bandHeight };
+  const pixelsPerBand = width * bandHeight;
+  return { width, height, bands: height / bandHeight, pixelsPerBand, bytesPerBand: 1 + 2 * pixelsPerBand };
 }
 
 function applyBands(data, frame, firstBand, full, spec) {
-  const bytesPerBand = 1 + 2 * spec.pixelsPerBand;
   const invalid = () => new Error(tr("Réponse série invalide."));
-  if (data.length < 6 || data.length !== 6 + data[5] * bytesPerBand) throw invalid();
+  if (data.length < headerBytes || data.length !== headerBytes + data[5] * spec.bytesPerBand) throw invalid();
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const revision = view.getUint32(0, true);
   const next = data[4];
   if (!revision || (next !== lastBand && (next <= firstBand || next >= spec.bands))) throw invalid();
   let minimum = firstBand;
-  for (let offset = 6; offset < data.length; offset += bytesPerBand) {
+  for (let offset = headerBytes; offset < data.length; offset += spec.bytesPerBand) {
     const band = data[offset];
     if (band < minimum || band >= Math.min(next, spec.bands) || (full && band !== minimum)) throw invalid();
     minimum = band + 1;
@@ -69,7 +70,9 @@ export function initializeDeviceScreen(panel) {
     if (!isActive() || inflight) return;
     const session = current;
     const key = keys.shift();
-    const work = key ? sendScreenKey(session.port, key) : fetchScreenBands(session.port, session.since, session.firstBand);
+    const maxBytes = headerBytes + (session.spec.bands - session.firstBand) * session.spec.bytesPerBand;
+    const work = key ? sendScreenKey(session.port, key)
+      : fetchScreenBands(session.port, session.since, session.firstBand, maxBytes);
     inflight = work;
     try {
       const data = await work;

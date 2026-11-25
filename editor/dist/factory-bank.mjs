@@ -1,7 +1,7 @@
 import { tr } from "./i18n.mjs";
 import { normalizePatch, offlineCatalog, patchForDevice, pitchCatalog, validatePatch } from "./patch.mjs?v=15";
 import { loadPresetAssets } from "./preset-assets.mjs";
-import { uploadPatch } from "./protocol.mjs?v=18";
+import { uploadPatch } from "./protocol.mjs?v=21";
 
 export async function loadFactoryBank(request = fetch) {
   const response = await request("./presets/index.json", { cache: "no-store" });
