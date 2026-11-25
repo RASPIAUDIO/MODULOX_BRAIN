@@ -8,6 +8,7 @@ const assets = new Map([
   ["/i18n.mjs", ["./dist/i18n.mjs", "text/javascript"]],
   ["/midi-keyboard.mjs", ["./dist/midi-keyboard.mjs", "text/javascript"]],
   ["/device-screen.mjs", ["./dist/device-screen.mjs", "text/javascript"]],
+  ["/modulox-front.webp", ["./dist/modulox-front.webp", "image/webp"]],
   ["/protocol.mjs", ["./dist/protocol.mjs", "text/javascript"]],
   ["/resources.mjs", ["./dist/resources.mjs", "text/javascript"]],
   ["/patch.mjs", ["./dist/patch.mjs", "text/javascript"]],

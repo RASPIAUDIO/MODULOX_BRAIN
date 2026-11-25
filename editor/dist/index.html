@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Modulox · Éditeur de patches</title>
-  <link rel="stylesheet" href="./style.css?v=25">
+  <link rel="stylesheet" href="./style.css?v=26">
 </head>
 <body>
   <header class="bar">
@@ -91,21 +91,24 @@
       <p role="status">Connecte le Modulox en USB pour voir son écran.</p>
     </header>
     <div class="device-front">
+      <img class="device-face" src="./modulox-front.webp" width="2500" height="2168" alt="" loading="lazy" draggable="false">
       <div class="device-display">
         <canvas width="280" height="240" role="img" aria-label="Affichage du Modulox" translate="no" hidden></canvas>
       </div>
       <div class="device-controls" role="group" aria-label="Commandes du Modulox">
-        <button type="button" data-screen-key="menu" disabled>Menu</button>
-        <div class="device-encoder" role="group" aria-label="Encodeur">
-          <button type="button" data-screen-key="ccw" aria-label="Tourner à gauche" disabled>−</button>
-          <button type="button" class="device-knob" data-screen-key="push" aria-label="Appuyer sur l’encodeur" title="Tourner avec la molette ou les flèches du clavier" disabled></button>
-          <button type="button" data-screen-key="cw" aria-label="Tourner à droite" disabled>+</button>
+        <button type="button" class="device-hotspot" data-screen-key="menu" aria-label="Menu" title="Menu" disabled></button>
+        <div role="group" aria-label="Boutons de navigation">
+          <button type="button" class="device-hotspot" data-screen-key="left" aria-label="Gauche" title="Gauche" disabled></button>
+          <button type="button" class="device-hotspot" data-screen-key="center" aria-label="Valider" title="Valider" disabled></button>
+          <button type="button" class="device-hotspot" data-screen-key="right" aria-label="Droite" title="Droite" disabled></button>
         </div>
-      </div>
-      <div class="device-buttons" role="group" aria-label="Boutons de navigation">
-        <button type="button" data-screen-key="left" aria-label="Gauche" disabled>←</button>
-        <button type="button" data-screen-key="center" disabled>Valider</button>
-        <button type="button" data-screen-key="right" aria-label="Droite" disabled>→</button>
+        <div role="group" aria-label="Encodeur">
+          <button type="button" class="device-hotspot" data-screen-key="push" aria-label="Appuyer sur l’encodeur" title="Tourner avec la molette ou les flèches du clavier" disabled></button>
+          <div class="device-encoder-turn">
+            <button type="button" data-screen-key="ccw" aria-label="Tourner à gauche" title="Tourner à gauche" disabled>−</button>
+            <button type="button" data-screen-key="cw" aria-label="Tourner à droite" title="Tourner à droite" disabled>+</button>
+          </div>
+        </div>
       </div>
     </div>
   </main>
