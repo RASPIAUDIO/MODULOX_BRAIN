@@ -15,7 +15,8 @@ Les fichiers de patches sauvegardés sur l'ordinateur restent disponibles.
 
 1. Sauvegarder sur l'ordinateur les patches à conserver.
 2. Ouvrir **Installation firmware usine…** et lire les avertissements.
-3. Mettre le Modulox en BOOT : maintenir BOOT pendant RESET, puis relâcher BOOT.
+3. Débrancher l’USB, maintenir l’encodeur argenté enfoncé, rebrancher la fiche
+   USB-C en haut au milieu, puis relâcher l’encodeur. [Voir le geste en GIF](modulox-boot.gif).
 4. Cliquer **Identifier le Modulox en BOOT** et choisir son port de programmation.
 5. L'éditeur identifie d'abord le modèle par ses mémoires et son type de bus,
    puis charge uniquement l'image correspondante et la contrôle (taille,

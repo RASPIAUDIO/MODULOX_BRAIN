@@ -82,7 +82,8 @@ l’environnement Python ESP-IDF avec `esptool` et l’accès au port ROM USB.
 
 1. Compiler normalement : `powershell -ExecutionPolicy Bypass -File firmware/idf.ps1 build`.
 2. Préparer la distribution : `python firmware/tools/release.py`.
-3. Fermer la connexion USB de l’éditeur, mettre le Modulox en mode BOOT/RESET.
+3. Fermer la connexion USB de l’éditeur. Débrancher le Modulox, maintenir
+   l’encodeur argenté enfoncé, rebrancher l’USB, puis relâcher l’encodeur.
 4. Avec le Python ESP-IDF, lancer `firmware/tools/migrate_ab.py --port COMx`.
 5. Le script sauvegarde d’abord les 16 Mio dans `firmware/backups`, avec la MAC,
    le SHA-256 et les empreintes des partitions protégées.
@@ -106,9 +107,9 @@ factory et les presets. Les mises à jour clients suivantes passent par USB A/B.
 ## Récupération depuis Chrome
 
 Si le firmware ne répond plus, choisir d’abord une version publiée ou un fichier
-de mise à jour, puis **Récupération USB (BOOT)**. Mettre la carte en mode
-programmation en maintenant BOOT pendant RESET ; relâcher BOOT et sélectionner
-le port ROM `303a:1001`. Les ports du programme et du bootloader sont distincts.
+de mise à jour, puis **Récupération USB (BOOT)**. Le dialogue montre comment
+maintenir l’encodeur argenté pendant le branchement USB-C. Après avoir relâché
+l’encodeur, sélectionner le port ROM `303a:1001`.
 
 Le module utilise une copie locale d’esptool-js 0.7.1 et de pako 2.1.0, avec leurs
 licences dans `editor/dist/vendor/esptool`. Aucun CDN n’est utilisé. Il contrôle

@@ -1,4 +1,10 @@
 {
+  "La récupération est réservée aux Modulox déjà migrés en A/B. Elle écrit dans l’emplacement inactif et conserve les patches et les samples.": "Recovery is for Modulox units already migrated to A/B. It writes to the inactive slot and preserves patches and samples.",
+  "Animation du branchement": "USB connection animation",
+  "Débranche le câble USB du Modulox.": "Unplug the USB cable from the Modulox.",
+  "Appuie sur l’encodeur argenté et garde-le enfoncé.": "Press and hold the silver encoder.",
+  "Rebranche la fiche USB-C en haut, au milieu. Relâche ensuite l’encodeur.": "Plug the USB-C connector back in at the top center. Then release the encoder.",
+  "Sélectionner le port USB de programmation": "Select the programming USB port",
   "Écran du Modulox": "Modulox screen",
   "Connecte le Modulox en USB pour voir son écran.": "Connect the Modulox via USB to view its screen.",
   "Affichage du Modulox": "Modulox display",

@@ -27,7 +27,9 @@ try {
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'dist') -File)) {
         if ($file.Extension -in @('.mjs', '.css', '.html')) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $package 'dist') }
     }
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'dist/modulox-front.webp') -Destination (Join-Path $package 'dist')
+    foreach ($name in @('modulox-front.webp', 'modulox-boot.webp', 'modulox-boot-still.webp')) {
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot "dist/$name") -Destination (Join-Path $package 'dist')
+    }
     foreach ($file in (Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot 'dist/presets') -File)) {
         if ($file.Name -match '^[a-z0-9-]+\.json$' -and $file.Name -ne 'index.json') {
             Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $package 'dist/presets')
@@ -52,6 +54,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../firmware/RELEASE-1.1.md') -Destination (Join-Path $package 'NOUVEAUTES-1.1.md')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../firmware/RELEASE-1.2.md') -Destination (Join-Path $package 'NOUVEAUTES-1.2.md')
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'INSTALLATION-USINE.md') -Destination $package
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'modulox-boot.gif') -Destination $package
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot '../firmware/BOARDS.md') -Destination (Join-Path $package 'MODELES-MATERIELS.md')
     Compress-Archive -LiteralPath $package -DestinationPath (Join-Path $stage 'package.zip') -CompressionLevel Optimal
     Move-Item -LiteralPath (Join-Path $stage 'package.zip') -Destination $zip -Force

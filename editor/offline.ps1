@@ -122,7 +122,7 @@ public sealed class ModuloxOfflineServer {
         }
         string filePath = null, mime = "application/octet-stream";
         if (path == "/") { filePath = Path.Combine(root, "dist", "index.html"); mime = "text/html; charset=utf-8"; }
-        else if (path == "/modulox-front.webp") { filePath = Path.Combine(root, "dist", "modulox-front.webp"); mime = "image/webp"; }
+        else if (Regex.IsMatch(path, "^/modulox-(front|boot|boot-still)\\.webp$")) { filePath = Path.Combine(root, "dist", path.Substring(1)); mime = "image/webp"; }
         else if (Regex.IsMatch(path, "^/[a-z][a-z0-9-]*\\.(mjs|css)$")) { filePath = Path.Combine(root, "dist", path.Substring(1)); mime = path.EndsWith(".css") ? "text/css; charset=utf-8" : "text/javascript; charset=utf-8"; }
         else if (Regex.IsMatch(path, "^/presets/[a-z0-9-]+\\.json$") || path == "/presets/assets/index.json") { filePath = Path.Combine(root, "dist", path.Substring(1).Replace('/', Path.DirectorySeparatorChar)); mime = "application/json"; }
         else if (Regex.IsMatch(path, "^/presets/assets/[a-f0-9]{14}\\.pcm$")) filePath = Path.Combine(root, "dist", path.Substring(1).Replace('/', Path.DirectorySeparatorChar));

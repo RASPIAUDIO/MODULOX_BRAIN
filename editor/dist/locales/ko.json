@@ -1,4 +1,10 @@
 {
+  "La récupération est réservée aux Modulox déjà migrés en A/B. Elle écrit dans l’emplacement inactif et conserve les patches et les samples.": "복구는 A/B로 마이그레이션된 Modulox에서 사용할 수 있습니다. 비활성 슬롯에 쓰고 패치와 샘플을 보존합니다.",
+  "Animation du branchement": "USB 연결 애니메이션",
+  "Débranche le câble USB du Modulox.": "Modulox에서 USB 케이블을 분리하세요.",
+  "Appuie sur l’encodeur argenté et garde-le enfoncé.": "은색 인코더를 길게 누르세요.",
+  "Rebranche la fiche USB-C en haut, au milieu. Relâche ensuite l’encodeur.": "상단 중앙에 USB-C 커넥터를 다시 꽂은 후 인코더에서 손을 떼세요.",
+  "Sélectionner le port USB de programmation": "프로그래밍용 USB 포트 선택",
   "Écran du Modulox": "Modulox 화면",
   "Connecte le Modulox en USB pour voir son écran.": "화면을 보려면 Modulox를 USB로 연결하세요.",
   "Affichage du Modulox": "Modulox 디스플레이",

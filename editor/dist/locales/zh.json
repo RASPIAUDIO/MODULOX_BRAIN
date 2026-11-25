@@ -1,4 +1,10 @@
 {
+  "La récupération est réservée aux Modulox déjà migrés en A/B. Elle écrit dans l’emplacement inactif et conserve les patches et les samples.": "恢复仅适用于已迁移到 A/B 的 Modulox。它写入非活动分区，并保留音色和采样。",
+  "Animation du branchement": "USB 连接动画",
+  "Débranche le câble USB du Modulox.": "拔下 Modulox 的 USB 线。",
+  "Appuie sur l’encodeur argenté et garde-le enfoncé.": "按住银色编码器旋钮。",
+  "Rebranche la fiche USB-C en haut, au milieu. Relâche ensuite l’encodeur.": "将 USB-C 插头重新插入顶部中间的接口，然后松开编码器旋钮。",
+  "Sélectionner le port USB de programmation": "选择 USB 编程端口",
   "Écran du Modulox": "Modulox 屏幕",
   "Connecte le Modulox en USB pour voir son écran.": "通过 USB 连接 Modulox 以查看屏幕。",
   "Affichage du Modulox": "Modulox 屏幕画面",

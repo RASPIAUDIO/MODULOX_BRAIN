@@ -2246,7 +2246,7 @@ function renderFirmware() {
   $("firmware").textContent = currentFirmware?.version === firmwareRelease?.version ? tr("Réinstaller cette version") : tr("Mettre à jour");
   $("firmware-rollback").disabled = Boolean(busy) || !port || !currentFirmware?.canRollback || currentFirmware.pendingVerify;
   $("firmware-check").disabled = $("firmware-file-button").disabled = Boolean(busy);
-  $("firmware-recovery").disabled = Boolean(busy) || !navigator.serial || !firmwareRelease;
+  $("firmware-recovery-port").disabled = $("firmware-recovery").disabled = Boolean(busy) || !navigator.serial || !firmwareRelease;
   $("firmware-factory").disabled = Boolean(busy) || !navigator.serial;
 }
 
@@ -2430,21 +2430,29 @@ $("firmware-rollback").onclick = () => fileOperation(tr("Retour à la version pr
   $("firmware-message").textContent = tr("Redémarrage sur le firmware précédent…");
   await disconnect(); await reconnectAfterFirmware(previousPort);
 });
-$("firmware-recovery").onclick = () => fileOperation(tr("Récupération USB…"), async () => {
-  if (!firmwareRelease) throw new Error(tr("Choisis d’abord un fichier de mise à jour ou vérifie les versions disponibles."));
-  if (!confirm(tr("Récupération pour un Modulox déjà migré en A/B.\nPlace le Modulox en mode programmation avec BOOT maintenu pendant RESET, puis relâche BOOT et sélectionne le port USB de programmation.\nLe firmware sera écrit dans un emplacement inactif ; patches et samples ne seront pas effacés."))) return;
-  if (port) await disconnect();
-  const romPort = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a, usbProductId: 0x1001 }] });
-  const release = structuredClone(firmwareRelease);
-  const image = firmwareImage ?? await fetchFirmwareImage(release);
-  $("firmware-progress").hidden = false; $("firmware-progress").value = 0;
-  await recoverFirmware(romPort, image, release, (message, percent) => {
-    $("firmware-message").textContent = message;
-    if (percent !== undefined) $("firmware-progress").value = percent;
+$("firmware-recovery").onclick = () => {
+  if (!busy && firmwareRelease) $("firmware-recovery-dialog").showModal();
+};
+$("firmware-recovery-port").onclick = () => {
+  if (busy || !firmwareRelease) return;
+  const selected = navigator.serial.requestPort({ filters: [{ usbVendorId: 0x303a, usbProductId: 0x1001 }] });
+  return fileOperation(tr("Récupération USB…"), async () => {
+    let romPort;
+    try { romPort = await selected; }
+    catch (error) { if (error.name === "NotFoundError") return; throw error; }
+    $("firmware-recovery-dialog").close();
+    if (port) await disconnect();
+    const release = structuredClone(firmwareRelease);
+    const image = firmwareImage ?? await fetchFirmwareImage(release);
+    $("firmware-progress").hidden = false; $("firmware-progress").value = 0;
+    await recoverFirmware(romPort, image, release, (message, percent) => {
+      $("firmware-message").textContent = message;
+      if (percent !== undefined) $("firmware-progress").value = percent;
+    });
+    expectedFirmware = { version: release.version, buildId: release.buildId };
+    $("firmware-message").textContent = tr("Récupération vérifiée. Clique sur Connecter en USB pour vérifier le démarrage et la version.");
   });
-  expectedFirmware = { version: release.version, buildId: release.buildId };
-  $("firmware-message").textContent = tr("Récupération vérifiée. Clique sur Connecter en USB pour vérifier le démarrage et la version.");
-});
+};
 fetchFirmwareRelease().then(release => { if (!currentFirmware || currentFirmware.model === release.model) firmwareRelease = release; renderFirmware(); }).catch(() => {
   $("firmware-latest").textContent = tr("Aucune version publiée sur cette copie. Un fichier de mise à jour peut être choisi hors ligne.");
 });

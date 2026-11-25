@@ -1,4 +1,10 @@
 {
+  "La récupération est réservée aux Modulox déjà migrés en A/B. Elle écrit dans l’emplacement inactif et conserve les patches et les samples.": "Die Wiederherstellung ist für Modulox-Geräte vorgesehen, die bereits auf A/B umgestellt wurden. Sie schreibt in den inaktiven Slot und behält Patches und Samples bei.",
+  "Animation du branchement": "Animation zum USB-Anschluss",
+  "Débranche le câble USB du Modulox.": "Ziehe das USB-Kabel vom Modulox ab.",
+  "Appuie sur l’encodeur argenté et garde-le enfoncé.": "Drücke den silbernen Drehgeber und halte ihn gedrückt.",
+  "Rebranche la fiche USB-C en haut, au milieu. Relâche ensuite l’encodeur.": "Stecke den USB-C-Stecker oben mittig wieder ein. Lass den Drehgeber danach los.",
+  "Sélectionner le port USB de programmation": "USB-Programmierport auswählen",
   "Écran du Modulox": "Modulox-Display",
   "Connecte le Modulox en USB pour voir son écran.": "Verbinde den Modulox per USB, um sein Display zu sehen.",
   "Affichage du Modulox": "Bild des Modulox-Displays",

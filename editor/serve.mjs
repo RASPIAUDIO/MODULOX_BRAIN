@@ -9,6 +9,8 @@ const assets = new Map([
   ["/midi-keyboard.mjs", ["./dist/midi-keyboard.mjs", "text/javascript"]],
   ["/device-screen.mjs", ["./dist/device-screen.mjs", "text/javascript"]],
   ["/modulox-front.webp", ["./dist/modulox-front.webp", "image/webp"]],
+  ["/modulox-boot.webp", ["./dist/modulox-boot.webp", "image/webp"]],
+  ["/modulox-boot-still.webp", ["./dist/modulox-boot-still.webp", "image/webp"]],
   ["/protocol.mjs", ["./dist/protocol.mjs", "text/javascript"]],
   ["/resources.mjs", ["./dist/resources.mjs", "text/javascript"]],
   ["/patch.mjs", ["./dist/patch.mjs", "text/javascript"]],

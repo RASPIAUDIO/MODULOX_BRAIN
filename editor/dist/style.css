@@ -253,8 +253,8 @@ button.patch[aria-current="true"] { background: #333349; border-color: #51516b; 
 .firmware-factory-action { border-top: 1px solid var(--edge); padding-top: 16px; margin-top: 20px; }
 .firmware-factory-action button { width: 100%; min-height: 41px; }
 .firmware-factory-action p { margin-top: 7px; }
-#factory-install-dialog { width: min(620px, 94vw); max-height: 90dvh; overflow: auto; border: 1px solid var(--edge); border-radius: 9px; padding: 0; color: var(--ink); background: var(--panel); }
-#factory-install-dialog::backdrop { background: #090a10cc; }
+.firmware-dialog { width: min(620px, 94vw); max-height: 90dvh; overflow: auto; border: 1px solid var(--edge); border-radius: 9px; padding: 0; color: var(--ink); background: var(--panel); }
+.firmware-dialog::backdrop { background: #090a10cc; }
 .factory-install-content { padding-block: 18px; }
 .factory-warning { padding: 16px; border: 1px solid #80515e; border-radius: 7px; background: #38252d; }
 .factory-warning h3 { color: #ffd0d5; font-size: .95rem; }
@@ -263,7 +263,15 @@ button.patch[aria-current="true"] { background: #333349; border-color: #51516b; 
 .factory-install-content p, .factory-install-content li, .factory-install-content label { font-size: .83rem; line-height: 1.6; }
 #factory-install-release, #factory-install-device { margin-top: 16px; }
 #factory-install-device { padding: 12px; background: var(--field); border-radius: 6px; }
-.factory-boot-steps { padding-left: 22px; color: var(--muted); }
+.boot-guide { display: grid; grid-template-columns: minmax(0, 230px) minmax(0, 1fr); gap: 14px; align-items: center; margin-block: 14px; }
+.boot-animation summary { width: fit-content; color: var(--muted); cursor: pointer; font-size: .78rem; }
+.boot-animation img { display: block; width: 100%; height: auto; margin-top: 6px; border: 1px solid var(--edge); border-radius: 8px; }
+.boot-steps { margin: 0; padding-left: 1.25em; }
+.boot-steps li + li { margin-top: 8px; }
+@media (max-width: 540px) {
+  .boot-guide { grid-template-columns: 1fr; }
+  .boot-animation { width: min(100%, 230px); justify-self: center; }
+}
 #factory-install-consent { margin: 18px 0; padding: 0; border: 0; }
 #factory-install-consent:disabled { opacity: .5; }
 .factory-acknowledgement { display: flex; align-items: flex-start; gap: 9px; }

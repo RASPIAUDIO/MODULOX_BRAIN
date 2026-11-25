@@ -1,4 +1,10 @@
 {
+  "La récupération est réservée aux Modulox déjà migrés en A/B. Elle écrit dans l’emplacement inactif et conserve les patches et les samples.": "復旧は A/B に移行済みの Modulox が対象です。非アクティブなスロットに書き込み、パッチとサンプルを保持します。",
+  "Animation du branchement": "USB 接続のアニメーション",
+  "Débranche le câble USB du Modulox.": "Modulox から USB ケーブルを抜いてください。",
+  "Appuie sur l’encodeur argenté et garde-le enfoncé.": "銀色のエンコーダーを押したままにしてください。",
+  "Rebranche la fiche USB-C en haut, au milieu. Relâche ensuite l’encodeur.": "上部中央に USB-C コネクターを差し直してから、エンコーダーを離してください。",
+  "Sélectionner le port USB de programmation": "書き込み用 USB ポートを選択",
   "Écran du Modulox": "Modulox 画面",
   "Connecte le Modulox en USB pour voir son écran.": "画面を表示するには、Modulox を USB で接続してください。",
   "Affichage du Modulox": "Modulox の画面表示",
